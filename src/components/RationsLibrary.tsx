@@ -222,32 +222,6 @@ export default function RationsLibrary() {
                       {items.length === 0 && <li>Продуктів ще немає.</li>}
                     </ul>
 
-                    {baseProducts.length > 0 && (
-                      <select
-                        value=""
-                        onChange={(e) => {
-                          const p = baseProducts.find((bp) => bp.id === e.target.value);
-                          if (p) {
-                            pickProduct(r.id, {
-                              name: p.name,
-                              caloriesPer100: p.calories_per_100,
-                              proteinPer100: p.protein_per_100,
-                              fatPer100: p.fat_per_100,
-                              carbsPer100: p.carbs_per_100,
-                            });
-                          }
-                        }}
-                        className="rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
-                      >
-                        <option value="">Вибрати з бази продуктів</option>
-                        {baseProducts.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-
                     <div className="relative flex gap-2">
                       <input
                         value={query[r.id] || ""}
@@ -255,7 +229,7 @@ export default function RationsLibrary() {
                           setQuery((prev) => ({ ...prev, [r.id]: e.target.value }));
                           setPer100ByRation((prev) => ({ ...prev, [r.id]: null }));
                         }}
-                        placeholder="Або пошук у відкритій базі (Open Food Facts)"
+                        placeholder="Пошук продукту (Open Food Facts)"
                         className="flex-1 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
                       />
                       <button
@@ -281,6 +255,32 @@ export default function RationsLibrary() {
                           </button>
                         ))}
                       </div>
+                    )}
+
+                    {baseProducts.length > 0 && (
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const p = baseProducts.find((bp) => bp.id === e.target.value);
+                          if (p) {
+                            pickProduct(r.id, {
+                              name: p.name,
+                              caloriesPer100: p.calories_per_100,
+                              proteinPer100: p.protein_per_100,
+                              fatPer100: p.fat_per_100,
+                              carbsPer100: p.carbs_per_100,
+                            });
+                          }
+                        }}
+                        className="rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
+                      >
+                        <option value="">Або зі своєї бази продуктів</option>
+                        {baseProducts.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
                     )}
 
                     <div className="flex flex-wrap gap-2">

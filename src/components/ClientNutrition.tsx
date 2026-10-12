@@ -214,32 +214,6 @@ export default function ClientNutrition({ clientId }: { clientId: string }) {
         </div>
 
         <div className="mt-3 border-t border-line pt-3">
-          {baseProducts.length > 0 && (
-            <select
-              value=""
-              onChange={(e) => {
-                const p = baseProducts.find((bp) => bp.id === e.target.value);
-                if (p) {
-                  pickProduct({
-                    name: p.name,
-                    caloriesPer100: p.calories_per_100,
-                    proteinPer100: p.protein_per_100,
-                    fatPer100: p.fat_per_100,
-                    carbsPer100: p.carbs_per_100,
-                  });
-                }
-              }}
-              className="mb-2 w-full rounded-lg border border-line bg-surface px-2 py-1.5 text-sm outline-none"
-            >
-              <option value="">Вибрати з бази продуктів</option>
-              {baseProducts.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          )}
-
           <div className="relative flex gap-2">
             <input
               value={query}
@@ -247,7 +221,7 @@ export default function ClientNutrition({ clientId }: { clientId: string }) {
                 setQuery(e.target.value);
                 setPer100(null);
               }}
-              placeholder="Або пошук у відкритій базі (Open Food Facts)"
+              placeholder="Пошук продукту (Open Food Facts)"
               className="flex-1 rounded-lg border border-line bg-surface px-2 py-1.5 text-sm outline-none"
             />
             <button
@@ -273,6 +247,32 @@ export default function ClientNutrition({ clientId }: { clientId: string }) {
                 </button>
               ))}
             </div>
+          )}
+
+          {baseProducts.length > 0 && (
+            <select
+              value=""
+              onChange={(e) => {
+                const p = baseProducts.find((bp) => bp.id === e.target.value);
+                if (p) {
+                  pickProduct({
+                    name: p.name,
+                    caloriesPer100: p.calories_per_100,
+                    proteinPer100: p.protein_per_100,
+                    fatPer100: p.fat_per_100,
+                    carbsPer100: p.carbs_per_100,
+                  });
+                }
+              }}
+              className="mt-2 w-full rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
+            >
+              <option value="">Або зі своєї бази продуктів</option>
+              {baseProducts.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           )}
 
           <div className="mt-2 flex flex-wrap gap-2">
