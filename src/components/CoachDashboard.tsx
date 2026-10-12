@@ -19,6 +19,18 @@ type Client = {
   invite_code: string;
   profile_id: string | null;
   subscription_until: string | null;
+  height: number | null;
+  start_weight: number | null;
+  target_weight: number | null;
+  intake_notes: string | null;
+  intake_goals: string | null;
+  experience_level: string | null;
+  health_restrictions: string | null;
+  training_location: string | null;
+  equipment: string | null;
+  training_days_per_week: number | null;
+  food_restrictions: string | null;
+  lifestyle: string | null;
 };
 
 type Checkin = {
@@ -224,6 +236,41 @@ export default function CoachDashboard() {
 
                   {openId === c.id && (
                     <div className="mt-3 flex flex-col gap-3 border-t border-line pt-3">
+                      {c.start_weight != null && (
+                        <div>
+                          <h3 className="mb-2 text-sm font-semibold">Анкета</h3>
+                          <div className="flex flex-col gap-1 rounded-lg bg-paper p-2 text-xs text-muted">
+                            <p>
+                              {[
+                                `Зріст ${c.height ?? "—"} см`,
+                                `Вага ${c.start_weight ?? "—"} кг${
+                                  c.target_weight != null ? ` → ${c.target_weight} кг` : ""
+                                }`,
+                              ].join(", ")}
+                            </p>
+                            {c.intake_goals && <p>Цілі: {c.intake_goals}</p>}
+                            {(c.experience_level || c.training_location || c.training_days_per_week != null) && (
+                              <p>
+                                {[
+                                  c.experience_level,
+                                  c.training_location,
+                                  c.training_days_per_week != null
+                                    ? `${c.training_days_per_week} дн./тиждень`
+                                    : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(", ")}
+                              </p>
+                            )}
+                            {c.equipment && <p>Інвентар: {c.equipment}</p>}
+                            {c.health_restrictions && <p>Обмеження здоров&apos;я: {c.health_restrictions}</p>}
+                            {c.food_restrictions && <p>Харчові обмеження: {c.food_restrictions}</p>}
+                            {c.lifestyle && <p>Спосіб життя: {c.lifestyle}</p>}
+                            {c.intake_notes && <p>{c.intake_notes}</p>}
+                          </div>
+                        </div>
+                      )}
+
                       <div>
                         <h3 className="mb-2 text-sm font-semibold">Чек-іни</h3>
                         <div className="flex flex-col gap-2">
