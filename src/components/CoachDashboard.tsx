@@ -9,6 +9,7 @@ import ProgramsSection from "@/components/ProgramsSection";
 import RationsLibrary from "@/components/RationsLibrary";
 import CoachAnalytics from "@/components/CoachAnalytics";
 import CoachPayments from "@/components/CoachPayments";
+import CoachCheckins from "@/components/CoachCheckins";
 
 type Client = {
   id: string;
@@ -27,10 +28,11 @@ type Checkin = {
   created_at: string;
 };
 
-type TabId = "clients" | "programs" | "rations" | "analytics" | "payments";
+type TabId = "clients" | "checkins" | "programs" | "rations" | "analytics" | "payments";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "clients", label: "Клієнти" },
+  { id: "checkins", label: "Чек-іни" },
   { id: "programs", label: "Програми" },
   { id: "rations", label: "Харчування" },
   { id: "analytics", label: "Аналітика" },
@@ -143,7 +145,9 @@ export default function CoachDashboard() {
         ))}
       </nav>
 
-      {tab === "programs" ? (
+      {tab === "checkins" ? (
+        <CoachCheckins />
+      ) : tab === "programs" ? (
         <ProgramsSection />
       ) : tab === "rations" ? (
         <RationsLibrary />
