@@ -8,6 +8,7 @@ import AnalyticsPanel from "@/components/AnalyticsPanel";
 import ProgramsLibrary from "@/components/ProgramsLibrary";
 import RationsLibrary from "@/components/RationsLibrary";
 import CoachAnalytics from "@/components/CoachAnalytics";
+import CoachClientPayments from "@/components/CoachClientPayments";
 
 type Client = {
   id: string;
@@ -15,6 +16,7 @@ type Client = {
   goal: string | null;
   invite_code: string;
   profile_id: string | null;
+  subscription_until: string | null;
 };
 
 type Checkin = {
@@ -246,6 +248,14 @@ export default function CoachDashboard() {
                             <p className="text-muted">Чек-інів ще немає.</p>
                           )}
                         </div>
+                      </div>
+
+                      <div className="border-t border-line pt-3">
+                        <CoachClientPayments
+                          clientId={c.id}
+                          subscriptionUntil={c.subscription_until}
+                          onChanged={load}
+                        />
                       </div>
 
                       <div className="border-t border-line pt-3">
