@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import CoachClientCalendar from "@/components/CoachClientCalendar";
 import CoachClientNutrition from "@/components/CoachClientNutrition";
+import AnalyticsPanel from "@/components/AnalyticsPanel";
 import ProgramsLibrary from "@/components/ProgramsLibrary";
 import RationsLibrary from "@/components/RationsLibrary";
 
@@ -241,6 +242,10 @@ export default function CoachDashboard() {
 
                       <div className="border-t border-line pt-3">
                         <CoachClientNutrition clientId={c.id} />
+                      </div>
+
+                      <div className="border-t border-line pt-3">
+                        <AnalyticsPanel clientId={c.id} />
                       </div>
                     </div>
                   )}

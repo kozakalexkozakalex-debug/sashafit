@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ClientCalendar from "@/components/ClientCalendar";
 import ClientNutrition from "@/components/ClientNutrition";
+import AnalyticsPanel from "@/components/AnalyticsPanel";
 
 type ClientRow = {
   id: string;
@@ -262,6 +263,7 @@ export default function ClientDashboard() {
 
       <ClientCalendar clientId={client.id} />
       <ClientNutrition clientId={client.id} />
+      <AnalyticsPanel clientId={client.id} />
     </div>
   );
 }
