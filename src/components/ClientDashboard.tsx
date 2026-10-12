@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import ClientCalendar from "@/components/ClientCalendar";
 import ClientNutrition from "@/components/ClientNutrition";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
+import ChatPanel from "@/components/ChatPanel";
 
 type ClientRow = {
   id: string;
@@ -490,6 +491,7 @@ export default function ClientDashboard() {
         </div>
       </div>
 
+      <ChatPanel mode="client" clientId={client.id} />
       <ClientCalendar clientId={client.id} />
       <ClientNutrition clientId={client.id} />
       <AnalyticsPanel clientId={client.id} />

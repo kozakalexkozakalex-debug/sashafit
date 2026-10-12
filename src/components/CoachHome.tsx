@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import ChatPanel from "@/components/ChatPanel";
 
 type Client = {
   id: string;
@@ -170,6 +171,7 @@ export default function CoachHome() {
   const todayCount = (workoutsByDate[todayKey] || []).length;
 
   return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
     <div className="flex flex-col gap-6">
       {warnings.length > 0 && (
         <div className="border-l-2 border-accent bg-surface p-3 text-sm">
@@ -225,53 +227,55 @@ export default function CoachHome() {
       )}
 
       <div className="rounded-xl border border-line bg-surface p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setCursor(new Date(year, month - 1, 1))}
-            className="rounded bg-paper px-2 py-1 text-xs"
-          >
-            ‹
-          </button>
-          <span className="font-display text-sm font-medium">
-            {MONTHS[month]} {year}
-          </span>
-          <button
-            type="button"
-            onClick={() => setCursor(new Date(year, month + 1, 1))}
-            className="rounded bg-paper px-2 py-1 text-xs"
-          >
-            ›
-          </button>
-        </div>
-        <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted">
-          {WEEKDAYS.map((w) => (
-            <div key={w} className="py-1">
-              {w}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {cells.map((d, i) => {
-            if (!d) return <div key={i} />;
-            const key = toKey(d);
-            const count = workoutsByDate[key]?.length || 0;
-            const isToday = key === todayKey;
-            const isSelected = key === selectedDay;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setSelectedDay(key)}
-                className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border text-xs ${
-                  count > 0 ? "border-accent/40 bg-accent/10" : "border-line bg-paper text-muted"
-                } ${isToday ? "ring-1 ring-accent" : ""} ${isSelected ? "outline outline-2 outline-accent" : ""}`}
-              >
-                <span>{d.getDate()}</span>
-                {count > 0 && <span className="text-[10px] text-accent">🏋 {count}</span>}
-              </button>
-            );
-          })}
+        <div className="mx-auto w-full max-w-[280px]">
+          <div className="mb-2 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setCursor(new Date(year, month - 1, 1))}
+              className="rounded bg-paper px-2 py-1 text-xs"
+            >
+              ‹
+            </button>
+            <span className="font-display text-xs font-medium">
+              {MONTHS[month]} {year}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCursor(new Date(year, month + 1, 1))}
+              className="rounded bg-paper px-2 py-1 text-xs"
+            >
+              ›
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted">
+            {WEEKDAYS.map((w) => (
+              <div key={w} className="py-0.5">
+                {w}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-0.5">
+            {cells.map((d, i) => {
+              if (!d) return <div key={i} />;
+              const key = toKey(d);
+              const count = workoutsByDate[key]?.length || 0;
+              const isToday = key === todayKey;
+              const isSelected = key === selectedDay;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setSelectedDay(key)}
+                  className={`flex aspect-square flex-col items-center justify-center rounded-md border text-[11px] ${
+                    count > 0 ? "border-accent/40 bg-accent/10" : "border-line bg-paper text-muted"
+                  } ${isToday ? "ring-1 ring-accent" : ""} ${isSelected ? "outline outline-2 outline-accent" : ""}`}
+                >
+                  <span>{d.getDate()}</span>
+                  {count > 0 && <span className="text-[8px] text-accent">🏋{count}</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {selectedDay && (
@@ -377,6 +381,9 @@ export default function CoachHome() {
           {meetings.length === 0 && <p className="text-sm text-muted">Зустрічей ще немає.</p>}
         </div>
       </div>
+    </div>
+
+    <ChatPanel mode="coach" />
     </div>
   );
 }
