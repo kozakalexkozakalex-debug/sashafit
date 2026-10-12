@@ -9,7 +9,10 @@ type ProgramExercise = {
   sets: number | null;
   reps: string | null;
   position: number;
+  exercise_id: string | null;
 };
+
+type BaseExercise = { id: string; name: string };
 
 type ProgramDay = {
   id: string;
@@ -37,8 +40,9 @@ export default function ProgramsLibrary() {
   const [newDayTitle, setNewDayTitle] = useState<Record<string, string>>({});
 
   const [exRows, setExRows] = useState<
-    Record<string, { name: string; sets: string; reps: string }>
+    Record<string, { exerciseId: string; sets: string; reps: string }>
   >({});
+  const [baseExercises, setBaseExercises] = useState<BaseExercise[]>([]);
 
   async function load() {
     setLoading(true);
@@ -50,8 +54,14 @@ export default function ProgramsLibrary() {
     setLoading(false);
   }
 
+  async function loadBaseExercises() {
+    const { data } = await supabase.from("exercises").select("id, name").order("name");
+    setBaseExercises((data as BaseExercise[]) || []);
+  }
+
   useEffect(() => {
     load();
+    loadBaseExercises();
   }, []);
 
   async function addProgram() {
@@ -86,7 +96,9 @@ export default function ProgramsLibrary() {
 
   async function addExercise(dayId: string) {
     const row = exRows[dayId];
-    if (!row || !row.name.trim()) return;
+    if (!row || !row.exerciseId) return;
+    const ex = baseExercises.find((e) => e.id === row.exerciseId);
+    if (!ex) return;
     const { data: existing } = await supabase
       .from("program_exercises")
       .select("id")
@@ -94,12 +106,13 @@ export default function ProgramsLibrary() {
     const position = existing?.length || 0;
     await supabase.from("program_exercises").insert({
       program_day_id: dayId,
-      name: row.name.trim(),
+      exercise_id: ex.id,
+      name: ex.name,
       sets: row.sets.trim() ? Number(row.sets) : null,
       reps: row.reps.trim() || null,
       position,
     });
-    setExRows((prev) => ({ ...prev, [dayId]: { name: "", sets: "", reps: "" } }));
+    setExRows((prev) => ({ ...prev, [dayId]: { exerciseId: "", sets: "", reps: "" } }));
     load();
   }
 
@@ -177,48 +190,70 @@ export default function ProgramsLibrary() {
                               <p className="text-muted">Вправ ще немає.</p>
                             )}
                           </div>
-                          <div className="mt-2 flex gap-2">
-                            <input
-                              value={exRows[d.id]?.name || ""}
-                              onChange={(e) =>
-                                setExRows((prev) => ({
-                                  ...prev,
-                                  [d.id]: { ...(prev[d.id] || { sets: "", reps: "" }), name: e.target.value },
-                                }))
-                              }
-                              placeholder="Вправа"
-                              className="flex-1 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
-                            />
-                            <input
-                              value={exRows[d.id]?.sets || ""}
-                              onChange={(e) =>
-                                setExRows((prev) => ({
-                                  ...prev,
-                                  [d.id]: { ...(prev[d.id] || { name: "", reps: "" }), sets: e.target.value },
-                                }))
-                              }
-                              placeholder="Підходи"
-                              className="w-16 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
-                            />
-                            <input
-                              value={exRows[d.id]?.reps || ""}
-                              onChange={(e) =>
-                                setExRows((prev) => ({
-                                  ...prev,
-                                  [d.id]: { ...(prev[d.id] || { name: "", sets: "" }), reps: e.target.value },
-                                }))
-                              }
-                              placeholder="Повтори"
-                              className="w-20 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => addExercise(d.id)}
-                              className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper"
-                            >
-                              +
-                            </button>
-                          </div>
+                          {baseExercises.length === 0 ? (
+                            <p className="mt-2 text-xs text-muted">
+                              Спочатку додай вправи у вкладці «База вправ».
+                            </p>
+                          ) : (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <select
+                                value={exRows[d.id]?.exerciseId || ""}
+                                onChange={(e) =>
+                                  setExRows((prev) => ({
+                                    ...prev,
+                                    [d.id]: {
+                                      ...(prev[d.id] || { sets: "", reps: "" }),
+                                      exerciseId: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="flex-1 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
+                              >
+                                <option value="">Оберіть вправу</option>
+                                {baseExercises.map((ex) => (
+                                  <option key={ex.id} value={ex.id}>
+                                    {ex.name}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                value={exRows[d.id]?.sets || ""}
+                                onChange={(e) =>
+                                  setExRows((prev) => ({
+                                    ...prev,
+                                    [d.id]: {
+                                      ...(prev[d.id] || { exerciseId: "", reps: "" }),
+                                      sets: e.target.value,
+                                    },
+                                  }))
+                                }
+                                placeholder="Підходи"
+                                className="w-16 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
+                              />
+                              <input
+                                value={exRows[d.id]?.reps || ""}
+                                onChange={(e) =>
+                                  setExRows((prev) => ({
+                                    ...prev,
+                                    [d.id]: {
+                                      ...(prev[d.id] || { exerciseId: "", sets: "" }),
+                                      reps: e.target.value,
+                                    },
+                                  }))
+                                }
+                                placeholder="Повтори"
+                                className="w-20 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
+                              />
+                              <button
+                                type="button"
+                                disabled={!exRows[d.id]?.exerciseId}
+                                onClick={() => addExercise(d.id)}
+                                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

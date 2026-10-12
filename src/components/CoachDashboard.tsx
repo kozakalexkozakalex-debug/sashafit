@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import CoachClientCalendar from "@/components/CoachClientCalendar";
 import CoachClientNutrition from "@/components/CoachClientNutrition";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
-import ProgramsLibrary from "@/components/ProgramsLibrary";
+import ProgramsSection from "@/components/ProgramsSection";
 import RationsLibrary from "@/components/RationsLibrary";
 import CoachAnalytics from "@/components/CoachAnalytics";
 import CoachPayments from "@/components/CoachPayments";
@@ -144,7 +144,7 @@ export default function CoachDashboard() {
       </nav>
 
       {tab === "programs" ? (
-        <ProgramsLibrary />
+        <ProgramsSection />
       ) : tab === "rations" ? (
         <RationsLibrary />
       ) : tab === "analytics" ? (

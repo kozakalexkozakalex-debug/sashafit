@@ -13,7 +13,14 @@ type AssignedWorkout = {
   assigned_workout_exercises: AWExercise[];
 };
 
-type ProgramExercise = { id: string; name: string; sets: number | null; reps: string | null; position: number };
+type ProgramExercise = {
+  id: string;
+  name: string;
+  sets: number | null;
+  reps: string | null;
+  position: number;
+  exercise_id: string | null;
+};
 type ProgramDay = { id: string; title: string; position: number; program_exercises: ProgramExercise[] };
 type Program = { id: string; title: string; program_days: ProgramDay[] };
 
@@ -82,6 +89,7 @@ export default function CoachClientCalendar({ clientId }: { clientId: string }) 
       await supabase.from("assigned_workout_exercises").insert(
         exercises.map((e, i) => ({
           assigned_workout_id: aw.id,
+          exercise_id: e.exercise_id,
           name: e.name,
           sets: e.sets,
           reps: e.reps,
