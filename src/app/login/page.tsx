@@ -30,7 +30,11 @@ function LoginForm() {
       // Якщо людина прийшла за запрошенням і щойно повернулась від Google —
       // прив'язуємо інвайт тут (для email/пароль це вже робить afterAuth).
       if (invite) {
-        await supabase.rpc("claim_invite", { code: invite }).catch(() => {});
+        try {
+          await supabase.rpc("claim_invite", { code: invite });
+        } catch {
+          /* інвайт уже міг бути використаний раніше — ігноруємо */
+        }
       }
       router.replace("/dashboard");
     });
