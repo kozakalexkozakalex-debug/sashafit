@@ -8,7 +8,7 @@ import AnalyticsPanel from "@/components/AnalyticsPanel";
 import ProgramsLibrary from "@/components/ProgramsLibrary";
 import RationsLibrary from "@/components/RationsLibrary";
 import CoachAnalytics from "@/components/CoachAnalytics";
-import CoachClientPayments from "@/components/CoachClientPayments";
+import CoachPayments from "@/components/CoachPayments";
 
 type Client = {
   id: string;
@@ -28,7 +28,9 @@ type Checkin = {
 };
 
 export default function CoachDashboard() {
-  const [tab, setTab] = useState<"clients" | "programs" | "rations" | "analytics">("clients");
+  const [tab, setTab] = useState<"clients" | "programs" | "rations" | "analytics" | "payments">(
+    "clients"
+  );
   const [clients, setClients] = useState<Client[]>([]);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
@@ -152,6 +154,15 @@ export default function CoachDashboard() {
         >
           Аналітика
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("payments")}
+          className={`flex-1 rounded-md py-2 text-sm font-semibold ${
+            tab === "payments" ? "bg-accent text-paper" : "text-muted"
+          }`}
+        >
+          Оплата
+        </button>
       </div>
 
       {tab === "programs" ? (
@@ -160,6 +171,8 @@ export default function CoachDashboard() {
         <RationsLibrary />
       ) : tab === "analytics" ? (
         <CoachAnalytics />
+      ) : tab === "payments" ? (
+        <CoachPayments />
       ) : (
         <>
           <div className="rounded-xl border border-line bg-surface p-4">
@@ -248,14 +261,6 @@ export default function CoachDashboard() {
                             <p className="text-muted">Чек-інів ще немає.</p>
                           )}
                         </div>
-                      </div>
-
-                      <div className="border-t border-line pt-3">
-                        <CoachClientPayments
-                          clientId={c.id}
-                          subscriptionUntil={c.subscription_until}
-                          onChanged={load}
-                        />
                       </div>
 
                       <div className="border-t border-line pt-3">
