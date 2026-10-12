@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import CoachWorkouts from "@/components/CoachWorkouts";
 
 type Client = {
   id: string;
@@ -188,6 +189,10 @@ export default function CoachDashboard() {
                   {(checkinsByClient[c.id] || []).length === 0 && (
                     <p className="text-muted">Чек-інів ще немає.</p>
                   )}
+
+                  <div className="border-t border-line pt-3">
+                    <CoachWorkouts clientId={c.id} />
+                  </div>
                 </div>
               )}
             </div>

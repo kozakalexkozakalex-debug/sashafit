@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import ClientWorkouts from "@/components/ClientWorkouts";
 
 type ClientRow = {
   id: string;
@@ -257,6 +258,8 @@ export default function ClientDashboard() {
           {checkins.length === 0 && <p className="text-sm text-muted">Чек-інів ще немає.</p>}
         </div>
       </div>
+
+      <ClientWorkouts clientId={client.id} />
     </div>
   );
 }
