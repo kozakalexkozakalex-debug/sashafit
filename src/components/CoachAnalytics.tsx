@@ -96,19 +96,19 @@ export default function CoachAnalytics() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-lg bg-paper p-3">
             <p className="text-xs text-muted">Клієнтів</p>
-            <p className="text-lg font-semibold">{clients.length}</p>
+            <p className="font-display text-lg font-medium">{clients.length}</p>
           </div>
           <div className="rounded-lg bg-paper p-3">
             <p className="text-xs text-muted">Підключено</p>
-            <p className="text-lg font-semibold">{connected}</p>
+            <p className="font-display text-lg font-medium">{connected}</p>
           </div>
           <div className="rounded-lg bg-paper p-3">
             <p className="text-xs text-muted">Виконання тренувань (30 дн.)</p>
-            <p className="text-lg font-semibold">{overallCompletion != null ? `${overallCompletion}%` : "—"}</p>
+            <p className="font-display text-lg font-medium">{overallCompletion != null ? `${overallCompletion}%` : "—"}</p>
           </div>
           <div className="rounded-lg bg-paper p-3">
             <p className="text-xs text-muted">Середньо ккал/день (30 дн.)</p>
-            <p className="text-lg font-semibold">{avg("calories") ?? "—"}</p>
+            <p className="font-display text-lg font-medium">{avg("calories") ?? "—"}</p>
           </div>
         </div>
         {dailyTotals.length > 0 && (
@@ -130,7 +130,7 @@ export default function CoachAnalytics() {
               >
                 <div>
                   <span className="font-medium">{c.name}</span>
-                  {!c.profile_id && <span className="ml-2 text-xs text-accent">очікує</span>}
+                  {!c.profile_id && <span className="stamp ml-2 text-accent">очікує</span>}
                 </div>
                 <div className="flex gap-4 text-muted">
                   <span>{s.lastWeight != null ? `${s.lastWeight} кг` : "—"}</span>

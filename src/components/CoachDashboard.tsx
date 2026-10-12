@@ -27,10 +27,18 @@ type Checkin = {
   created_at: string;
 };
 
+type TabId = "clients" | "programs" | "rations" | "analytics" | "payments";
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: "clients", label: "Клієнти" },
+  { id: "programs", label: "Програми" },
+  { id: "rations", label: "Харчування" },
+  { id: "analytics", label: "Аналітика" },
+  { id: "payments", label: "Оплата" },
+];
+
 export default function CoachDashboard() {
-  const [tab, setTab] = useState<"clients" | "programs" | "rations" | "analytics" | "payments">(
-    "clients"
-  );
+  const [tab, setTab] = useState<TabId>("clients");
   const [clients, setClients] = useState<Client[]>([]);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
@@ -117,53 +125,23 @@ export default function CoachDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-1 rounded-lg border border-line bg-paper p-1">
-        <button
-          type="button"
-          onClick={() => setTab("clients")}
-          className={`flex-1 rounded-md py-2 text-sm font-semibold ${
-            tab === "clients" ? "bg-accent text-paper" : "text-muted"
-          }`}
-        >
-          Клієнти
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("programs")}
-          className={`flex-1 rounded-md py-2 text-sm font-semibold ${
-            tab === "programs" ? "bg-accent text-paper" : "text-muted"
-          }`}
-        >
-          Програми
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("rations")}
-          className={`flex-1 rounded-md py-2 text-sm font-semibold ${
-            tab === "rations" ? "bg-accent text-paper" : "text-muted"
-          }`}
-        >
-          Харчування
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("analytics")}
-          className={`flex-1 rounded-md py-2 text-sm font-semibold ${
-            tab === "analytics" ? "bg-accent text-paper" : "text-muted"
-          }`}
-        >
-          Аналітика
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("payments")}
-          className={`flex-1 rounded-md py-2 text-sm font-semibold ${
-            tab === "payments" ? "bg-accent text-paper" : "text-muted"
-          }`}
-        >
-          Оплата
-        </button>
-      </div>
+      <nav className="flex gap-6 overflow-x-auto border-b border-line">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`relative whitespace-nowrap pb-3 font-display text-sm font-medium transition ${
+              tab === t.id ? "text-ink" : "text-muted hover:text-ink"
+            }`}
+          >
+            {t.label}
+            {tab === t.id && (
+              <span className="absolute inset-x-0 -bottom-px h-0.5 bg-accent" />
+            )}
+          </button>
+        ))}
+      </nav>
 
       {tab === "programs" ? (
         <ProgramsLibrary />
@@ -175,7 +153,7 @@ export default function CoachDashboard() {
         <CoachPayments />
       ) : (
         <>
-          <div className="rounded-xl border border-line bg-surface p-4">
+          <div className="border border-dashed border-line/80 p-4">
             <h2 className="mb-3 text-sm font-semibold">+ Новий клієнт</h2>
             <div className="flex flex-wrap gap-2">
               <input
@@ -213,7 +191,7 @@ export default function CoachDashboard() {
                     className="flex w-full items-center justify-between text-left"
                   >
                     <span className="font-medium">{c.name}</span>
-                    <span className={c.profile_id ? "text-xs text-green-400" : "text-xs text-accent"}>
+                    <span className={`stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
                       {c.profile_id ? "Підключено" : "Очікує"}
                     </span>
                   </button>

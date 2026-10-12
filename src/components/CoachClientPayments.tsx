@@ -79,11 +79,11 @@ export default function CoachClientPayments({
         <p className="mb-2">
           Підписка:{" "}
           {subscriptionUntil ? (
-            <span className={isActive ? "text-green-400" : "text-red-400"}>
+            <span className={`stamp ${isActive ? "text-green-400" : "text-red-400"}`}>
               {isActive ? "активна до" : "закінчилась"} {subscriptionUntil}
             </span>
           ) : (
-            <span className="text-muted">не оформлена</span>
+            <span className="stamp text-muted">не оформлена</span>
           )}
         </p>
 

@@ -2,19 +2,19 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8 text-center">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent">
-          <span className="text-sm font-bold text-paper">SF</span>
-        </div>
-        <span className="text-xl font-bold">SashaFit</span>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-10 p-8 text-center">
+      <div className="flex flex-col items-center gap-3">
+        <span className="font-display text-4xl font-medium tracking-tight sm:text-5xl">
+          Sasha<span className="text-accent">Fit</span>
+        </span>
+        <span className="h-px w-16 bg-accent" />
+        <p className="max-w-xs text-sm text-muted">
+          Особистий простір для тренувань, харчування та зв&apos;язку з тренером.
+        </p>
       </div>
-      <p className="max-w-sm text-sm text-muted">
-        Платформа для онлайн-тренера та його клієнтів.
-      </p>
       <Link
         href="/login"
-        className="rounded-lg bg-accent px-6 py-2.5 text-sm font-bold text-paper"
+        className="border border-accent px-8 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent hover:text-paper"
       >
         Увійти
       </Link>

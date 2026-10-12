@@ -69,19 +69,19 @@ export default function CoachPayments() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-lg bg-paper p-3">
             <p className="text-xs text-muted">Дохід цього місяця</p>
-            <p className="text-lg font-semibold">{Math.round(monthRevenue)} грн</p>
+            <p className="font-display text-lg font-medium">{Math.round(monthRevenue)} грн</p>
           </div>
           <div className="rounded-lg bg-paper p-3">
             <p className="text-xs text-muted">Активні підписки</p>
-            <p className="text-lg font-semibold text-green-400">{active.length}</p>
+            <p className="font-display text-lg font-medium text-green-400">{active.length}</p>
           </div>
           <div className="rounded-lg bg-paper p-3">
             <p className="text-xs text-muted">Прострочені</p>
-            <p className="text-lg font-semibold text-red-400">{expired.length}</p>
+            <p className="font-display text-lg font-medium text-red-400">{expired.length}</p>
           </div>
           <div className="rounded-lg bg-paper p-3">
             <p className="text-xs text-muted">Без підписки</p>
-            <p className="text-lg font-semibold">{noSub.length}</p>
+            <p className="font-display text-lg font-medium">{noSub.length}</p>
           </div>
         </div>
       </div>
@@ -100,11 +100,11 @@ export default function CoachPayments() {
                 >
                   <span className="font-medium">{c.name}</span>
                   {c.subscription_until ? (
-                    <span className={isActive ? "text-xs text-green-400" : "text-xs text-red-400"}>
+                    <span className={`stamp ${isActive ? "text-green-400" : "text-red-400"}`}>
                       {isActive ? "активна до" : "закінчилась"} {c.subscription_until}
                     </span>
                   ) : (
-                    <span className="text-xs text-muted">без підписки</span>
+                    <span className="stamp text-muted">без підписки</span>
                   )}
                 </button>
 

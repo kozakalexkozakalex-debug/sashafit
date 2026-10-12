@@ -5,12 +5,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        paper: "#0B0B0C",
-        surface: "#161617",
-        ink: "#F5F1EA",
-        muted: "#A39C92",
-        line: "#2C2C2E",
-        accent: "#FF7A1A",
+        paper: "#1E2024",
+        surface: "#2A2D32",
+        ink: "#F2F1ED",
+        muted: "#9A9A96",
+        line: "#3A3D42",
+        accent: "#E8622C",
+      },
+      fontFamily: {
+        sans: ["var(--font-body)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
       },
     },
   },
