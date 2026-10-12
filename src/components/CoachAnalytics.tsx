@@ -1,0 +1,147 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+
+type Client = { id: string; name: string; profile_id: string | null };
+type Checkin = { client_id: string; weight: number | null; created_at: string };
+type AssignedWorkout = { client_id: string; date: string; completed_at: string | null };
+type FoodEntry = {
+  client_id: string;
+  date: string;
+  calories: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+};
+
+function daysAgoKey(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+export default function CoachAnalytics() {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [checkins, setCheckins] = useState<Checkin[]>([]);
+  const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
+  const [food, setFood] = useState<FoodEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const since = daysAgoKey(30);
+
+      const [{ data: cl }, { data: ci }, { data: wo }, { data: fe }] = await Promise.all([
+        supabase.from("clients").select("id, name, profile_id"),
+        supabase.from("checkins").select("client_id, weight, created_at").order("created_at", { ascending: true }),
+        supabase.from("assigned_workouts").select("client_id, date, completed_at").gte("date", since),
+        supabase.from("food_entries").select("client_id, date, calories, protein, fat, carbs").gte("date", since),
+      ]);
+
+      setClients((cl as Client[]) || []);
+      setCheckins((ci as Checkin[]) || []);
+      setWorkouts((wo as AssignedWorkout[]) || []);
+      setFood((fe as FoodEntry[]) || []);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) {
+    return <p className="text-sm text-muted">Завантаження…</p>;
+  }
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const connected = clients.filter((c) => c.profile_id).length;
+
+  const pastWorkouts = workouts.filter((w) => w.date <= todayKey);
+  const doneCount = pastWorkouts.filter((w) => w.completed_at).length;
+  const overallCompletion =
+    pastWorkouts.length > 0 ? Math.round((doneCount / pastWorkouts.length) * 100) : null;
+
+  const foodByDate: Record<string, FoodEntry[]> = {};
+  for (const f of food) (foodByDate[`${f.client_id}_${f.date}`] = foodByDate[`${f.client_id}_${f.date}`] || []).push(f);
+  const dailyTotals = Object.values(foodByDate).map((rows) =>
+    rows.reduce(
+      (acc, e) => ({
+        calories: acc.calories + (e.calories || 0),
+        protein: acc.protein + (e.protein || 0),
+        fat: acc.fat + (e.fat || 0),
+        carbs: acc.carbs + (e.carbs || 0),
+      }),
+      { calories: 0, protein: 0, fat: 0, carbs: 0 }
+    )
+  );
+  const avg = (key: "calories" | "protein" | "fat" | "carbs") =>
+    dailyTotals.length > 0
+      ? Math.round(dailyTotals.reduce((s, d) => s + d[key], 0) / dailyTotals.length)
+      : null;
+
+  function clientStats(clientId: string) {
+    const cw = pastWorkouts.filter((w) => w.client_id === clientId);
+    const cDone = cw.filter((w) => w.completed_at).length;
+    const rate = cw.length > 0 ? Math.round((cDone / cw.length) * 100) : null;
+
+    const cCheckins = checkins.filter((c) => c.client_id === clientId && c.weight != null);
+    const lastWeight = cCheckins.length > 0 ? cCheckins[cCheckins.length - 1].weight : null;
+
+    return { rate, total: cw.length, lastWeight };
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="rounded-xl border border-line bg-surface p-4">
+        <h2 className="mb-3 text-sm font-semibold">Зведення по всіх клієнтах</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-lg bg-paper p-3">
+            <p className="text-xs text-muted">Клієнтів</p>
+            <p className="text-lg font-semibold">{clients.length}</p>
+          </div>
+          <div className="rounded-lg bg-paper p-3">
+            <p className="text-xs text-muted">Підключено</p>
+            <p className="text-lg font-semibold">{connected}</p>
+          </div>
+          <div className="rounded-lg bg-paper p-3">
+            <p className="text-xs text-muted">Виконання тренувань (30 дн.)</p>
+            <p className="text-lg font-semibold">{overallCompletion != null ? `${overallCompletion}%` : "—"}</p>
+          </div>
+          <div className="rounded-lg bg-paper p-3">
+            <p className="text-xs text-muted">Середньо ккал/день (30 дн.)</p>
+            <p className="text-lg font-semibold">{avg("calories") ?? "—"}</p>
+          </div>
+        </div>
+        {dailyTotals.length > 0 && (
+          <p className="mt-2 text-xs text-muted">
+            Білки {avg("protein")} / Жири {avg("fat")} / Вуглеводи {avg("carbs")} г в середньому за день
+          </p>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-line bg-surface p-4">
+        <h2 className="mb-3 text-sm font-semibold">По клієнтах</h2>
+        <div className="flex flex-col gap-2">
+          {clients.map((c) => {
+            const s = clientStats(c.id);
+            return (
+              <div
+                key={c.id}
+                className="flex items-center justify-between rounded-lg border border-line p-3 text-sm"
+              >
+                <div>
+                  <span className="font-medium">{c.name}</span>
+                  {!c.profile_id && <span className="ml-2 text-xs text-accent">очікує</span>}
+                </div>
+                <div className="flex gap-4 text-muted">
+                  <span>{s.lastWeight != null ? `${s.lastWeight} кг` : "—"}</span>
+                  <span>{s.rate != null ? `${s.rate}% (${s.total})` : "—"}</span>
+                </div>
+              </div>
+            );
+          })}
+          {clients.length === 0 && <p className="text-sm text-muted">Клієнтів ще немає.</p>}
+        </div>
+      </div>
+    </div>
+  );
+}

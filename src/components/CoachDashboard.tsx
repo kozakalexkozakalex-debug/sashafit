@@ -7,6 +7,7 @@ import CoachClientNutrition from "@/components/CoachClientNutrition";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
 import ProgramsLibrary from "@/components/ProgramsLibrary";
 import RationsLibrary from "@/components/RationsLibrary";
+import CoachAnalytics from "@/components/CoachAnalytics";
 
 type Client = {
   id: string;
@@ -25,7 +26,7 @@ type Checkin = {
 };
 
 export default function CoachDashboard() {
-  const [tab, setTab] = useState<"clients" | "programs" | "rations">("clients");
+  const [tab, setTab] = useState<"clients" | "programs" | "rations" | "analytics">("clients");
   const [clients, setClients] = useState<Client[]>([]);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
@@ -140,12 +141,23 @@ export default function CoachDashboard() {
         >
           Харчування
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("analytics")}
+          className={`flex-1 rounded-md py-2 text-sm font-semibold ${
+            tab === "analytics" ? "bg-accent text-paper" : "text-muted"
+          }`}
+        >
+          Аналітика
+        </button>
       </div>
 
       {tab === "programs" ? (
         <ProgramsLibrary />
       ) : tab === "rations" ? (
         <RationsLibrary />
+      ) : tab === "analytics" ? (
+        <CoachAnalytics />
       ) : (
         <>
           <div className="rounded-xl border border-line bg-surface p-4">
