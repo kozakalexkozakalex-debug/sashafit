@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import CoachWorkouts from "@/components/CoachWorkouts";
+import CoachClientCalendar from "@/components/CoachClientCalendar";
+import ProgramsLibrary from "@/components/ProgramsLibrary";
 
 type Client = {
   id: string;
@@ -21,6 +22,7 @@ type Checkin = {
 };
 
 export default function CoachDashboard() {
+  const [tab, setTab] = useState<"clients" | "programs">("clients");
   const [clients, setClients] = useState<Client[]>([]);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
@@ -107,99 +109,131 @@ export default function CoachDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">+ Новий клієнт</h2>
-        <div className="flex flex-wrap gap-2">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ім'я"
-            className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-          />
-          <input
-            value={goal}
-            onChange={(e) => setGoal(e.target.value)}
-            placeholder="Ціль (необов'язково)"
-            className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-          />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={addClient}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
-          >
-            Додати
-          </button>
-        </div>
-        {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+      <div className="flex gap-1 rounded-lg border border-line bg-paper p-1">
+        <button
+          type="button"
+          onClick={() => setTab("clients")}
+          className={`flex-1 rounded-md py-2 text-sm font-semibold ${
+            tab === "clients" ? "bg-accent text-paper" : "text-muted"
+          }`}
+        >
+          Клієнти
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("programs")}
+          className={`flex-1 rounded-md py-2 text-sm font-semibold ${
+            tab === "programs" ? "bg-accent text-paper" : "text-muted"
+          }`}
+        >
+          Програми
+        </button>
       </div>
 
-      <div className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Клієнти ({clients.length})</h2>
-        <div className="flex flex-col gap-2">
-          {clients.map((c) => (
-            <div key={c.id} className="rounded-lg border border-line p-3 text-sm">
+      {tab === "programs" ? (
+        <ProgramsLibrary />
+      ) : (
+        <>
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold">+ Новий клієнт</h2>
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ім'я"
+                className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+              />
+              <input
+                value={goal}
+                onChange={(e) => setGoal(e.target.value)}
+                placeholder="Ціль (необов'язково)"
+                className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+              />
               <button
                 type="button"
-                onClick={() => toggleClient(c.id)}
-                className="flex w-full items-center justify-between text-left"
+                disabled={busy}
+                onClick={addClient}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
               >
-                <span className="font-medium">{c.name}</span>
-                <span className={c.profile_id ? "text-xs text-green-400" : "text-xs text-accent"}>
-                  {c.profile_id ? "Підключено" : "Очікує"}
-                </span>
+                Додати
               </button>
-              {c.goal && <p className="mt-1 text-muted">{c.goal}</p>}
-              {!c.profile_id && (
-                <div className="mt-2 flex items-center gap-2">
-                  <p className="flex-1 break-all rounded bg-paper px-2 py-1 text-xs text-muted">
-                    {inviteUrl(c.invite_code)}
-                  </p>
+            </div>
+            {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold">Клієнти ({clients.length})</h2>
+            <div className="flex flex-col gap-2">
+              {clients.map((c) => (
+                <div key={c.id} className="rounded-lg border border-line p-3 text-sm">
                   <button
                     type="button"
-                    onClick={() => copy(inviteUrl(c.invite_code))}
-                    className="rounded bg-paper px-2 py-1 text-xs text-accent"
+                    onClick={() => toggleClient(c.id)}
+                    className="flex w-full items-center justify-between text-left"
                   >
-                    Копіювати
+                    <span className="font-medium">{c.name}</span>
+                    <span className={c.profile_id ? "text-xs text-green-400" : "text-xs text-accent"}>
+                      {c.profile_id ? "Підключено" : "Очікує"}
+                    </span>
                   </button>
-                </div>
-              )}
-
-              {openId === c.id && c.profile_id && (
-                <div className="mt-3 flex flex-col gap-2 border-t border-line pt-3">
-                  {(checkinsByClient[c.id] || []).map((ci) => (
-                    <div key={ci.id} className="rounded-lg bg-paper p-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{ci.weight} кг</span>
-                        <span className="text-xs text-muted">
-                          {new Date(ci.created_at).toLocaleDateString("uk-UA")}
-                        </span>
-                      </div>
-                      {ci.comment && <p className="mt-1 text-muted">{ci.comment}</p>}
-                      {ci.photo_path && photoUrls[ci.id] && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={photoUrls[ci.id]}
-                          alt="Фото чек-іну"
-                          className="mt-2 max-h-40 rounded-lg object-cover"
-                        />
-                      )}
+                  {c.goal && <p className="mt-1 text-muted">{c.goal}</p>}
+                  {!c.profile_id && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <p className="flex-1 break-all rounded bg-paper px-2 py-1 text-xs text-muted">
+                        {inviteUrl(c.invite_code)}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copy(inviteUrl(c.invite_code))}
+                        className="rounded bg-paper px-2 py-1 text-xs text-accent"
+                      >
+                        Копіювати
+                      </button>
                     </div>
-                  ))}
-                  {(checkinsByClient[c.id] || []).length === 0 && (
-                    <p className="text-muted">Чек-інів ще немає.</p>
                   )}
 
-                  <div className="border-t border-line pt-3">
-                    <CoachWorkouts clientId={c.id} />
-                  </div>
+                  {openId === c.id && c.profile_id && (
+                    <div className="mt-3 flex flex-col gap-3 border-t border-line pt-3">
+                      <div>
+                        <h3 className="mb-2 text-sm font-semibold">Чек-іни</h3>
+                        <div className="flex flex-col gap-2">
+                          {(checkinsByClient[c.id] || []).map((ci) => (
+                            <div key={ci.id} className="rounded-lg bg-paper p-2">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{ci.weight} кг</span>
+                                <span className="text-xs text-muted">
+                                  {new Date(ci.created_at).toLocaleDateString("uk-UA")}
+                                </span>
+                              </div>
+                              {ci.comment && <p className="mt-1 text-muted">{ci.comment}</p>}
+                              {ci.photo_path && photoUrls[ci.id] && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={photoUrls[ci.id]}
+                                  alt="Фото чек-іну"
+                                  className="mt-2 max-h-40 rounded-lg object-cover"
+                                />
+                              )}
+                            </div>
+                          ))}
+                          {(checkinsByClient[c.id] || []).length === 0 && (
+                            <p className="text-muted">Чек-інів ще немає.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-line pt-3">
+                        <CoachClientCalendar clientId={c.id} />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
+              {clients.length === 0 && <p className="text-sm text-muted">Клієнтів ще немає.</p>}
             </div>
-          ))}
-          {clients.length === 0 && <p className="text-sm text-muted">Клієнтів ще немає.</p>}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
