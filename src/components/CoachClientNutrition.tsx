@@ -15,9 +15,23 @@ type FoodEntry = {
   carbs: number;
 };
 
+type RationItem = {
+  id: string;
+  name: string;
+  grams: number | null;
+  calories: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+};
+type Ration = { id: string; title: string; ration_items: RationItem[] };
+
 export default function CoachClientNutrition({ clientId }: { clientId: string }) {
   const [entries, setEntries] = useState<FoodEntry[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [rations, setRations] = useState<Ration[]>([]);
+  const [selectedRationId, setSelectedRationId] = useState("");
+  const [assignBusy, setAssignBusy] = useState(false);
 
   const [calories, setCalories] = useState("");
   const [protein, setProtein] = useState("");
@@ -47,8 +61,17 @@ export default function CoachClientNutrition({ clientId }: { clientId: string })
     }
   }
 
+  async function loadRations() {
+    const { data } = await supabase
+      .from("rations")
+      .select("*, ration_items(*)")
+      .order("created_at", { ascending: false });
+    setRations((data as unknown as Ration[]) || []);
+  }
+
   useEffect(() => {
     load();
+    loadRations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
@@ -71,6 +94,28 @@ export default function CoachClientNutrition({ clientId }: { clientId: string })
     });
     setBusy(false);
     setSaved(true);
+  }
+
+  async function assignRation() {
+    if (!selected || !selectedRationId) return;
+    const ration = rations.find((r) => r.id === selectedRationId);
+    if (!ration) return;
+    setAssignBusy(true);
+    await supabase.from("food_entries").insert(
+      ration.ration_items.map((i) => ({
+        client_id: clientId,
+        date: selected,
+        name: i.name,
+        grams: i.grams,
+        calories: i.calories,
+        protein: i.protein,
+        fat: i.fat,
+        carbs: i.carbs,
+      }))
+    );
+    setAssignBusy(false);
+    setSelectedRationId("");
+    load();
   }
 
   return (
@@ -132,6 +177,35 @@ export default function CoachClientNutrition({ clientId }: { clientId: string })
               </div>
             ))}
             {dayEntries.length === 0 && <p className="text-muted">Записів немає.</p>}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+            {rations.length === 0 ? (
+              <p className="text-muted">Спочатку створи раціон у вкладці «Харчування».</p>
+            ) : (
+              <>
+                <select
+                  value={selectedRationId}
+                  onChange={(e) => setSelectedRationId(e.target.value)}
+                  className="rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
+                >
+                  <option value="">Оберіть раціон</option>
+                  {rations.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.title}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={!selectedRationId || assignBusy}
+                  onClick={assignRation}
+                  className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
+                >
+                  {assignBusy ? "Призначаю…" : "Призначити на цю дату"}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

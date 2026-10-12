@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import CoachClientCalendar from "@/components/CoachClientCalendar";
 import CoachClientNutrition from "@/components/CoachClientNutrition";
 import ProgramsLibrary from "@/components/ProgramsLibrary";
+import RationsLibrary from "@/components/RationsLibrary";
 
 type Client = {
   id: string;
@@ -23,7 +24,7 @@ type Checkin = {
 };
 
 export default function CoachDashboard() {
-  const [tab, setTab] = useState<"clients" | "programs">("clients");
+  const [tab, setTab] = useState<"clients" | "programs" | "rations">("clients");
   const [clients, setClients] = useState<Client[]>([]);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
@@ -129,10 +130,21 @@ export default function CoachDashboard() {
         >
           Програми
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("rations")}
+          className={`flex-1 rounded-md py-2 text-sm font-semibold ${
+            tab === "rations" ? "bg-accent text-paper" : "text-muted"
+          }`}
+        >
+          Харчування
+        </button>
       </div>
 
       {tab === "programs" ? (
         <ProgramsLibrary />
+      ) : tab === "rations" ? (
+        <RationsLibrary />
       ) : (
         <>
           <div className="rounded-xl border border-line bg-surface p-4">
