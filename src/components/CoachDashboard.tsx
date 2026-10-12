@@ -6,7 +6,7 @@ import CoachClientCalendar from "@/components/CoachClientCalendar";
 import CoachClientNutrition from "@/components/CoachClientNutrition";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
 import ProgramsSection from "@/components/ProgramsSection";
-import RationsLibrary from "@/components/RationsLibrary";
+import NutritionSection from "@/components/NutritionSection";
 import CoachAnalytics from "@/components/CoachAnalytics";
 import CoachPayments from "@/components/CoachPayments";
 import CoachCheckins from "@/components/CoachCheckins";
@@ -169,7 +169,7 @@ export default function CoachDashboard() {
       ) : tab === "programs" ? (
         <ProgramsSection />
       ) : tab === "rations" ? (
-        <RationsLibrary />
+        <NutritionSection />
       ) : tab === "analytics" ? (
         <CoachAnalytics />
       ) : tab === "payments" ? (

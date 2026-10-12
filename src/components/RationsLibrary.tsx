@@ -22,6 +22,15 @@ type Ration = {
   ration_items: RationItem[];
 };
 
+type BaseProduct = {
+  id: string;
+  name: string;
+  calories_per_100: number;
+  protein_per_100: number;
+  fat_per_100: number;
+  carbs_per_100: number;
+};
+
 export default function RationsLibrary() {
   const [rations, setRations] = useState<Ration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +49,7 @@ export default function RationsLibrary() {
   const [fat, setFat] = useState<Record<string, string>>({});
   const [carbs, setCarbs] = useState<Record<string, string>>({});
   const [per100ByRation, setPer100ByRation] = useState<Record<string, FoodProduct | null>>({});
+  const [baseProducts, setBaseProducts] = useState<BaseProduct[]>([]);
 
   async function load() {
     setLoading(true);
@@ -51,8 +61,17 @@ export default function RationsLibrary() {
     setLoading(false);
   }
 
+  async function loadBaseProducts() {
+    const { data } = await supabase
+      .from("products")
+      .select("id, name, calories_per_100, protein_per_100, fat_per_100, carbs_per_100")
+      .order("name");
+    setBaseProducts((data as BaseProduct[]) || []);
+  }
+
   useEffect(() => {
     load();
+    loadBaseProducts();
   }, []);
 
   async function addRation() {
@@ -203,6 +222,32 @@ export default function RationsLibrary() {
                       {items.length === 0 && <li>Продуктів ще немає.</li>}
                     </ul>
 
+                    {baseProducts.length > 0 && (
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const p = baseProducts.find((bp) => bp.id === e.target.value);
+                          if (p) {
+                            pickProduct(r.id, {
+                              name: p.name,
+                              caloriesPer100: p.calories_per_100,
+                              proteinPer100: p.protein_per_100,
+                              fatPer100: p.fat_per_100,
+                              carbsPer100: p.carbs_per_100,
+                            });
+                          }
+                        }}
+                        className="rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
+                      >
+                        <option value="">Вибрати з бази продуктів</option>
+                        {baseProducts.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
                     <div className="relative flex gap-2">
                       <input
                         value={query[r.id] || ""}
@@ -210,7 +255,7 @@ export default function RationsLibrary() {
                           setQuery((prev) => ({ ...prev, [r.id]: e.target.value }));
                           setPer100ByRation((prev) => ({ ...prev, [r.id]: null }));
                         }}
-                        placeholder="Назва продукту"
+                        placeholder="Або пошук у відкритій базі (Open Food Facts)"
                         className="flex-1 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
                       />
                       <button

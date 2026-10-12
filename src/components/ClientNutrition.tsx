@@ -23,6 +23,15 @@ type Target = {
   carbs: number | null;
 } | null;
 
+type BaseProduct = {
+  id: string;
+  name: string;
+  calories_per_100: number;
+  protein_per_100: number;
+  fat_per_100: number;
+  carbs_per_100: number;
+};
+
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -43,6 +52,7 @@ export default function ClientNutrition({ clientId }: { clientId: string }) {
   const [carbs, setCarbs] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [baseProducts, setBaseProducts] = useState<BaseProduct[]>([]);
 
   async function load() {
     const { data } = await supabase
@@ -60,8 +70,17 @@ export default function ClientNutrition({ clientId }: { clientId: string }) {
     setTarget((t as Target) || null);
   }
 
+  async function loadBaseProducts() {
+    const { data } = await supabase
+      .from("products")
+      .select("id, name, calories_per_100, protein_per_100, fat_per_100, carbs_per_100")
+      .order("name");
+    setBaseProducts((data as BaseProduct[]) || []);
+  }
+
   useEffect(() => {
     load();
+    loadBaseProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
@@ -195,6 +214,32 @@ export default function ClientNutrition({ clientId }: { clientId: string }) {
         </div>
 
         <div className="mt-3 border-t border-line pt-3">
+          {baseProducts.length > 0 && (
+            <select
+              value=""
+              onChange={(e) => {
+                const p = baseProducts.find((bp) => bp.id === e.target.value);
+                if (p) {
+                  pickProduct({
+                    name: p.name,
+                    caloriesPer100: p.calories_per_100,
+                    proteinPer100: p.protein_per_100,
+                    fatPer100: p.fat_per_100,
+                    carbsPer100: p.carbs_per_100,
+                  });
+                }
+              }}
+              className="mb-2 w-full rounded-lg border border-line bg-surface px-2 py-1.5 text-sm outline-none"
+            >
+              <option value="">Вибрати з бази продуктів</option>
+              {baseProducts.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           <div className="relative flex gap-2">
             <input
               value={query}
@@ -202,7 +247,7 @@ export default function ClientNutrition({ clientId }: { clientId: string }) {
                 setQuery(e.target.value);
                 setPer100(null);
               }}
-              placeholder="Назва продукту"
+              placeholder="Або пошук у відкритій базі (Open Food Facts)"
               className="flex-1 rounded-lg border border-line bg-surface px-2 py-1.5 text-sm outline-none"
             />
             <button
