@@ -144,7 +144,7 @@ export default function RationsLibrary() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-xl border border-line bg-surface p-4">
+      <div className="border border-dashed border-line/80 p-4">
         <h2 className="mb-3 text-sm font-semibold">+ Новий раціон</h2>
         <div className="flex flex-wrap gap-2">
           <input

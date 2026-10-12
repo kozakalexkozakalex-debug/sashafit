@@ -110,7 +110,7 @@ export default function ProgramsLibrary() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-xl border border-line bg-surface p-4">
+      <div className="border border-dashed border-line/80 p-4">
         <h2 className="mb-3 text-sm font-semibold">+ Нова програма</h2>
         <div className="flex flex-wrap gap-2">
           <input
@@ -146,7 +146,7 @@ export default function ProgramsLibrary() {
                   className="flex w-full items-center justify-between text-left"
                 >
                   <span className="font-medium">{p.title}</span>
-                  <span className="text-xs text-muted">{days.length} дн.</span>
+                  <span className="stamp text-muted">{days.length} дн.</span>
                 </button>
 
                 {isOpen && (
@@ -156,17 +156,27 @@ export default function ProgramsLibrary() {
                         (a, b) => a.position - b.position
                       );
                       return (
-                        <div key={d.id} className="rounded-lg bg-paper p-2">
-                          <p className="font-medium">{d.title}</p>
-                          <ul className="mt-1 flex flex-col gap-0.5 text-muted">
-                            {exercises.map((e) => (
-                              <li key={e.id}>
-                                {e.name}
-                                {e.sets ? ` — ${e.sets}×${e.reps || "?"}` : e.reps ? ` — ${e.reps}` : ""}
-                              </li>
+                        <div key={d.id} className="border-l-2 border-line bg-paper p-3">
+                          <p className="font-display text-sm font-medium">{d.title}</p>
+                          <div className="mt-2 flex flex-col">
+                            {exercises.map((e, i) => (
+                              <div
+                                key={e.id}
+                                className="flex items-center gap-3 border-b border-line/60 py-1.5 last:border-0"
+                              >
+                                <span className="font-display text-xs text-accent">
+                                  {String(i + 1).padStart(2, "0")}
+                                </span>
+                                <span className="flex-1">{e.name}</span>
+                                <span className="text-xs text-muted">
+                                  {e.sets ? `${e.sets}×${e.reps || "?"}` : e.reps || ""}
+                                </span>
+                              </div>
                             ))}
-                            {exercises.length === 0 && <li>Вправ ще немає.</li>}
-                          </ul>
+                            {exercises.length === 0 && (
+                              <p className="text-muted">Вправ ще немає.</p>
+                            )}
+                          </div>
                           <div className="mt-2 flex gap-2">
                             <input
                               value={exRows[d.id]?.name || ""}
