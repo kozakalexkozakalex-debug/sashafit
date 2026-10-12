@@ -7,6 +7,9 @@ type Checkin = {
   id: string;
   client_id: string;
   weight: number | null;
+  waist: number | null;
+  hips: number | null;
+  chest: number | null;
   photo_path: string | null;
   comment: string | null;
   created_at: string;
@@ -86,6 +89,17 @@ export default function CoachCheckins() {
             <p className="mt-1 font-display text-base font-medium">
               {c.weight != null ? `${c.weight} кг` : "—"}
             </p>
+            {(c.waist != null || c.hips != null || c.chest != null) && (
+              <p className="mt-1 text-xs text-muted">
+                {[
+                  c.waist != null ? `Талія ${c.waist} см` : null,
+                  c.hips != null ? `Стегна ${c.hips} см` : null,
+                  c.chest != null ? `Груди ${c.chest} см` : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </p>
+            )}
             {c.comment && <p className="mt-1 text-muted">{c.comment}</p>}
             {c.photo_path && photoUrls[c.id] && (
               // eslint-disable-next-line @next/next/no-img-element

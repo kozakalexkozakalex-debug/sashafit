@@ -18,6 +18,9 @@ type ClientRow = {
 type Checkin = {
   id: string;
   weight: number | null;
+  waist: number | null;
+  hips: number | null;
+  chest: number | null;
   photo_path: string | null;
   comment: string | null;
   created_at: string;
@@ -35,6 +38,9 @@ export default function ClientDashboard() {
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [ciWeight, setCiWeight] = useState("");
+  const [ciWaist, setCiWaist] = useState("");
+  const [ciHips, setCiHips] = useState("");
+  const [ciChest, setCiChest] = useState("");
   const [ciComment, setCiComment] = useState("");
   const [ciFile, setCiFile] = useState<File | null>(null);
   const [ciBusy, setCiBusy] = useState(false);
@@ -125,6 +131,9 @@ export default function ClientDashboard() {
     const { error } = await supabase.from("checkins").insert({
       client_id: c.id,
       weight: Number(ciWeight),
+      waist: ciWaist.trim() ? Number(ciWaist) : null,
+      hips: ciHips.trim() ? Number(ciHips) : null,
+      chest: ciChest.trim() ? Number(ciChest) : null,
       photo_path: photoPath,
       comment: ciComment.trim() || null,
     });
@@ -134,6 +143,9 @@ export default function ClientDashboard() {
       return;
     }
     setCiWeight("");
+    setCiWaist("");
+    setCiHips("");
+    setCiChest("");
     setCiComment("");
     setCiFile(null);
     loadCheckins(c.id);
@@ -210,6 +222,29 @@ export default function ClientDashboard() {
             placeholder="Вага, кг"
             className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
           />
+          <div className="flex gap-2">
+            <input
+              value={ciWaist}
+              onChange={(e) => setCiWaist(e.target.value)}
+              inputMode="decimal"
+              placeholder="Талія, см"
+              className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+            />
+            <input
+              value={ciHips}
+              onChange={(e) => setCiHips(e.target.value)}
+              inputMode="decimal"
+              placeholder="Стегна, см"
+              className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+            />
+            <input
+              value={ciChest}
+              onChange={(e) => setCiChest(e.target.value)}
+              inputMode="decimal"
+              placeholder="Груди, см"
+              className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+            />
+          </div>
           <input
             type="file"
             accept="image/*"
@@ -246,6 +281,17 @@ export default function ClientDashboard() {
                   {new Date(c.created_at).toLocaleDateString("uk-UA")}
                 </span>
               </div>
+              {(c.waist != null || c.hips != null || c.chest != null) && (
+                <p className="mt-1 text-xs text-muted">
+                  {[
+                    c.waist != null ? `Талія ${c.waist} см` : null,
+                    c.hips != null ? `Стегна ${c.hips} см` : null,
+                    c.chest != null ? `Груди ${c.chest} см` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+              )}
               {c.comment && <p className="mt-1 text-muted">{c.comment}</p>}
               {c.photo_path && photoUrls[c.id] && (
                 // eslint-disable-next-line @next/next/no-img-element

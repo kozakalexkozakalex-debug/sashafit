@@ -23,6 +23,9 @@ type Client = {
 type Checkin = {
   id: string;
   weight: number | null;
+  waist: number | null;
+  hips: number | null;
+  chest: number | null;
   photo_path: string | null;
   comment: string | null;
   created_at: string;
@@ -228,6 +231,17 @@ export default function CoachDashboard() {
                                   {new Date(ci.created_at).toLocaleDateString("uk-UA")}
                                 </span>
                               </div>
+                              {(ci.waist != null || ci.hips != null || ci.chest != null) && (
+                                <p className="mt-1 text-xs text-muted">
+                                  {[
+                                    ci.waist != null ? `Талія ${ci.waist} см` : null,
+                                    ci.hips != null ? `Стегна ${ci.hips} см` : null,
+                                    ci.chest != null ? `Груди ${ci.chest} см` : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(", ")}
+                                </p>
+                              )}
                               {ci.comment && <p className="mt-1 text-muted">{ci.comment}</p>}
                               {ci.photo_path && photoUrls[ci.id] && (
                                 // eslint-disable-next-line @next/next/no-img-element
