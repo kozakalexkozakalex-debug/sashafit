@@ -206,7 +206,7 @@ export default function CoachDashboard() {
                     </div>
                   )}
 
-                  {openId === c.id && c.profile_id && (
+                  {openId === c.id && (
                     <div className="mt-3 flex flex-col gap-3 border-t border-line pt-3">
                       <div>
                         <h3 className="mb-2 text-sm font-semibold">Чек-іни</h3>
