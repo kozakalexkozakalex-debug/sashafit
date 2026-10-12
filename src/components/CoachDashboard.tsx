@@ -10,6 +10,7 @@ import RationsLibrary from "@/components/RationsLibrary";
 import CoachAnalytics from "@/components/CoachAnalytics";
 import CoachPayments from "@/components/CoachPayments";
 import CoachCheckins from "@/components/CoachCheckins";
+import CoachHome from "@/components/CoachHome";
 
 type Client = {
   id: string;
@@ -31,9 +32,10 @@ type Checkin = {
   created_at: string;
 };
 
-type TabId = "clients" | "checkins" | "programs" | "rations" | "analytics" | "payments";
+type TabId = "home" | "clients" | "checkins" | "programs" | "rations" | "analytics" | "payments";
 
 const TABS: { id: TabId; label: string }[] = [
+  { id: "home", label: "Головна" },
   { id: "clients", label: "Клієнти" },
   { id: "checkins", label: "Чек-іни" },
   { id: "programs", label: "Програми" },
@@ -43,7 +45,7 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 export default function CoachDashboard() {
-  const [tab, setTab] = useState<TabId>("clients");
+  const [tab, setTab] = useState<TabId>("home");
   const [clients, setClients] = useState<Client[]>([]);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
@@ -148,7 +150,9 @@ export default function CoachDashboard() {
         ))}
       </nav>
 
-      {tab === "checkins" ? (
+      {tab === "home" ? (
+        <CoachHome />
+      ) : tab === "checkins" ? (
         <CoachCheckins />
       ) : tab === "programs" ? (
         <ProgramsSection />
