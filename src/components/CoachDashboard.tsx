@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import CoachClientCalendar from "@/components/CoachClientCalendar";
+import CoachClientNutrition from "@/components/CoachClientNutrition";
 import ProgramsLibrary from "@/components/ProgramsLibrary";
 
 type Client = {
@@ -224,6 +225,10 @@ export default function CoachDashboard() {
 
                       <div className="border-t border-line pt-3">
                         <CoachClientCalendar clientId={c.id} />
+                      </div>
+
+                      <div className="border-t border-line pt-3">
+                        <CoachClientNutrition clientId={c.id} />
                       </div>
                     </div>
                   )}
