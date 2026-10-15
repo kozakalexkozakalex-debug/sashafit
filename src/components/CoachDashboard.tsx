@@ -20,6 +20,7 @@ type Client = {
   invite_code: string;
   profile_id: string | null;
   subscription_until: string | null;
+  created_at: string;
   height: number | null;
   start_weight: number | null;
   target_weight: number | null;
