@@ -256,90 +256,135 @@ export default function CoachDashboard() {
                   {openId === c.id && (
                     <div className="mt-3 flex flex-col gap-3 border-t border-line pt-3">
                       {c.start_weight != null && (
-                        <div>
-                          <h3 className="mb-2 text-sm font-semibold">Анкета</h3>
-                          <div className="flex flex-col gap-1 rounded-lg bg-paper p-2 text-xs text-muted">
-                            <p>
-                              {[
-                                `Зріст ${c.height ?? "—"} см`,
-                                `Вага ${c.start_weight ?? "—"} кг${
-                                  c.target_weight != null ? ` → ${c.target_weight} кг` : ""
-                                }`,
-                              ].join(", ")}
-                            </p>
-                            {c.intake_goals && <p>Цілі: {c.intake_goals}</p>}
-                            {(c.experience_level || c.training_location || c.training_days_per_week != null) && (
-                              <p>
-                                {[
-                                  c.experience_level,
-                                  c.training_location,
-                                  c.training_days_per_week != null
-                                    ? `${c.training_days_per_week} дн./тиждень`
-                                    : null,
-                                ]
-                                  .filter(Boolean)
-                                  .join(", ")}
+                        <section className="rounded-lg border border-line bg-paper p-3">
+                          <h3 className="mb-2.5 font-display text-xs font-semibold">Анкета</h3>
+                          <div className="grid grid-cols-1 gap-x-5 gap-y-2.5 sm:grid-cols-3">
+                            <div>
+                              <p className="text-[11px] text-muted">Зріст / Вага</p>
+                              <p className="mt-0.5 text-sm">
+                                {c.height ?? "—"} см, {c.start_weight ?? "—"} кг
+                                {c.target_weight != null ? ` → ${c.target_weight} кг` : ""}
                               </p>
-                            )}
-                            {c.equipment && <p>Інвентар: {c.equipment}</p>}
-                            {c.health_restrictions && <p>Обмеження здоров&apos;я: {c.health_restrictions}</p>}
-                            {c.food_restrictions && <p>Харчові обмеження: {c.food_restrictions}</p>}
-                            {c.lifestyle && <p>Спосіб життя: {c.lifestyle}</p>}
-                            {c.intake_notes && <p>{c.intake_notes}</p>}
-                          </div>
-                        </div>
-                      )}
-
-                      <div>
-                        <h3 className="mb-2 text-sm font-semibold">Чек-іни</h3>
-                        <div className="flex flex-col gap-2">
-                          {(checkinsByClient[c.id] || []).map((ci) => (
-                            <div key={ci.id} className="rounded-lg bg-paper p-2">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium">{ci.weight} кг</span>
-                                <span className="text-xs text-muted">
-                                  {new Date(ci.created_at).toLocaleDateString("uk-UA")}
-                                </span>
-                              </div>
-                              {(ci.waist != null || ci.hips != null || ci.chest != null) && (
-                                <p className="mt-1 text-xs text-muted">
+                            </div>
+                            {(c.experience_level || c.training_days_per_week != null) && (
+                              <div>
+                                <p className="text-[11px] text-muted">Досвід</p>
+                                <p className="mt-0.5 text-sm">
                                   {[
-                                    ci.waist != null ? `Талія ${ci.waist} см` : null,
-                                    ci.hips != null ? `Стегна ${ci.hips} см` : null,
-                                    ci.chest != null ? `Груди ${ci.chest} см` : null,
+                                    c.experience_level,
+                                    c.training_days_per_week != null
+                                      ? `${c.training_days_per_week} дн./тиждень`
+                                      : null,
                                   ]
                                     .filter(Boolean)
                                     .join(", ")}
                                 </p>
+                              </div>
+                            )}
+                            {c.training_location && (
+                              <div>
+                                <p className="text-[11px] text-muted">Місце тренувань</p>
+                                <p className="mt-0.5 text-sm">{c.training_location}</p>
+                              </div>
+                            )}
+                            {c.intake_goals && (
+                              <div>
+                                <p className="text-[11px] text-muted">Цілі</p>
+                                <p className="mt-0.5 text-sm">{c.intake_goals}</p>
+                              </div>
+                            )}
+                            {c.equipment && (
+                              <div>
+                                <p className="text-[11px] text-muted">Інвентар</p>
+                                <p className="mt-0.5 text-sm">{c.equipment}</p>
+                              </div>
+                            )}
+                            {c.lifestyle && (
+                              <div>
+                                <p className="text-[11px] text-muted">Спосіб життя</p>
+                                <p className="mt-0.5 text-sm">{c.lifestyle}</p>
+                              </div>
+                            )}
+                            {c.health_restrictions && (
+                              <div>
+                                <p className="text-[11px] text-muted">Обмеження здоров&apos;я</p>
+                                <p className="mt-0.5 text-sm">{c.health_restrictions}</p>
+                              </div>
+                            )}
+                            {c.food_restrictions && (
+                              <div>
+                                <p className="text-[11px] text-muted">Харчові обмеження</p>
+                                <p className="mt-0.5 text-sm">{c.food_restrictions}</p>
+                              </div>
+                            )}
+                            {c.intake_notes && (
+                              <div>
+                                <p className="text-[11px] text-muted">Нотатка тренера</p>
+                                <p className="mt-0.5 text-sm">{c.intake_notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        </section>
+                      )}
+
+                      <section className="rounded-lg border border-line bg-paper p-3">
+                        <h3 className="mb-2.5 font-display text-xs font-semibold">Чек-іни</h3>
+                        <div className="flex flex-col gap-2">
+                          {(checkinsByClient[c.id] || []).map((ci) => (
+                            <div key={ci.id} className="flex items-start gap-3 rounded-md bg-surface p-2.5">
+                              {ci.photo_path ? (
+                                photoUrls[ci.id] ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={photoUrls[ci.id]}
+                                    alt="Фото чек-іну"
+                                    className="h-12 w-12 flex-shrink-0 rounded-md object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-12 w-12 flex-shrink-0 rounded-md bg-line" />
+                                )
+                              ) : (
+                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-line text-[10px] text-muted">
+                                  фото
+                                </div>
                               )}
-                              {ci.comment && <p className="mt-1 text-muted">{ci.comment}</p>}
-                              {ci.photo_path && photoUrls[ci.id] && (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={photoUrls[ci.id]}
-                                  alt="Фото чек-іну"
-                                  className="mt-2 max-h-40 rounded-lg object-cover"
-                                />
-                              )}
+                              <div className="min-w-0 flex-grow">
+                                <div className="flex items-baseline justify-between gap-2 text-sm">
+                                  <span className="font-medium">{ci.weight} кг</span>
+                                  <span className="whitespace-nowrap text-xs text-muted">
+                                    {new Date(ci.created_at).toLocaleDateString("uk-UA")}
+                                  </span>
+                                </div>
+                                {(ci.waist != null || ci.hips != null || ci.chest != null) && (
+                                  <p className="mt-0.5 text-xs text-muted">
+                                    {[
+                                      ci.waist != null ? `Талія ${ci.waist} см` : null,
+                                      ci.hips != null ? `Стегна ${ci.hips} см` : null,
+                                      ci.chest != null ? `Груди ${ci.chest} см` : null,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(", ")}
+                                  </p>
+                                )}
+                                {ci.comment && <p className="mt-1 text-sm">{ci.comment}</p>}
+                              </div>
                             </div>
                           ))}
                           {(checkinsByClient[c.id] || []).length === 0 && (
-                            <p className="text-muted">Чек-інів ще немає.</p>
+                            <p className="text-sm text-muted">Чек-інів ще немає.</p>
                           )}
                         </div>
-                      </div>
+                      </section>
 
-                      <div className="border-t border-line pt-3">
+                      <section className="rounded-lg border border-line bg-paper p-3">
                         <CoachClientCalendar clientId={c.id} />
-                      </div>
+                      </section>
 
-                      <div className="border-t border-line pt-3">
+                      <section className="rounded-lg border border-line bg-paper p-3">
                         <CoachClientNutrition clientId={c.id} />
-                      </div>
+                      </section>
 
-                      <div className="border-t border-line pt-3">
-                        <AnalyticsPanel clientId={c.id} />
-                      </div>
+                      <AnalyticsPanel clientId={c.id} />
                     </div>
                   )}
                 </div>
