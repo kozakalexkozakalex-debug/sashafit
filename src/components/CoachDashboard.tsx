@@ -155,23 +155,33 @@ export default function CoachDashboard() {
     }
   }
 
+  function TabButton({ t }: { t: { id: TabId; label: string } }) {
+    const active = tab === t.id;
+    return (
+      <button
+        type="button"
+        onClick={() => setTab(t.id)}
+        className={`whitespace-nowrap rounded-full border px-4 py-1.5 font-display text-sm font-medium transition lg:w-full lg:rounded-md lg:border-0 lg:border-l-2 lg:px-3 lg:py-2 lg:text-left ${
+          active
+            ? "border-accent bg-accent text-paper lg:bg-accent/15 lg:text-ink"
+            : "border-line bg-surface text-muted hover:border-accent/50 hover:text-ink lg:border-transparent lg:bg-transparent lg:hover:bg-line/30"
+        }`}
+      >
+        {t.label}
+      </button>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-      <nav className="flex gap-2 overflow-x-auto pb-1 lg:w-44 lg:flex-none lg:flex-col lg:gap-1 lg:overflow-visible lg:pb-0">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`whitespace-nowrap rounded-full border px-4 py-1.5 font-display text-sm font-medium transition lg:w-full lg:rounded-lg lg:border-2 lg:px-3 lg:py-2 lg:text-left ${
-              tab === t.id
-                ? "border-accent bg-accent text-paper"
-                : "border-line bg-surface text-muted hover:border-accent/50 hover:text-ink"
-            }`}
-          >
-            {t.label}
-          </button>
+      <nav className="flex gap-2 overflow-x-auto pb-1 lg:sticky lg:top-6 lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:overflow-visible lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
+        <TabButton t={TABS[0]} />
+        <div className="hidden h-px bg-line lg:my-2 lg:block" />
+        {TABS.slice(1, 6).map((t) => (
+          <TabButton key={t.id} t={t} />
         ))}
+        <div className="hidden h-px bg-line lg:my-2 lg:block" />
+        <TabButton t={TABS[6]} />
       </nav>
 
       <div className="min-w-0 flex-1">
