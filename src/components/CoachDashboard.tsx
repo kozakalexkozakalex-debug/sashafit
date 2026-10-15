@@ -156,20 +156,19 @@ export default function CoachDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <nav className="flex gap-6 overflow-x-auto border-b border-line">
+      <nav className="flex gap-2 overflow-x-auto pb-1">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`relative whitespace-nowrap pb-3 font-display text-sm font-medium transition ${
-              tab === t.id ? "text-ink" : "text-muted hover:text-ink"
+            className={`whitespace-nowrap rounded-full border px-4 py-1.5 font-display text-sm font-medium transition ${
+              tab === t.id
+                ? "border-accent bg-accent text-paper"
+                : "border-line bg-surface text-muted hover:border-accent/50 hover:text-ink"
             }`}
           >
             {t.label}
-            {tab === t.id && (
-              <span className="absolute inset-x-0 -bottom-px h-0.5 bg-accent" />
-            )}
           </button>
         ))}
       </nav>
