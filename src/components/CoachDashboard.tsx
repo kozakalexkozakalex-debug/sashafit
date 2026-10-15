@@ -186,7 +186,7 @@ export default function CoachDashboard() {
 
       <div className="min-w-0 flex-1">
       {tab === "home" ? (
-        <CoachHome />
+        <CoachHome onOpenClients={() => setTab("clients")} />
       ) : tab === "checkins" ? (
         <CoachCheckins />
       ) : tab === "programs" ? (
