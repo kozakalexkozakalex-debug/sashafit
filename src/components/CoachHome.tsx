@@ -260,21 +260,21 @@ export default function CoachHome() {
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-lg border border-line bg-surface p-3">
+        <div className="rounded-lg border-l-2 border-accent bg-surface p-3">
           <p className="text-xs text-muted">Клієнтів</p>
-          <p className="font-display text-lg font-medium">{clients.length}</p>
+          <p className="font-display text-2xl font-semibold text-ink">{clients.length}</p>
         </div>
-        <div className="rounded-lg border border-line bg-surface p-3">
+        <div className="rounded-lg border-l-2 border-accent bg-surface p-3">
           <p className="text-xs text-muted">Підключено</p>
-          <p className="font-display text-lg font-medium">{connectedCount}</p>
+          <p className="font-display text-2xl font-semibold text-ink">{connectedCount}</p>
         </div>
-        <div className="rounded-lg border border-line bg-surface p-3">
+        <div className="rounded-lg border-l-2 border-accent bg-surface p-3">
           <p className="text-xs text-muted">Активні підписки</p>
-          <p className="font-display text-lg font-medium text-green-400">{activeCount}</p>
+          <p className="font-display text-2xl font-semibold text-green-400">{activeCount}</p>
         </div>
-        <div className="rounded-lg border border-line bg-surface p-3">
+        <div className="rounded-lg border-l-2 border-accent bg-surface p-3">
           <p className="text-xs text-muted">Тренувань сьогодні</p>
-          <p className="font-display text-lg font-medium">{todayCount}</p>
+          <p className="font-display text-2xl font-semibold text-ink">{todayCount}</p>
         </div>
       </div>
 

@@ -156,14 +156,14 @@ export default function CoachDashboard() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <nav className="flex gap-2 overflow-x-auto pb-1">
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+      <nav className="flex gap-2 overflow-x-auto pb-1 lg:w-44 lg:flex-none lg:flex-col lg:gap-1 lg:overflow-visible lg:pb-0">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`whitespace-nowrap rounded-full border px-4 py-1.5 font-display text-sm font-medium transition ${
+            className={`whitespace-nowrap rounded-full border px-4 py-1.5 font-display text-sm font-medium transition lg:w-full lg:rounded-lg lg:border-2 lg:px-3 lg:py-2 lg:text-left ${
               tab === t.id
                 ? "border-accent bg-accent text-paper"
                 : "border-line bg-surface text-muted hover:border-accent/50 hover:text-ink"
@@ -174,6 +174,7 @@ export default function CoachDashboard() {
         ))}
       </nav>
 
+      <div className="min-w-0 flex-1">
       {tab === "home" ? (
         <CoachHome />
       ) : tab === "checkins" ? (
@@ -394,6 +395,7 @@ export default function CoachDashboard() {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }
