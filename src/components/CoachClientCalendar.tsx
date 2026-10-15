@@ -4,7 +4,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Calendar, { DayStatus } from "@/components/Calendar";
 
-type AWExercise = { id: string; name: string; sets: number | null; reps: string | null };
+type AWExercise = {
+  id: string;
+  name: string;
+  sets: number | null;
+  reps: string | null;
+  actual_weight: number | null;
+  actual_reps: string | null;
+  done: boolean;
+};
 type AssignedWorkout = {
   id: string;
   title: string;
@@ -125,13 +133,29 @@ export default function CoachClientCalendar({ clientId }: { clientId: string }) 
                 {workoutForSelected.title} —{" "}
                 {workoutForSelected.completed_at ? "виконано" : "заплановано"}
               </p>
-              <ul className="mt-1 flex flex-col gap-0.5 text-muted">
+              <ul className="mt-1 flex flex-col gap-1 text-muted">
                 {[...workoutForSelected.assigned_workout_exercises]
                   .sort((a, b) => a.name.localeCompare(b.name))
                   .map((e) => (
                     <li key={e.id}>
-                      {e.name}
-                      {e.sets ? ` — ${e.sets}×${e.reps || "?"}` : e.reps ? ` — ${e.reps}` : ""}
+                      <div className="flex items-center justify-between">
+                        <span>
+                          {e.name}
+                          {e.sets ? ` — ${e.sets}×${e.reps || "?"}` : e.reps ? ` — ${e.reps}` : ""}
+                        </span>
+                        {e.done && <span className="text-green-400">✓</span>}
+                      </div>
+                      {(e.actual_weight != null || e.actual_reps) && (
+                        <p className="text-xs">
+                          Факт:{" "}
+                          {[
+                            e.actual_weight != null ? `${e.actual_weight} кг` : null,
+                            e.actual_reps ? `${e.actual_reps} повт.` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
+                      )}
                     </li>
                   ))}
               </ul>
