@@ -84,6 +84,15 @@ export default function ClientDashboard() {
   const [ciBusy, setCiBusy] = useState(false);
   const [ciErr, setCiErr] = useState("");
 
+  const [editingCheckinId, setEditingCheckinId] = useState<string | null>(null);
+  const [ecWeight, setEcWeight] = useState("");
+  const [ecWaist, setEcWaist] = useState("");
+  const [ecHips, setEcHips] = useState("");
+  const [ecChest, setEcChest] = useState("");
+  const [ecComment, setEcComment] = useState("");
+  const [ecBusy, setEcBusy] = useState(false);
+  const [ecErr, setEcErr] = useState("");
+
   async function load() {
     const { data } = await supabase.from("clients").select("*").maybeSingle();
     setClient((data as ClientRow) ?? "none");
@@ -196,6 +205,49 @@ export default function ClientDashboard() {
     setCiComment("");
     setCiFile(null);
     loadCheckins(c.id);
+  }
+
+  function startEditCheckin(c: Checkin) {
+    setEditingCheckinId(c.id);
+    setEcWeight(c.weight != null ? String(c.weight) : "");
+    setEcWaist(c.waist != null ? String(c.waist) : "");
+    setEcHips(c.hips != null ? String(c.hips) : "");
+    setEcChest(c.chest != null ? String(c.chest) : "");
+    setEcComment(c.comment || "");
+    setEcErr("");
+  }
+
+  async function saveEditCheckin() {
+    if (!editingCheckinId) return;
+    if (!ecWeight.trim()) {
+      setEcErr("Вкажи вагу");
+      return;
+    }
+    setEcErr("");
+    setEcBusy(true);
+    const { error } = await supabase
+      .from("checkins")
+      .update({
+        weight: Number(ecWeight),
+        waist: ecWaist.trim() ? Number(ecWaist) : null,
+        hips: ecHips.trim() ? Number(ecHips) : null,
+        chest: ecChest.trim() ? Number(ecChest) : null,
+        comment: ecComment.trim() || null,
+      })
+      .eq("id", editingCheckinId);
+    setEcBusy(false);
+    if (error) {
+      setEcErr(error.message);
+      return;
+    }
+    setEditingCheckinId(null);
+    loadCheckins((client as ClientRow).id);
+  }
+
+  async function deleteCheckin(id: string) {
+    await supabase.from("checkins").delete().eq("id", id);
+    if (editingCheckinId === id) setEditingCheckinId(null);
+    loadCheckins((client as ClientRow).id);
   }
 
   if (client === null) {
@@ -457,36 +509,103 @@ export default function ClientDashboard() {
       <div className="rounded-xl border border-line bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">Історія чек-інів ({checkins.length})</h2>
         <div className="flex flex-col gap-2">
-          {checkins.map((c) => (
-            <div key={c.id} className="rounded-lg border border-line p-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{c.weight} кг</span>
-                <span className="text-xs text-muted">
-                  {new Date(c.created_at).toLocaleDateString("uk-UA")}
-                </span>
-              </div>
-              {(c.waist != null || c.hips != null || c.chest != null) && (
-                <p className="mt-1 text-xs text-muted">
-                  {[
-                    c.waist != null ? `Талія ${c.waist} см` : null,
-                    c.hips != null ? `Стегна ${c.hips} см` : null,
-                    c.chest != null ? `Груди ${c.chest} см` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                </p>
-              )}
-              {c.comment && <p className="mt-1 text-muted">{c.comment}</p>}
-              {c.photo_path && photoUrls[c.id] && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={photoUrls[c.id]}
-                  alt="Фото чек-іну"
-                  className="mt-2 max-h-48 rounded-lg object-cover"
+          {checkins.map((c) =>
+            editingCheckinId === c.id ? (
+              <div key={c.id} className="rounded-lg border border-accent/50 bg-paper p-3 text-sm">
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    value={ecWeight}
+                    onChange={(e) => setEcWeight(e.target.value)}
+                    inputMode="decimal"
+                    placeholder="Вага, кг"
+                    className="w-24 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
+                  />
+                  <input
+                    value={ecWaist}
+                    onChange={(e) => setEcWaist(e.target.value)}
+                    inputMode="decimal"
+                    placeholder="Талія, см"
+                    className="w-24 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
+                  />
+                  <input
+                    value={ecHips}
+                    onChange={(e) => setEcHips(e.target.value)}
+                    inputMode="decimal"
+                    placeholder="Стегна, см"
+                    className="w-24 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
+                  />
+                  <input
+                    value={ecChest}
+                    onChange={(e) => setEcChest(e.target.value)}
+                    inputMode="decimal"
+                    placeholder="Груди, см"
+                    className="w-24 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
+                  />
+                </div>
+                <input
+                  value={ecComment}
+                  onChange={(e) => setEcComment(e.target.value)}
+                  placeholder="Коментар (необов'язково)"
+                  className="mt-2 w-full rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
                 />
-              )}
-            </div>
-          ))}
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={ecBusy}
+                    onClick={saveEditCheckin}
+                    className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
+                  >
+                    {ecBusy ? "Зберігаю…" : "Зберегти"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCheckinId(null)}
+                    className="text-xs text-muted"
+                  >
+                    Скасувати
+                  </button>
+                </div>
+                {ecErr && <p className="mt-1 text-xs text-red-400">{ecErr}</p>}
+              </div>
+            ) : (
+              <div key={c.id} className="rounded-lg border border-line p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{c.weight} кг</span>
+                  <span className="text-xs text-muted">
+                    {new Date(c.created_at).toLocaleDateString("uk-UA")}
+                  </span>
+                </div>
+                {(c.waist != null || c.hips != null || c.chest != null) && (
+                  <p className="mt-1 text-xs text-muted">
+                    {[
+                      c.waist != null ? `Талія ${c.waist} см` : null,
+                      c.hips != null ? `Стегна ${c.hips} см` : null,
+                      c.chest != null ? `Груди ${c.chest} см` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                )}
+                {c.comment && <p className="mt-1 text-muted">{c.comment}</p>}
+                {c.photo_path && photoUrls[c.id] && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photoUrls[c.id]}
+                    alt="Фото чек-іну"
+                    className="mt-2 max-h-48 rounded-lg object-cover"
+                  />
+                )}
+                <div className="mt-2 flex items-center gap-3">
+                  <button type="button" onClick={() => startEditCheckin(c)} className="text-xs text-accent">
+                    Редагувати
+                  </button>
+                  <button type="button" onClick={() => deleteCheckin(c.id)} className="text-xs text-muted">
+                    Видалити
+                  </button>
+                </div>
+              </div>
+            )
+          )}
           {checkins.length === 0 && <p className="text-sm text-muted">Чек-інів ще немає.</p>}
         </div>
       </div>

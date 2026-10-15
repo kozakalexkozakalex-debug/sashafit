@@ -12,6 +12,7 @@ type AWExercise = {
   actual_weight: number | null;
   actual_reps: string | null;
   done: boolean;
+  exercises: { photo_path: string | null; video_url: string | null } | null;
 };
 type AssignedWorkout = {
   id: string;
@@ -33,9 +34,13 @@ export default function ClientCalendar({ clientId }: { clientId: string }) {
   async function load() {
     const { data } = await supabase
       .from("assigned_workouts")
-      .select("*, assigned_workout_exercises(*)")
+      .select("*, assigned_workout_exercises(*, exercises(photo_path, video_url))")
       .eq("client_id", clientId);
     setWorkouts((data as unknown as AssignedWorkout[]) || []);
+  }
+
+  function exercisePhotoUrl(path: string) {
+    return supabase.storage.from("exercises").getPublicUrl(path).data.publicUrl;
   }
 
   useEffect(() => {
@@ -116,6 +121,24 @@ export default function ClientCalendar({ clientId }: { clientId: string }) {
                             {e.sets ? `план: ${e.sets}×${e.reps || "?"}` : e.reps ? `план: ${e.reps}` : ""}
                           </span>
                         </div>
+                        {e.exercises?.photo_path && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={exercisePhotoUrl(e.exercises.photo_path)}
+                            alt={`Фото вправи: ${e.name}`}
+                            className="mt-1.5 max-h-32 rounded-lg object-cover"
+                          />
+                        )}
+                        {e.exercises?.video_url && (
+                          <a
+                            href={e.exercises.video_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 inline-block text-xs text-accent underline"
+                          >
+                            Відео техніки
+                          </a>
+                        )}
                         <div className="mt-1.5 flex flex-wrap items-center gap-2">
                           <input
                             value={draft.weight}

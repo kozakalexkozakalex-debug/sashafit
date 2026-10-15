@@ -61,6 +61,7 @@ export default function CoachHome() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [feedSeenAt, setFeedSeenAt] = useState<string | null>(null);
 
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
@@ -109,7 +110,21 @@ export default function CoachHome() {
 
   useEffect(() => {
     load();
+    try {
+      setFeedSeenAt(localStorage.getItem("sashafit_feed_seen_at"));
+    } catch {
+      /* ігноруємо — немає доступу до localStorage */
+    }
   }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    try {
+      localStorage.setItem("sashafit_feed_seen_at", new Date().toISOString());
+    } catch {
+      /* ігноруємо — немає доступу до localStorage */
+    }
+  }, [loading]);
 
   async function addMeeting() {
     if (!mTitle.trim() || !mDateTime) {
@@ -450,12 +465,18 @@ export default function CoachHome() {
           <p className="text-sm text-muted">Подій ще немає.</p>
         ) : (
           <ul className="flex flex-col gap-2 text-sm">
-            {feed.map((f) => (
-              <li key={f.key} className="flex items-baseline justify-between gap-2">
-                <span>{f.text}</span>
-                <span className="whitespace-nowrap text-xs text-muted">{relTime(f.at)}</span>
-              </li>
-            ))}
+            {feed.map((f) => {
+              const isNew = feedSeenAt != null && new Date(f.at).getTime() > new Date(feedSeenAt).getTime();
+              return (
+                <li key={f.key} className="flex items-baseline justify-between gap-2">
+                  <span className="flex items-center gap-1.5">
+                    {isNew && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
+                    {f.text}
+                  </span>
+                  <span className="whitespace-nowrap text-xs text-muted">{relTime(f.at)}</span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
