@@ -18,7 +18,18 @@ type AssignedWorkout = {
   client_id: string;
   clients: { name: string } | null;
 };
-type Checkin = { client_id: string; created_at: string };
+type Checkin = { client_id: string; created_at: string; clients?: { name: string } | null };
+type Message = {
+  sender: "coach" | "client";
+  created_at: string;
+  clients: { name: string } | null;
+};
+type Payment = {
+  amount: number | null;
+  created_at: string;
+  clients: { name: string } | null;
+};
+type FeedItem = { key: string; text: string; at: string };
 type Meeting = {
   id: string;
   title: string;
@@ -47,6 +58,8 @@ export default function CoachHome() {
   const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [cursor, setCursor] = useState(() => {
@@ -65,16 +78,32 @@ export default function CoachHome() {
 
   async function load() {
     setLoading(true);
-    const [{ data: cl }, { data: wo }, { data: ci }, { data: mt }] = await Promise.all([
+    const [{ data: cl }, { data: wo }, { data: ci }, { data: mt }, { data: ms }, { data: pm }] = await Promise.all([
       supabase.from("clients").select("id, name, profile_id, subscription_until, created_at"),
       supabase.from("assigned_workouts").select("id, date, title, client_id, clients(name)"),
-      supabase.from("checkins").select("client_id, created_at").order("created_at", { ascending: false }),
+      supabase
+        .from("checkins")
+        .select("client_id, created_at, clients(name)")
+        .order("created_at", { ascending: false }),
       supabase.from("meetings").select("*, clients(name)").order("scheduled_at", { ascending: true }),
+      supabase
+        .from("messages")
+        .select("sender, created_at, clients(name)")
+        .eq("sender", "client")
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("payments")
+        .select("amount, created_at, clients(name)")
+        .order("created_at", { ascending: false })
+        .limit(10),
     ]);
     setClients((cl as Client[]) || []);
     setWorkouts((wo as unknown as AssignedWorkout[]) || []);
-    setCheckins((ci as Checkin[]) || []);
+    setCheckins((ci as unknown as Checkin[]) || []);
     setMeetings((mt as unknown as Meeting[]) || []);
+    setMessages((ms as unknown as Message[]) || []);
+    setPayments((pm as unknown as Payment[]) || []);
     setLoading(false);
   }
 
@@ -165,6 +194,37 @@ export default function CoachHome() {
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
 
   const dayWorkouts = selectedDay ? workoutsByDate[selectedDay] || [] : [];
+
+  function relTime(iso: string) {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return "щойно";
+    if (mins < 60) return `${mins} хв тому`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} год тому`;
+    const days = Math.floor(hours / 24);
+    return `${days} дн тому`;
+  }
+
+  const feed: FeedItem[] = [
+    ...checkins.map((c, i) => ({
+      key: `ci-${i}`,
+      text: `${c.clients?.name || "Клієнт"} надіслав(ла) чек-ін`,
+      at: c.created_at,
+    })),
+    ...messages.map((m, i) => ({
+      key: `msg-${i}`,
+      text: `${m.clients?.name || "Клієнт"} написав(ла) у чат`,
+      at: m.created_at,
+    })),
+    ...payments.map((p, i) => ({
+      key: `pay-${i}`,
+      text: `Оплата від ${p.clients?.name || "клієнта"}${p.amount ? `: ${p.amount}` : ""}`,
+      at: p.created_at,
+    })),
+  ]
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 10);
 
   const connectedCount = clients.filter((c) => c.profile_id).length;
   const activeCount = clients.filter((c) => c.subscription_until && c.subscription_until >= todayKey).length;
@@ -383,7 +443,24 @@ export default function CoachHome() {
       </div>
     </div>
 
-    <ChatPanel mode="coach" />
+    <div className="flex flex-col gap-4">
+      <div className="rounded-xl border border-line bg-surface p-4">
+        <h2 className="mb-3 text-sm font-semibold">Останні події</h2>
+        {feed.length === 0 ? (
+          <p className="text-sm text-muted">Подій ще немає.</p>
+        ) : (
+          <ul className="flex flex-col gap-2 text-sm">
+            {feed.map((f) => (
+              <li key={f.key} className="flex items-baseline justify-between gap-2">
+                <span>{f.text}</span>
+                <span className="whitespace-nowrap text-xs text-muted">{relTime(f.at)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <ChatPanel mode="coach" />
+    </div>
     </div>
   );
 }

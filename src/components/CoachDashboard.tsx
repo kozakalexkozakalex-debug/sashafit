@@ -11,6 +11,7 @@ import CoachAnalytics from "@/components/CoachAnalytics";
 import CoachPayments from "@/components/CoachPayments";
 import CoachCheckins from "@/components/CoachCheckins";
 import CoachHome from "@/components/CoachHome";
+import { clientRisk, RISK_LABEL } from "@/lib/clientRisk";
 
 type Client = {
   id: string;
@@ -67,6 +68,7 @@ export default function CoachDashboard() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [checkinsByClient, setCheckinsByClient] = useState<Record<string, Checkin[]>>({});
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [lastCheckinByClient, setLastCheckinByClient] = useState<Record<string, string>>({});
 
   async function load() {
     const { data } = await supabase
@@ -74,6 +76,16 @@ export default function CoachDashboard() {
       .select("*")
       .order("created_at", { ascending: false });
     setClients((data as Client[]) || []);
+
+    const { data: ci } = await supabase
+      .from("checkins")
+      .select("client_id, created_at")
+      .order("created_at", { ascending: false });
+    const last: Record<string, string> = {};
+    for (const row of (ci as { client_id: string; created_at: string }[]) || []) {
+      if (!last[row.client_id]) last[row.client_id] = row.created_at;
+    }
+    setLastCheckinByClient(last);
   }
 
   useEffect(() => {
@@ -214,8 +226,15 @@ export default function CoachDashboard() {
                     className="flex w-full items-center justify-between text-left"
                   >
                     <span className="font-medium">{c.name}</span>
-                    <span className={`stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
-                      {c.profile_id ? "Підключено" : "Очікує"}
+                    <span className="flex items-center gap-2">
+                      {c.profile_id && (
+                        <span className="text-xs">
+                          {RISK_LABEL[clientRisk(c, lastCheckinByClient[c.id])]}
+                        </span>
+                      )}
+                      <span className={`stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
+                        {c.profile_id ? "Підключено" : "Очікує"}
+                      </span>
                     </span>
                   </button>
                   {c.goal && <p className="mt-1 text-muted">{c.goal}</p>}
