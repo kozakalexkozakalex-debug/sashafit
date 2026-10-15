@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 type Checkin = { weight: number | null; created_at: string };
 type AssignedWorkout = { date: string; completed_at: string | null };
 type FoodEntry = { date: string; calories: number; protein: number; fat: number; carbs: number };
+type NutritionTarget = { calories: number | null; protein: number | null } | null;
 
 function daysAgoKey(n: number) {
   const d = new Date();
@@ -48,10 +49,57 @@ function WeightChart({ points }: { points: { date: string; weight: number }[] })
   );
 }
 
+function MetricChart({
+  points,
+  target,
+  unit,
+}: {
+  points: { date: string; value: number }[];
+  target?: number | null;
+  unit: string;
+}) {
+  if (points.length < 2) {
+    return <p className="text-sm text-muted">Потрібно щонайменше 2 дні з записами, щоб побудувати графік.</p>;
+  }
+  const values = points.map((p) => p.value);
+  const min = Math.min(...values, target ?? values[0]);
+  const max = Math.max(...values, target ?? values[0]);
+  const range = max - min || 1;
+  const w = 300;
+  const h = 100;
+  const pad = 10;
+
+  const toY = (v: number) => pad + (1 - (v - min) / range) * (h - pad * 2);
+  const coords = points.map((p, i) => ({
+    x: pad + (i / (points.length - 1)) * (w - pad * 2),
+    y: toY(p.value),
+  }));
+  const path = coords.map((c, i) => `${i === 0 ? "M" : "L"}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ");
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
+      {target != null && (
+        <line x1={pad} y1={toY(target)} x2={w - pad} y2={toY(target)} className="text-muted" stroke="currentColor" strokeWidth={1} strokeDasharray="4 3" />
+      )}
+      <path d={path} fill="none" stroke="currentColor" className="text-accent" strokeWidth={2} />
+      {coords.map((c, i) => (
+        <circle key={i} cx={c.x} cy={c.y} r={2.5} className="fill-accent" />
+      ))}
+      <text x={pad} y={h - 2} className="fill-current text-[8px] text-muted">
+        {Math.round(points[0].value)} {unit}
+      </text>
+      <text x={w - pad} y={h - 2} textAnchor="end" className="fill-current text-[8px] text-muted">
+        {Math.round(points[points.length - 1].value)} {unit}
+      </text>
+    </svg>
+  );
+}
+
 export default function AnalyticsPanel({ clientId }: { clientId: string }) {
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
   const [food, setFood] = useState<FoodEntry[]>([]);
+  const [target, setTarget] = useState<NutritionTarget>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -59,7 +107,7 @@ export default function AnalyticsPanel({ clientId }: { clientId: string }) {
       setLoading(true);
       const since = daysAgoKey(30);
 
-      const [{ data: ci }, { data: wo }, { data: fe }] = await Promise.all([
+      const [{ data: ci }, { data: wo }, { data: fe }, { data: nt }] = await Promise.all([
         supabase
           .from("checkins")
           .select("weight, created_at")
@@ -75,11 +123,13 @@ export default function AnalyticsPanel({ clientId }: { clientId: string }) {
           .select("date, calories, protein, fat, carbs")
           .eq("client_id", clientId)
           .gte("date", since),
+        supabase.from("nutrition_targets").select("calories, protein").eq("client_id", clientId).maybeSingle(),
       ]);
 
       setCheckins((ci as Checkin[]) || []);
       setWorkouts((wo as AssignedWorkout[]) || []);
       setFood((fe as FoodEntry[]) || []);
+      setTarget((nt as NutritionTarget) || null);
       setLoading(false);
     })();
   }, [clientId]);
@@ -101,9 +151,10 @@ export default function AnalyticsPanel({ clientId }: { clientId: string }) {
   for (const f of food) {
     (foodByDate[f.date] = foodByDate[f.date] || []).push(f);
   }
-  const loggedDays = Object.keys(foodByDate);
-  const dailyTotals = loggedDays.map((d) =>
-    foodByDate[d].reduce(
+  const loggedDays = Object.keys(foodByDate).sort();
+  const totalsByDate: Record<string, { calories: number; protein: number; fat: number; carbs: number }> = {};
+  for (const d of loggedDays) {
+    totalsByDate[d] = foodByDate[d].reduce(
       (acc, e) => ({
         calories: acc.calories + (e.calories || 0),
         protein: acc.protein + (e.protein || 0),
@@ -111,12 +162,16 @@ export default function AnalyticsPanel({ clientId }: { clientId: string }) {
         carbs: acc.carbs + (e.carbs || 0),
       }),
       { calories: 0, protein: 0, fat: 0, carbs: 0 }
-    )
-  );
+    );
+  }
+  const dailyTotals = loggedDays.map((d) => totalsByDate[d]);
   const avg = (key: "calories" | "protein" | "fat" | "carbs") =>
     dailyTotals.length > 0
       ? Math.round(dailyTotals.reduce((s, d) => s + d[key], 0) / dailyTotals.length)
       : null;
+
+  const caloriePoints = loggedDays.map((d) => ({ date: d, value: totalsByDate[d].calories }));
+  const proteinPoints = loggedDays.map((d) => ({ date: d, value: totalsByDate[d].protein }));
 
   return (
     <div className="rounded-xl border border-line bg-surface p-4">
@@ -142,10 +197,29 @@ export default function AnalyticsPanel({ clientId }: { clientId: string }) {
         <div className="rounded-lg bg-paper p-3 text-sm">
           <p className="mb-1 font-medium">Харчування (середнє за дні з записами, останні 30 днів)</p>
           {loggedDays.length > 0 ? (
-            <p className="text-muted">
-              {avg("calories")} ккал · Б {avg("protein")} / Ж {avg("fat")} / В {avg("carbs")} г · за{" "}
-              {loggedDays.length} {loggedDays.length === 1 ? "день" : "днів"}
-            </p>
+            <>
+              <p className="text-muted">
+                {[
+                  `${avg("calories")} ккал`,
+                  `Б ${avg("protein")} / Ж ${avg("fat")} / В ${avg("carbs")} г`,
+                  `за ${loggedDays.length} ${loggedDays.length === 1 ? "день" : "днів"}`,
+                ].join(", ")}
+              </p>
+              <div className="mt-3 flex flex-col gap-3">
+                <div>
+                  <p className="mb-1 text-xs text-muted">
+                    Калорії по днях{target?.calories ? ` (пунктир — ціль ${target.calories} ккал)` : ""}
+                  </p>
+                  <MetricChart points={caloriePoints} target={target?.calories ?? null} unit="ккал" />
+                </div>
+                <div>
+                  <p className="mb-1 text-xs text-muted">
+                    Білки по днях{target?.protein ? ` (пунктир — ціль ${target.protein} г)` : ""}
+                  </p>
+                  <MetricChart points={proteinPoints} target={target?.protein ?? null} unit="г" />
+                </div>
+              </div>
+            </>
           ) : (
             <p className="text-muted">Ще немає записів харчування у цьому періоді.</p>
           )}
