@@ -95,6 +95,9 @@ export default function ClientActivityCalendar({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selected, setSelected] = useState<string | null>(null);
+  // На мобільному показуємо тільки один щоденник за раз (перемикач пігулками),
+  // щоб вони не падали один під одним. На sm+ обидва видно поруч завжди.
+  const [diaryTab, setDiaryTab] = useState<"workout" | "food">("workout");
 
   // ---- тренування ----
   const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
@@ -163,6 +166,11 @@ export default function ClientActivityCalendar({
   }, [clientId]);
 
   const workout = selected ? workouts.find((w) => w.date === selected) : null;
+
+  // При виборі нового дня показуємо щоденник тренувань першим (на мобільному).
+  useEffect(() => {
+    setDiaryTab("workout");
+  }, [selected]);
 
   useEffect(() => {
     if (!workout) return;
@@ -379,9 +387,32 @@ export default function ClientActivityCalendar({
 
       {selected && <p className="mb-2 text-xs font-medium text-muted">{selected}</p>}
 
+      {!!(selected && showWorkout && workout) && !!(selected && showFood) && (
+        <div className="mb-2 flex gap-1.5 sm:hidden">
+          <button
+            type="button"
+            onClick={() => setDiaryTab("workout")}
+            className={`rounded-full border px-3 py-1 text-xs font-medium ${
+              diaryTab === "workout" ? "border-accent bg-accent text-paper" : "border-line text-muted"
+            }`}
+          >
+            🏋 Тренування
+          </button>
+          <button
+            type="button"
+            onClick={() => setDiaryTab("food")}
+            className={`rounded-full border px-3 py-1 text-xs font-medium ${
+              diaryTab === "food" ? "border-accent bg-accent text-paper" : "border-line text-muted"
+            }`}
+          >
+            🍽 Харчування
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col items-start gap-3 sm:flex-row">
         {selected && showWorkout && workout && (
-          <div className="order-1 w-full rounded-lg bg-paper p-3 text-sm sm:flex-1">
+          <div className={`order-1 w-full rounded-lg bg-paper p-3 text-sm sm:flex-1 ${diaryTab === "workout" ? "block" : "hidden"} sm:block`}>
             <p className="font-medium text-ink">🏋 {workout.title}</p>
             <div className="mt-1.5 flex flex-col gap-1.5">
               {[...workout.assigned_workout_exercises]
@@ -518,7 +549,7 @@ export default function ClientActivityCalendar({
         </div>
 
         {selected && showFood && (
-          <div className="order-3 w-full rounded-lg bg-paper p-3 text-sm sm:flex-1">
+          <div className={`order-3 w-full rounded-lg bg-paper p-3 text-sm sm:flex-1 ${diaryTab === "food" ? "block" : "hidden"} sm:block`}>
             <div className="mb-3 flex items-center gap-3">
               <svg width="64" height="64" viewBox="0 0 64 64" className="flex-none -rotate-90">
                 <circle cx="32" cy="32" r={ringR} fill="none" stroke="currentColor" className="text-line" strokeWidth="6" />
