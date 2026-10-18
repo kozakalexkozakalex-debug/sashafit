@@ -172,6 +172,10 @@ export default function ClientDashboard() {
   }
 
   async function addCheckin() {
+    if (new Date().getDay() !== 0) {
+      setCiErr("Чек-ін можна додати тільки в неділю");
+      return;
+    }
     if (!ciWeight.trim()) {
       setCiErr("Вкажи вагу");
       return;
@@ -417,6 +421,8 @@ export default function ClientDashboard() {
     );
   }
 
+  const todayIsSunday = new Date().getDay() === 0;
+
   const checkinMarkers: CheckinMarker[] = checkins.map((c) => ({
     id: c.id,
     date: c.created_at.slice(0, 10),
@@ -476,11 +482,23 @@ export default function ClientDashboard() {
       </div>
 
       <div className="rounded-xl border border-line bg-surface p-3">
-        <button type="button" onClick={() => setCiOpen((v) => !v)} className="flex w-full items-center justify-between text-left">
+        <button
+          type="button"
+          onClick={() => todayIsSunday && setCiOpen((v) => !v)}
+          disabled={!todayIsSunday}
+          className="flex w-full items-center justify-between text-left disabled:cursor-not-allowed"
+        >
           <h2 className="text-sm font-semibold">Новий чек-ін</h2>
-          <span className="text-xs text-accent">{ciOpen ? "згорнути" : "додати"}</span>
+          <span className={`text-xs ${todayIsSunday ? "text-accent" : "text-muted"}`}>
+            {todayIsSunday ? (ciOpen ? "згорнути" : "додати") : "доступно в неділю"}
+          </span>
         </button>
-        {ciOpen && (
+        {!todayIsSunday && (
+          <p className="mt-1 text-xs text-muted">
+            Щотижневий чек-ін можна заповнити тільки в неділю — щоб прогрес рахувався рівно по тижнях.
+          </p>
+        )}
+        {todayIsSunday && ciOpen && (
           <div className="mt-2.5 flex flex-col gap-2">
             <input
               value={ciWeight}
