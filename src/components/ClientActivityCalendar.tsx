@@ -326,6 +326,9 @@ export default function ClientActivityCalendar({
           </button>
         ))}
       </div>
+      {filter === "checkin" && (
+        <p className="mb-2 text-[11px] text-muted">Чек-ін вноситься лише в неділю — інші дні неактивні.</p>
+      )}
 
       <div className="mx-auto w-full max-w-[280px]">
         <div className="mb-1.5 flex items-center justify-between">
@@ -355,6 +358,9 @@ export default function ClientActivityCalendar({
             const wStatus = showWorkout ? workoutStatus(key) : null;
             const hasFood = showFood && foodDates.has(key);
             const hasCheckin = showCheckin && !!checkinByDate[key];
+            const isSunday = d.getDay() === 0;
+            const checkinOnlyMode = filter === "checkin";
+            const disabledForCheckin = checkinOnlyMode && !isSunday;
             const wColor =
               wStatus === "done"
                 ? "bg-green-500/20"
@@ -367,11 +373,14 @@ export default function ClientActivityCalendar({
               <button
                 key={key}
                 type="button"
+                disabled={disabledForCheckin}
                 onClick={() => setSelected(key)}
                 className={`flex aspect-square flex-col items-center justify-center rounded-md border text-[11px] ${
                   wColor || "border-line bg-paper text-muted"
                 } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-accent" : ""} ${
                   isSelected ? "outline outline-2 outline-accent" : ""
+                } ${disabledForCheckin ? "cursor-not-allowed opacity-25" : ""} ${
+                  checkinOnlyMode && isSunday ? "border-blue-400/50" : ""
                 }`}
               >
                 <span>{d.getDate()}</span>
