@@ -112,6 +112,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
   const [aErr, setAErr] = useState("");
   const [aInviteCode, setAInviteCode] = useState<string | null>(null);
   const [aCopied, setACopied] = useState(false);
+  const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -239,6 +240,16 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
       await navigator.clipboard.writeText(inviteUrl(code));
       setACopied(true);
       setTimeout(() => setACopied(false), 1500);
+    } catch {
+      /* ігноруємо — просто немає буфера обміну */
+    }
+  }
+
+  async function copyRowInvite(id: string, code: string) {
+    try {
+      await navigator.clipboard.writeText(inviteUrl(code));
+      setCopiedRowId(id);
+      setTimeout(() => setCopiedRowId((cur) => (cur === id ? null : cur)), 1500);
     } catch {
       /* ігноруємо — просто немає буфера обміну */
     }
@@ -558,6 +569,15 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
                     <span className={`h-2 w-2 flex-shrink-0 rounded-full ${RISK_DOT[r.level]}`} />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{clientLabel(r.client)}</span>
                     <span className="whitespace-nowrap text-xs text-muted">{r.reason}</span>
+                    {!r.client.profile_id && (
+                      <button
+                        type="button"
+                        onClick={() => copyRowInvite(r.client.id, r.client.invite_code)}
+                        className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
+                      >
+                        {copiedRowId === r.client.id ? "Скопійовано" : "Копіювати посилання"}
+                      </button>
+                    )}
                     {onOpenClients && (
                       <button
                         type="button"
