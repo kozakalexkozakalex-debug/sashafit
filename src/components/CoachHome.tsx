@@ -411,7 +411,7 @@ export default function CoachHome({
   }
   const HEAT_SHADES = ["bg-line/30", "bg-accent/35", "bg-accent/65", "bg-accent"];
 
-  type ActivityDay = { key: string; isWeekend: boolean; workoutCount: number; foodCount: number };
+  type ActivityDay = { key: string; dateLabel: string; isWeekend: boolean; workoutCount: number; foodCount: number };
   type ActivityMonthRow = { label: string; days: (ActivityDay | null)[] };
   const activityMonthRows: ActivityMonthRow[] = [];
   for (let m = heatMonths - 1; m >= 0; m--) {
@@ -427,10 +427,12 @@ export default function CoachHome({
       }
       const dd = new Date(y, mon, day);
       const key = toKey(dd);
-      const isWeekend = dd.getDay() === 0 || dd.getDay() === 6;
+      const jsDay = dd.getDay();
+      const isWeekend = jsDay === 0 || jsDay === 6;
+      const dateLabel = `${day} ${MONTHS[mon].toLowerCase()} ${y}, ${WEEKDAYS[(jsDay + 6) % 7]}`;
       const workoutCount = (workoutsByDate[key] || []).filter((w) => w.completed_at).length;
       const foodCount = new Set((foodByDate[key] || []).map((f) => f.client_id)).size;
-      days.push({ key, isWeekend, workoutCount, foodCount });
+      days.push({ key, dateLabel, isWeekend, workoutCount, foodCount });
     }
     activityMonthRows.push({ label: `${MONTHS[mon].slice(0, 3)} ${y}`, days });
   }
@@ -620,7 +622,7 @@ export default function CoachHome({
                             d ? (
                               <div
                                 key={i}
-                                title={`${d.key}: ${d.workoutCount} виконано${d.isWeekend ? " · вихідний" : ""}`}
+                                title={`${d.dateLabel}: ${d.workoutCount} виконано${d.isWeekend ? " · вихідний" : ""}`}
                                 className={`flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[6px] leading-none font-medium ${
                                   d.workoutCount > 0
                                     ? `${HEAT_SHADES[heatLevel(d.workoutCount)]} text-paper`
@@ -653,7 +655,7 @@ export default function CoachHome({
                             d ? (
                               <div
                                 key={i}
-                                title={`${d.key}: ${d.foodCount} клієнт(ів) залогували їжу${d.isWeekend ? " · вихідний" : ""}`}
+                                title={`${d.dateLabel}: ${d.foodCount} клієнт(ів) залогували їжу${d.isWeekend ? " · вихідний" : ""}`}
                                 className={`flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[6px] leading-none font-medium ${
                                   d.foodCount > 0
                                     ? `${HEAT_SHADES[heatLevel(d.foodCount)]} text-paper`
