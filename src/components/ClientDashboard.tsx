@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
+import ClientProfileCard from "@/components/ClientProfileCard";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
 import ChatPanel from "@/components/ChatPanel";
 
 type ClientRow = {
   id: string;
   name: string | null;
+  avatar_path: string | null;
   height: number | null;
   start_weight: number | null;
   target_weight: number | null;
@@ -76,16 +78,7 @@ export default function ClientDashboard() {
 
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
-  const [ciOpen, setCiOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [ciWeight, setCiWeight] = useState("");
-  const [ciWaist, setCiWaist] = useState("");
-  const [ciHips, setCiHips] = useState("");
-  const [ciChest, setCiChest] = useState("");
-  const [ciComment, setCiComment] = useState("");
-  const [ciFile, setCiFile] = useState<File | null>(null);
-  const [ciBusy, setCiBusy] = useState(false);
-  const [ciErr, setCiErr] = useState("");
 
   const [editingCheckinId, setEditingCheckinId] = useState<string | null>(null);
   const [ecWeight, setEcWeight] = useState("");
@@ -169,55 +162,6 @@ export default function ClientDashboard() {
     }
     setEditMode(false);
     load();
-  }
-
-  async function addCheckin() {
-    if (new Date().getDay() !== 0) {
-      setCiErr("Чек-ін можна додати тільки в неділю");
-      return;
-    }
-    if (!ciWeight.trim()) {
-      setCiErr("Вкажи вагу");
-      return;
-    }
-    setCiErr("");
-    setCiBusy(true);
-    const c = client as ClientRow;
-
-    let photoPath: string | null = null;
-    if (ciFile) {
-      const path = `${c.id}/${Date.now()}-${ciFile.name}`;
-      const { error: upErr } = await supabase.storage.from("checkins").upload(path, ciFile);
-      if (upErr) {
-        setCiBusy(false);
-        setCiErr("Не вдалось завантажити фото: " + upErr.message);
-        return;
-      }
-      photoPath = path;
-    }
-
-    const { error } = await supabase.from("checkins").insert({
-      client_id: c.id,
-      weight: Number(ciWeight),
-      waist: ciWaist.trim() ? Number(ciWaist) : null,
-      hips: ciHips.trim() ? Number(ciHips) : null,
-      chest: ciChest.trim() ? Number(ciChest) : null,
-      photo_path: photoPath,
-      comment: ciComment.trim() || null,
-    });
-    setCiBusy(false);
-    if (error) {
-      setCiErr(error.message);
-      return;
-    }
-    setCiWeight("");
-    setCiWaist("");
-    setCiHips("");
-    setCiChest("");
-    setCiComment("");
-    setCiFile(null);
-    setCiOpen(false);
-    loadCheckins(c.id);
   }
 
   function startEditCheckin(c: Checkin) {
@@ -421,8 +365,6 @@ export default function ClientDashboard() {
     );
   }
 
-  const todayIsSunday = new Date().getDay() === 0;
-
   const checkinMarkers: CheckinMarker[] = checkins.map((c) => ({
     id: c.id,
     date: c.created_at.slice(0, 10),
@@ -440,125 +382,16 @@ export default function ClientDashboard() {
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
       <div className="flex flex-col gap-3 lg:w-1/3 lg:flex-none">
-      <div className="rounded-xl border border-line bg-surface p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Моя анкета</h2>
-          <button
-            type="button"
-            onClick={() => {
-              prefillFromClient(client);
-              setEditMode(true);
-            }}
-            className="text-xs text-accent"
-          >
-            Редагувати
-          </button>
-        </div>
-        <div className="flex flex-col gap-1.5 text-sm">
-          <p>
-            {[
-              `Зріст ${client.height ?? "—"} см`,
-              `Вага ${client.start_weight ?? "—"} кг${
-                client.target_weight != null ? ` → ${client.target_weight} кг` : ""
-              }`,
-            ].join(", ")}
-          </p>
-          {client.intake_goals && <p className="text-muted">Цілі: {client.intake_goals}</p>}
-          <p className="text-muted">
-            {[
-              client.experience_level,
-              client.training_location,
-              client.training_days_per_week != null ? `${client.training_days_per_week} дн./тиждень` : null,
-            ]
-              .filter(Boolean)
-              .join(", ")}
-          </p>
-          {client.equipment && <p className="text-muted">Інвентар: {client.equipment}</p>}
-          {client.health_restrictions && (
-            <p className="text-muted">Обмеження здоров&apos;я: {client.health_restrictions}</p>
-          )}
-          {client.food_restrictions && (
-            <p className="text-muted">Харчові обмеження: {client.food_restrictions}</p>
-          )}
-          {client.lifestyle && <p className="text-muted">Спосіб життя: {client.lifestyle}</p>}
-          {client.intake_notes && <p className="text-muted">{client.intake_notes}</p>}
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-line bg-surface p-3">
-        <button
-          type="button"
-          onClick={() => todayIsSunday && setCiOpen((v) => !v)}
-          disabled={!todayIsSunday}
-          className="flex w-full items-center justify-between text-left disabled:cursor-not-allowed"
-        >
-          <h2 className="text-sm font-semibold">Новий чек-ін</h2>
-          <span className={`text-xs ${todayIsSunday ? "text-accent" : "text-muted"}`}>
-            {todayIsSunday ? (ciOpen ? "згорнути" : "додати") : "доступно в неділю"}
-          </span>
-        </button>
-        {!todayIsSunday && (
-          <p className="mt-1 text-xs text-muted">
-            Щотижневий чек-ін можна заповнити тільки в неділю — щоб прогрес рахувався рівно по тижнях.
-          </p>
-        )}
-        {todayIsSunday && ciOpen && (
-          <div className="mt-2.5 flex flex-col gap-2">
-            <input
-              value={ciWeight}
-              onChange={(e) => setCiWeight(e.target.value)}
-              inputMode="decimal"
-              placeholder="Вага, кг"
-              className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
-            />
-            <div className="flex gap-2">
-              <input
-                value={ciWaist}
-                onChange={(e) => setCiWaist(e.target.value)}
-                inputMode="decimal"
-                placeholder="Талія, см"
-                className="flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
-              />
-              <input
-                value={ciHips}
-                onChange={(e) => setCiHips(e.target.value)}
-                inputMode="decimal"
-                placeholder="Стегна, см"
-                className="flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
-              />
-              <input
-                value={ciChest}
-                onChange={(e) => setCiChest(e.target.value)}
-                inputMode="decimal"
-                placeholder="Груди, см"
-                className="flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
-              />
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setCiFile(e.target.files?.[0] ?? null)}
-              className="text-xs text-muted"
-            />
-            <textarea
-              value={ciComment}
-              onChange={(e) => setCiComment(e.target.value)}
-              placeholder="Коментар (необов'язково)"
-              rows={2}
-              className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
-            />
-            <button
-              type="button"
-              disabled={ciBusy}
-              onClick={addCheckin}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-bold text-paper disabled:opacity-50"
-            >
-              {ciBusy ? "Зберігаю…" : "Зберегти чек-ін"}
-            </button>
-            {ciErr && <p className="text-sm text-red-400">{ciErr}</p>}
-          </div>
-        )}
-      </div>
+        <ClientProfileCard
+          client={client}
+          checkins={checkins}
+          onEditAnketa={() => {
+            prefillFromClient(client);
+            setEditMode(true);
+          }}
+          onAvatarUpdated={load}
+          onCheckinAdded={() => loadCheckins(client.id)}
+        />
       </div>
 
       <div className="lg:flex-1">
