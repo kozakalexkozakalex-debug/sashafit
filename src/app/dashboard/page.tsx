@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role>(null);
   const [loading, setLoading] = useState(true);
+  const [goHomeSignal, setGoHomeSignal] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -42,12 +43,18 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen p-6">
       <div className="mb-6 flex items-center justify-between">
-        <span className="text-lg font-bold">SashaFit</span>
+        <button
+          type="button"
+          onClick={() => setGoHomeSignal((v) => v + 1)}
+          className="text-lg font-bold"
+        >
+          SashaFit
+        </button>
         <button type="button" onClick={signOut} className="text-sm text-muted hover:text-accent">
           Вийти
         </button>
       </div>
-      {role === "coach" ? <CoachDashboard /> : <ClientDashboard />}
+      {role === "coach" ? <CoachDashboard goHomeSignal={goHomeSignal} /> : <ClientDashboard />}
     </main>
   );
 }

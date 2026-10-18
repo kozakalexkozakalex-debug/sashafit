@@ -91,12 +91,14 @@ export default function ClientProfileCard({
   onEditAnketa,
   onAvatarUpdated,
   onCheckinAdded,
+  readOnly = false,
 }: {
   client: ClientRow;
   checkins: Checkin[];
-  onEditAnketa: () => void;
-  onAvatarUpdated: () => void;
-  onCheckinAdded: () => void;
+  onEditAnketa?: () => void;
+  onAvatarUpdated?: () => void;
+  onCheckinAdded?: () => void;
+  readOnly?: boolean;
 }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
@@ -118,7 +120,7 @@ export default function ClientProfileCard({
     const { error: upErr } = await supabase.storage.from("avatars").upload(path, file);
     if (!upErr) {
       await supabase.from("clients").update({ avatar_path: path }).eq("id", client.id);
-      onAvatarUpdated();
+      onAvatarUpdated?.();
     }
     setAvatarBusy(false);
   }
@@ -201,40 +203,55 @@ export default function ClientProfileCard({
     setCiComment("");
     setCiFile(null);
     setCiOpen(false);
-    onCheckinAdded();
+    onCheckinAdded?.();
   }
 
   return (
     <div className="rounded-xl border border-line bg-surface p-3">
       <div className="flex items-center gap-3">
-        <label className="group relative h-14 w-14 flex-none cursor-pointer overflow-hidden rounded-full border border-line bg-paper">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="Фото профілю" className="h-full w-full object-cover" />
-          ) : (
-            <span className="flex h-full w-full items-center justify-center text-lg text-muted">
-              {(client.name || "?").slice(0, 1).toUpperCase()}
+        {readOnly ? (
+          <div className="h-14 w-14 flex-none overflow-hidden rounded-full border border-line bg-paper">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="Фото профілю" className="h-full w-full object-cover" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-lg text-muted">
+                {(client.name || "?").slice(0, 1).toUpperCase()}
+              </span>
+            )}
+          </div>
+        ) : (
+          <label className="group relative h-14 w-14 flex-none cursor-pointer overflow-hidden rounded-full border border-line bg-paper">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="Фото профілю" className="h-full w-full object-cover" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-lg text-muted">
+                {(client.name || "?").slice(0, 1).toUpperCase()}
+              </span>
+            )}
+            <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-[9px] text-paper opacity-0 group-hover:opacity-100">
+              {avatarBusy ? "…" : "Змінити"}
             </span>
-          )}
-          <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-[9px] text-paper opacity-0 group-hover:opacity-100">
-            {avatarBusy ? "…" : "Змінити"}
-          </span>
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) uploadAvatar(f);
-            }}
-          />
-        </label>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadAvatar(f);
+              }}
+            />
+          </label>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between">
             <h2 className="truncate text-sm font-semibold">{client.name || "Моя анкета"}</h2>
-            <button type="button" onClick={onEditAnketa} className="flex-none text-xs text-accent">
-              Редагувати
-            </button>
+            {!readOnly && onEditAnketa && (
+              <button type="button" onClick={onEditAnketa} className="flex-none text-xs text-accent">
+                Редагувати
+              </button>
+            )}
           </div>
           <p className="mt-0.5 text-xs text-muted">
             {[
@@ -303,7 +320,13 @@ export default function ClientProfileCard({
       </div>
 
       <div className="mt-3 border-t border-line pt-3">
-        {isSundayNow && !didCheckinToday ? (
+        {readOnly ? (
+          <p className="text-xs text-muted">
+            {didCheckinToday
+              ? `Чек-ін на цьому тижні вже зроблено. Наступний через ${daysToNextSunday === 0 ? 7 : daysToNextSunday} днів (${nextSundayLabel}).`
+              : `Наступний чек-ін через ${daysToNextSunday} ${daysToNextSunday === 1 ? "день" : "днів"} (${nextSundayLabel}).`}
+          </p>
+        ) : isSundayNow && !didCheckinToday ? (
           <button
             type="button"
             onClick={() => setCiOpen((v) => !v)}
@@ -319,7 +342,7 @@ export default function ClientProfileCard({
           </p>
         )}
 
-        {ciOpen && isSundayNow && !didCheckinToday && (
+        {!readOnly && ciOpen && isSundayNow && !didCheckinToday && (
           <div className="mt-2.5 flex flex-col gap-2">
             <input
               value={ciWeight}

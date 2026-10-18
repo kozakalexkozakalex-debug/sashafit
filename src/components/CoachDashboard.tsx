@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import CoachClientCalendar from "@/components/CoachClientCalendar";
-import CoachClientNutrition from "@/components/CoachClientNutrition";
-import AnalyticsPanel from "@/components/AnalyticsPanel";
+import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
+import ClientProfileCard from "@/components/ClientProfileCard";
 import ProgramsSection from "@/components/ProgramsSection";
 import NutritionSection from "@/components/NutritionSection";
 import CoachAnalytics from "@/components/CoachAnalytics";
@@ -22,6 +21,7 @@ type Client = {
   profile_id: string | null;
   subscription_until: string | null;
   created_at: string;
+  avatar_path: string | null;
   height: number | null;
   start_weight: number | null;
   target_weight: number | null;
@@ -59,13 +59,17 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "payments", label: "Оплата" },
 ];
 
-export default function CoachDashboard() {
+export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number }) {
   const [tab, setTab] = useState<TabId>("home");
   const [clients, setClients] = useState<Client[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  const [openId, setOpenId] = useState<string | null>(null);
+  useEffect(() => {
+    if (goHomeSignal) setTab("home");
+  }, [goHomeSignal]);
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [checkinsByClient, setCheckinsByClient] = useState<Record<string, Checkin[]>>({});
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [lastCheckinByClient, setLastCheckinByClient] = useState<Record<string, string>>({});
@@ -92,12 +96,12 @@ export default function CoachDashboard() {
     load();
   }, []);
 
-  async function toggleClient(clientId: string) {
-    if (openId === clientId) {
-      setOpenId(null);
+  async function selectClient(clientId: string) {
+    if (selectedId === clientId) {
+      setSelectedId(null);
       return;
     }
-    setOpenId(clientId);
+    setSelectedId(clientId);
     if (!checkinsByClient[clientId]) {
       const { data } = await supabase
         .from("checkins")
@@ -138,7 +142,7 @@ export default function CoachDashboard() {
       return;
     }
     await supabase.from("clients").delete().eq("id", id);
-    if (openId === id) setOpenId(null);
+    if (selectedId === id) setSelectedId(null);
     load();
   }
 
@@ -225,7 +229,7 @@ export default function CoachDashboard() {
                 <div key={c.id} className="rounded-lg border border-line p-3 text-sm">
                   <button
                     type="button"
-                    onClick={() => toggleClient(c.id)}
+                    onClick={() => selectClient(c.id)}
                     className="flex w-full items-center justify-between text-left"
                   >
                     <span className="font-medium">{clientLabel(c)}</span>
@@ -264,146 +268,51 @@ export default function CoachDashboard() {
                       Відключити
                     </button>
                   </div>
-
-                  {openId === c.id && (
-                    <div className="mt-3 flex flex-col gap-3 border-t border-line pt-3">
-                      {c.start_weight != null && (
-                        <section className="rounded-lg border border-line bg-paper p-3">
-                          <h3 className="mb-2.5 font-display text-xs font-semibold">Анкета</h3>
-                          <div className="grid grid-cols-1 gap-x-5 gap-y-2.5 sm:grid-cols-3">
-                            <div>
-                              <p className="text-[11px] text-muted">Зріст / Вага</p>
-                              <p className="mt-0.5 text-sm">
-                                {c.height ?? "—"} см, {c.start_weight ?? "—"} кг
-                                {c.target_weight != null ? ` → ${c.target_weight} кг` : ""}
-                              </p>
-                            </div>
-                            {(c.experience_level || c.training_days_per_week != null) && (
-                              <div>
-                                <p className="text-[11px] text-muted">Досвід</p>
-                                <p className="mt-0.5 text-sm">
-                                  {[
-                                    c.experience_level,
-                                    c.training_days_per_week != null
-                                      ? `${c.training_days_per_week} дн./тиждень`
-                                      : null,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(", ")}
-                                </p>
-                              </div>
-                            )}
-                            {c.training_location && (
-                              <div>
-                                <p className="text-[11px] text-muted">Місце тренувань</p>
-                                <p className="mt-0.5 text-sm">{c.training_location}</p>
-                              </div>
-                            )}
-                            {c.intake_goals && (
-                              <div>
-                                <p className="text-[11px] text-muted">Цілі</p>
-                                <p className="mt-0.5 text-sm">{c.intake_goals}</p>
-                              </div>
-                            )}
-                            {c.equipment && (
-                              <div>
-                                <p className="text-[11px] text-muted">Інвентар</p>
-                                <p className="mt-0.5 text-sm">{c.equipment}</p>
-                              </div>
-                            )}
-                            {c.lifestyle && (
-                              <div>
-                                <p className="text-[11px] text-muted">Спосіб життя</p>
-                                <p className="mt-0.5 text-sm">{c.lifestyle}</p>
-                              </div>
-                            )}
-                            {c.health_restrictions && (
-                              <div>
-                                <p className="text-[11px] text-muted">Обмеження здоров&apos;я</p>
-                                <p className="mt-0.5 text-sm">{c.health_restrictions}</p>
-                              </div>
-                            )}
-                            {c.food_restrictions && (
-                              <div>
-                                <p className="text-[11px] text-muted">Харчові обмеження</p>
-                                <p className="mt-0.5 text-sm">{c.food_restrictions}</p>
-                              </div>
-                            )}
-                            {c.intake_notes && (
-                              <div>
-                                <p className="text-[11px] text-muted">Нотатка тренера</p>
-                                <p className="mt-0.5 text-sm">{c.intake_notes}</p>
-                              </div>
-                            )}
-                          </div>
-                        </section>
-                      )}
-
-                      <section className="rounded-lg border border-line bg-paper p-3">
-                        <h3 className="mb-2.5 font-display text-xs font-semibold">Чек-іни</h3>
-                        <div className="flex flex-col gap-2">
-                          {(checkinsByClient[c.id] || []).map((ci) => (
-                            <div key={ci.id} className="flex items-start gap-3 rounded-md bg-surface p-2.5">
-                              {ci.photo_path ? (
-                                photoUrls[ci.id] ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={photoUrls[ci.id]}
-                                    alt="Фото чек-іну"
-                                    className="h-12 w-12 flex-shrink-0 rounded-md object-cover"
-                                  />
-                                ) : (
-                                  <div className="h-12 w-12 flex-shrink-0 rounded-md bg-line" />
-                                )
-                              ) : (
-                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-line text-[10px] text-muted">
-                                  фото
-                                </div>
-                              )}
-                              <div className="min-w-0 flex-grow">
-                                <div className="flex items-baseline justify-between gap-2 text-sm">
-                                  <span className="font-medium">{ci.weight} кг</span>
-                                  <span className="whitespace-nowrap text-xs text-muted">
-                                    {new Date(ci.created_at).toLocaleDateString("uk-UA")}
-                                  </span>
-                                </div>
-                                {(ci.waist != null || ci.hips != null || ci.chest != null) && (
-                                  <p className="mt-0.5 text-xs text-muted">
-                                    {[
-                                      ci.waist != null ? `Талія ${ci.waist} см` : null,
-                                      ci.hips != null ? `Стегна ${ci.hips} см` : null,
-                                      ci.chest != null ? `Груди ${ci.chest} см` : null,
-                                    ]
-                                      .filter(Boolean)
-                                      .join(", ")}
-                                  </p>
-                                )}
-                                {ci.comment && <p className="mt-1 text-sm">{ci.comment}</p>}
-                              </div>
-                            </div>
-                          ))}
-                          {(checkinsByClient[c.id] || []).length === 0 && (
-                            <p className="text-sm text-muted">Чек-інів ще немає.</p>
-                          )}
-                        </div>
-                      </section>
-
-                      <section className="rounded-lg border border-line bg-paper p-3">
-                        <CoachClientCalendar clientId={c.id} />
-                      </section>
-
-                      <section className="rounded-lg border border-line bg-paper p-3">
-                        <CoachClientNutrition clientId={c.id} />
-                      </section>
-
-                      <AnalyticsPanel clientId={c.id} />
-                    </div>
-                  )}
                 </div>
               ))}
               {clients.length === 0 && <p className="text-sm text-muted">Клієнтів ще немає.</p>}
             </div>
           </div>
+
+          {selectedId &&
+            (() => {
+              const c = clients.find((x) => x.id === selectedId);
+              if (!c) return null;
+
+              if (!c.profile_id || c.start_weight == null) {
+                return (
+                  <div className="rounded-xl border border-line bg-surface p-4">
+                    <p className="text-sm text-muted">
+                      {clientLabel(c)} ще не заповнив(ла) анкету.
+                      {!c.profile_id && " Надішли посилання-запрошення зі списку вище."}
+                    </p>
+                  </div>
+                );
+              }
+
+              const checkins = checkinsByClient[c.id] || [];
+              const markers: CheckinMarker[] = checkins.map((ci) => ({
+                id: ci.id,
+                date: ci.created_at.slice(0, 10),
+                weight: ci.weight,
+                waist: ci.waist,
+                hips: ci.hips,
+                chest: ci.chest,
+                comment: ci.comment,
+                photoUrl: ci.photo_path ? photoUrls[ci.id] || null : null,
+              }));
+
+              return (
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+                  <div className="flex flex-col gap-3 lg:w-1/3 lg:flex-none">
+                    <ClientProfileCard client={c} checkins={checkins} readOnly />
+                  </div>
+                  <div className="lg:flex-1">
+                    <ClientActivityCalendar clientId={c.id} checkins={markers} />
+                  </div>
+                </div>
+              );
+            })()}
         </>
       )}
       </div>
