@@ -489,65 +489,75 @@ export default function CoachHome({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
         <button
           type="button"
           onClick={() => onNavigate?.("clients")}
-          className="rounded-lg border-l-2 border-accent bg-surface p-3 text-left transition hover:bg-line/20"
+          className="rounded-lg border-l-2 border-accent bg-surface p-2 text-left transition hover:bg-line/20 sm:p-3"
         >
           <p className="text-xs text-muted">Клієнтів</p>
           <div className="flex items-end justify-between gap-2">
-            <p className="font-display text-2xl font-semibold text-ink">{clients.length}</p>
+            <p className="font-display text-lg font-semibold text-ink sm:text-2xl">{clients.length}</p>
             {newClientsThisWeek > 0 && (
-              <span className="rounded bg-green-400/10 px-1.5 py-0.5 text-[11px] text-green-400">
+              <span className="hidden rounded bg-green-400/10 px-1.5 py-0.5 text-[11px] text-green-400 sm:inline">
                 +{newClientsThisWeek} за тиждень
               </span>
             )}
           </div>
-          <Sparkline values={newClientsPerDay} color="#4ADE80" />
+          <div className="hidden sm:block">
+            <Sparkline values={newClientsPerDay} color="#4ADE80" />
+          </div>
         </button>
         <button
           type="button"
           onClick={() => onNavigate?.("clients")}
-          className="rounded-lg border-l-2 border-accent bg-surface p-3 text-left transition hover:bg-line/20"
+          className="rounded-lg border-l-2 border-accent bg-surface p-2 text-left transition hover:bg-line/20 sm:p-3"
         >
           <p className="text-xs text-muted">Активні підписки</p>
           <div className="flex items-end justify-between gap-2">
-            <p className="font-display text-2xl font-semibold text-green-400">{activeCount}</p>
+            <p className="font-display text-lg font-semibold text-green-400 sm:text-2xl">{activeCount}</p>
             {expiringSoon > 0 && (
-              <span className="rounded bg-yellow-400/10 px-1.5 py-0.5 text-[11px] text-yellow-400">
+              <span className="hidden rounded bg-yellow-400/10 px-1.5 py-0.5 text-[11px] text-yellow-400 sm:inline">
                 {expiringSoon} закінчуються
               </span>
             )}
           </div>
-          <Sparkline values={workoutsPerDay} color="#F2615B" />
+          <div className="hidden sm:block">
+            <Sparkline values={workoutsPerDay} color="#F2615B" />
+          </div>
         </button>
         <button
           type="button"
           onClick={() => onNavigate?.("clients")}
-          className="rounded-lg border-l-2 border-accent bg-surface p-3 text-left transition hover:bg-line/20"
+          className="rounded-lg border-l-2 border-accent bg-surface p-2 text-left transition hover:bg-line/20 sm:p-3"
         >
           <p className="text-xs text-muted">Тренувань сьогодні</p>
-          <p className="font-display text-2xl font-semibold text-ink">{todayCount}</p>
-          <Sparkline values={workoutsPerDay} color="#E8622C" />
+          <p className="font-display text-lg font-semibold text-ink sm:text-2xl">{todayCount}</p>
+          <div className="hidden sm:block">
+            <Sparkline values={workoutsPerDay} color="#E8622C" />
+          </div>
         </button>
         <button
           type="button"
           onClick={() => onNavigate?.("clients")}
-          className="rounded-lg border-l-2 border-accent bg-surface p-3 text-left transition hover:bg-line/20"
+          className="rounded-lg border-l-2 border-accent bg-surface p-2 text-left transition hover:bg-line/20 sm:p-3"
         >
           <p className="text-xs text-muted">Харчування сьогодні</p>
-          <p className="font-display text-2xl font-semibold text-ink">{foodTodayCount}</p>
-          <Sparkline values={workoutsPerDay} color="#60A5FA" />
+          <p className="font-display text-lg font-semibold text-ink sm:text-2xl">{foodTodayCount}</p>
+          <div className="hidden sm:block">
+            <Sparkline values={workoutsPerDay} color="#60A5FA" />
+          </div>
         </button>
         <button
           type="button"
           onClick={() => onNavigate?.("payments")}
-          className="rounded-lg border-l-2 border-accent bg-surface p-3 text-left transition hover:bg-line/20"
+          className="col-span-2 rounded-lg border-l-2 border-accent bg-surface p-2 text-left transition hover:bg-line/20 sm:col-span-1 sm:p-3"
         >
           <p className="text-xs text-muted">Оплата цього місяця</p>
-          <p className="font-display text-2xl font-semibold text-ink">{monthTotal.toLocaleString("uk-UA")} ₴</p>
-          <Sparkline values={paymentsAmountPerDay} color="#4ADE80" />
+          <p className="font-display text-lg font-semibold text-ink sm:text-2xl">{monthTotal.toLocaleString("uk-UA")} ₴</p>
+          <div className="hidden sm:block">
+            <Sparkline values={paymentsAmountPerDay} color="#4ADE80" />
+          </div>
         </button>
       </div>
 

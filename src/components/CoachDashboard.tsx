@@ -86,6 +86,12 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
     if (goHomeSignal) setTab("home");
   }, [goHomeSignal]);
 
+  // При переключенні вкладки прокручуємо сторінку наверх — інакше лишається
+  // позиція скролу з попередньої вкладки (напр. знизу списку клієнтів).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [tab]);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showBuilder, setShowBuilder] = useState(false);
   const [showAssignProgram, setShowAssignProgram] = useState(false);
