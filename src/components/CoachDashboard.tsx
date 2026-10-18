@@ -6,6 +6,7 @@ import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivi
 import ClientProfileCard from "@/components/ClientProfileCard";
 import WorkoutBuilder from "@/components/WorkoutBuilder";
 import AssignProgram from "@/components/AssignProgram";
+import AssignRation from "@/components/AssignRation";
 import ProgramsSection from "@/components/ProgramsSection";
 import NutritionSection from "@/components/NutritionSection";
 import CoachAnalytics from "@/components/CoachAnalytics";
@@ -74,6 +75,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showBuilder, setShowBuilder] = useState(false);
   const [showAssignProgram, setShowAssignProgram] = useState(false);
+  const [showAssignRation, setShowAssignRation] = useState(false);
   const [calendarKey, setCalendarKey] = useState(0);
   const [checkinsByClient, setCheckinsByClient] = useState<Record<string, Checkin[]>>({});
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
@@ -104,6 +106,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
   async function selectClient(clientId: string) {
     setShowBuilder(false);
     setShowAssignProgram(false);
+    setShowAssignRation(false);
     if (selectedId === clientId) {
       setSelectedId(null);
       return;
@@ -197,7 +200,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
 
       <div className="min-w-0 flex-1">
       {tab === "home" ? (
-        <CoachHome onOpenClients={() => setTab("clients")} />
+        <CoachHome onOpenClients={() => setTab("clients")} onNavigate={(t) => setTab(t)} />
       ) : tab === "checkins" ? (
         <CoachCheckins />
       ) : tab === "programs" ? (
@@ -314,12 +317,13 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
                     <div className="flex flex-col gap-3 lg:w-1/3 lg:flex-none">
                       <ClientProfileCard client={c} checkins={checkins} readOnly />
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => {
                             setShowBuilder((v) => !v);
                             setShowAssignProgram(false);
+                            setShowAssignRation(false);
                           }}
                           className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-accent"
                         >
@@ -330,10 +334,22 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                           onClick={() => {
                             setShowAssignProgram((v) => !v);
                             setShowBuilder(false);
+                            setShowAssignRation(false);
                           }}
                           className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-accent"
                         >
                           {showAssignProgram ? "Сховати" : "Призначити програму"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAssignRation((v) => !v);
+                            setShowBuilder(false);
+                            setShowAssignProgram(false);
+                          }}
+                          className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-accent"
+                        >
+                          {showAssignRation ? "Сховати" : "Призначити раціон"}
                         </button>
                       </div>
                     </div>
@@ -354,6 +370,14 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                     <AssignProgram
                       clientId={c.id}
                       onClose={() => setShowAssignProgram(false)}
+                      onSaved={() => setCalendarKey((k) => k + 1)}
+                    />
+                  )}
+
+                  {showAssignRation && (
+                    <AssignRation
+                      clientId={c.id}
+                      onClose={() => setShowAssignRation(false)}
                       onSaved={() => setCalendarKey((k) => k + 1)}
                     />
                   )}

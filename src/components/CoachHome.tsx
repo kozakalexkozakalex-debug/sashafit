@@ -82,7 +82,15 @@ const RISK_DOT: Record<RiskLevel, string> = {
   ok: "bg-green-400",
 };
 
-export default function CoachHome({ onOpenClients }: { onOpenClients?: () => void }) {
+type NavTab = "clients" | "checkins" | "programs" | "rations" | "analytics" | "payments";
+
+export default function CoachHome({
+  onOpenClients,
+  onNavigate,
+}: {
+  onOpenClients?: () => void;
+  onNavigate?: (tab: NavTab) => void;
+}) {
   const [clients, setClients] = useState<Client[]>([]);
   const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
   const [checkins, setCheckins] = useState<Checkin[]>([]);
@@ -90,6 +98,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
   const [messages, setMessages] = useState<Message[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [monthPayments, setMonthPayments] = useState<{ amount: number | null; created_at: string }[]>([]);
+  const [foodToday, setFoodToday] = useState<{ client_id: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedSeenAt, setFeedSeenAt] = useState<string | null>(null);
 
@@ -120,7 +129,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const [{ data: cl }, { data: wo }, { data: ci }, { data: mt }, { data: ms }, { data: pm }, { data: mp }] =
+    const [{ data: cl }, { data: wo }, { data: ci }, { data: mt }, { data: ms }, { data: pm }, { data: mp }, { data: fo }] =
       await Promise.all([
         supabase.from("clients").select("id, name, invite_code, profile_id, subscription_until, created_at"),
         supabase.from("assigned_workouts").select("id, date, title, client_id, completed_at, clients(name)"),
@@ -144,6 +153,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
           .from("payments")
           .select("amount, created_at")
           .gte("created_at", monthStart.toISOString()),
+        supabase.from("food_entries").select("client_id").eq("date", toKey(new Date())),
       ]);
     setClients((cl as Client[]) || []);
     setWorkouts((wo as unknown as AssignedWorkout[]) || []);
@@ -152,6 +162,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
     setMessages((ms as unknown as Message[]) || []);
     setPayments((pm as unknown as Payment[]) || []);
     setMonthPayments(mp || []);
+    setFoodToday((fo as { client_id: string }[]) || []);
     setLoading(false);
   }
 
@@ -358,6 +369,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
   const activeCount = clients.filter((c) => c.subscription_until && c.subscription_until >= todayKey).length;
   const todayWorkouts = workoutsByDate[todayKey] || [];
   const todayCount = todayWorkouts.length;
+  const foodTodayCount = new Set(foodToday.map((f) => f.client_id)).size;
 
   // ---- Спарклайни для карток статистики (останні 7 днів) ----
   const last7Keys: string[] = [];
@@ -490,8 +502,12 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-lg border-l-2 border-accent bg-surface p-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <button
+          type="button"
+          onClick={() => onNavigate?.("clients")}
+          className="rounded-lg border-l-2 border-accent bg-surface p-3 text-left transition hover:bg-line/20"
+        >
           <p className="text-xs text-muted">Клієнтів</p>
           <div className="flex items-end justify-between gap-2">
             <p className="font-display text-2xl font-semibold text-ink">{clients.length}</p>
@@ -502,8 +518,12 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
             )}
           </div>
           <Sparkline values={newClientsPerDay} color="#4ADE80" />
-        </div>
-        <div className="rounded-lg border-l-2 border-accent bg-surface p-3">
+        </button>
+        <button
+          type="button"
+          onClick={() => onNavigate?.("clients")}
+          className="rounded-lg border-l-2 border-accent bg-surface p-3 text-left transition hover:bg-line/20"
+        >
           <p className="text-xs text-muted">Активні підписки</p>
           <div className="flex items-end justify-between gap-2">
             <p className="font-display text-2xl font-semibold text-green-400">{activeCount}</p>
@@ -514,17 +534,34 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
             )}
           </div>
           <Sparkline values={workoutsPerDay} color="#F2615B" />
-        </div>
-        <div className="rounded-lg border-l-2 border-accent bg-surface p-3">
+        </button>
+        <button
+          type="button"
+          onClick={() => onNavigate?.("clients")}
+          className="rounded-lg border-l-2 border-accent bg-surface p-3 text-left transition hover:bg-line/20"
+        >
           <p className="text-xs text-muted">Тренувань сьогодні</p>
           <p className="font-display text-2xl font-semibold text-ink">{todayCount}</p>
           <Sparkline values={workoutsPerDay} color="#E8622C" />
-        </div>
-        <div className="rounded-lg border-l-2 border-accent bg-surface p-3">
+        </button>
+        <button
+          type="button"
+          onClick={() => onNavigate?.("clients")}
+          className="rounded-lg border-l-2 border-accent bg-surface p-3 text-left transition hover:bg-line/20"
+        >
+          <p className="text-xs text-muted">Харчування сьогодні</p>
+          <p className="font-display text-2xl font-semibold text-ink">{foodTodayCount}</p>
+          <Sparkline values={workoutsPerDay} color="#60A5FA" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onNavigate?.("payments")}
+          className="rounded-lg border-l-2 border-accent bg-surface p-3 text-left transition hover:bg-line/20"
+        >
           <p className="text-xs text-muted">Оплата цього місяця</p>
           <p className="font-display text-2xl font-semibold text-ink">{monthTotal.toLocaleString("uk-UA")} ₴</p>
           <Sparkline values={paymentsAmountPerDay} color="#4ADE80" />
-        </div>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px] lg:items-start">
