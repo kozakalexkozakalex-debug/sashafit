@@ -422,21 +422,13 @@ export default function ClientActivityCalendar({
 
       {selected && <p className="mb-2 text-xs font-medium text-muted">{selected}</p>}
 
-      {/* На мобільному — горизонтальна каруселька (тренування / календар / харчування):
-          тягни вліво-вправо або тапай стрілочки. На sm+ все видно поруч без свайпу (transform вимкнено). */}
-      <div className="flex items-center gap-1">
-        {slide > minSlide && (
-          <button
-            type="button"
-            onClick={() => goSlide(slide - 1)}
-            aria-label="Попередній розділ"
-            className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-line bg-paper text-sm text-muted sm:hidden"
-          >
-            ‹
-          </button>
-        )}
-
-        <div className="min-w-0 flex-1 overflow-hidden sm:overflow-visible">
+      {/* На мобільному — горизонтальна каруселька (тренування / календар / харчування), візуально
+          виділена помаранчевими лініями зверху й знизу, щоб було видно, що це окрема зона, а не
+          продовження сторінки. Тягни вліво-вправо або тапай стрілочки (вони не впливають на ширину
+          треку — інакше при появі/зникненні стрілки все "стрибало" і зміщувався центр). На sm+ все
+          видно поруч без свайпу (transform вимкнено), лінії й рамка теж вимкнені. */}
+      <div className="relative border-y-2 border-accent/50 py-3 sm:border-y-0 sm:py-0">
+        <div className="overflow-hidden px-7 sm:overflow-visible sm:px-0">
           <div
             onTouchStart={onDiaryTouchStart}
             onTouchMove={onDiaryTouchMove}
@@ -753,12 +745,22 @@ export default function ClientActivityCalendar({
           </div>
         </div>
 
+        {slide > minSlide && (
+          <button
+            type="button"
+            onClick={() => goSlide(slide - 1)}
+            aria-label="Попередній розділ"
+            className="absolute left-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-paper text-sm text-muted shadow-sm sm:hidden"
+          >
+            ‹
+          </button>
+        )}
         {slide < maxSlide && (
           <button
             type="button"
             onClick={() => goSlide(slide + 1)}
             aria-label="Наступний розділ"
-            className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-line bg-paper text-sm text-muted sm:hidden"
+            className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-paper text-sm text-muted shadow-sm sm:hidden"
           >
             ›
           </button>
