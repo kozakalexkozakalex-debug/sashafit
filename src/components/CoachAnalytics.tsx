@@ -276,51 +276,40 @@ export default function CoachAnalytics() {
 
   return (
     <div className="flex min-w-0 flex-col gap-4 overflow-x-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-5">
+      <div className="flex flex-wrap gap-1.5">
+        {(
+          [
+            { id: "checkins", label: "📋 Чек-іни" },
+            { id: "clients", label: "👥 Клієнти" },
+            { id: "workouts", label: "🏋 Тренування" },
+            { id: "food", label: "🍽 Харчування" },
+          ] as { id: SubTab; label: string }[]
+        ).map((t) => (
           <button
+            key={t.id}
             type="button"
-            onClick={() => setSub("checkins")}
-            className={`font-display text-sm font-medium ${sub === "checkins" ? "text-accent" : "text-muted"}`}
+            onClick={() => setSub(t.id)}
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+              sub === t.id ? "border-accent bg-accent text-paper" : "border-line bg-paper text-muted hover:text-ink"
+            }`}
           >
-            Чек-іни
+            {t.label}
           </button>
+        ))}
+      </div>
+      <div className="flex gap-1.5">
+        {([7, 30, 90] as Period[]).map((p) => (
           <button
+            key={p}
             type="button"
-            onClick={() => setSub("clients")}
-            className={`font-display text-sm font-medium ${sub === "clients" ? "text-accent" : "text-muted"}`}
+            onClick={() => setPeriod(p)}
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+              period === p ? "border-accent bg-accent text-paper" : "border-line bg-paper text-muted hover:text-ink"
+            }`}
           >
-            Клієнти
+            {p} дн.
           </button>
-          <button
-            type="button"
-            onClick={() => setSub("workouts")}
-            className={`font-display text-sm font-medium ${sub === "workouts" ? "text-accent" : "text-muted"}`}
-          >
-            Тренування
-          </button>
-          <button
-            type="button"
-            onClick={() => setSub("food")}
-            className={`font-display text-sm font-medium ${sub === "food" ? "text-accent" : "text-muted"}`}
-          >
-            Харчування
-          </button>
-        </div>
-        <div className="flex gap-1">
-          {([7, 30, 90] as Period[]).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPeriod(p)}
-              className={`rounded-full border px-2.5 py-1 text-xs ${
-                period === p ? "border-accent bg-accent text-paper" : "border-line text-muted"
-              }`}
-            >
-              {p} дн.
-            </button>
-          ))}
-        </div>
+        ))}
       </div>
 
       {sub === "checkins" && <CoachCheckins />}
