@@ -275,7 +275,7 @@ export default function CoachAnalytics() {
     : [];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-5">
           <button
@@ -373,12 +373,15 @@ export default function CoachAnalytics() {
                 const delta =
                   s.lastWeight != null && s.firstWeight != null ? Math.round((s.lastWeight - s.firstWeight) * 10) / 10 : null;
                 return (
-                  <div key={c.id} className="flex items-center justify-between rounded-lg border border-line p-3 text-sm">
-                    <div>
+                  <div
+                    key={c.id}
+                    className="flex flex-col gap-1.5 rounded-lg border border-line p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0 truncate">
                       <span className="font-medium">{clientLabel(c)}</span>
                       {!c.profile_id && <span className="stamp ml-2 text-accent">очікує</span>}
                     </div>
-                    <div className="flex items-center gap-3 text-muted">
+                    <div className="flex flex-wrap items-center gap-2 text-muted">
                       {delta != null && delta !== 0 && (
                         <span className={delta < 0 ? "text-green-400" : "text-red-400"}>
                           {delta > 0 ? `+${delta}` : delta} кг за {period} дн.
@@ -442,11 +445,14 @@ export default function CoachAnalytics() {
               {clients.map((c) => {
                 const s = clientStats(c.id);
                 return (
-                  <div key={c.id} className="flex items-center justify-between rounded-lg border border-line p-3 text-sm">
-                    <span className="font-medium">{clientLabel(c)}</span>
+                  <div
+                    key={c.id}
+                    className="flex flex-col gap-1.5 rounded-lg border border-line p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="truncate font-medium">{clientLabel(c)}</span>
                     <div className="flex items-center gap-3">
                       {s.rate != null && <ProgressBar pct={s.rate} />}
-                      <span className="w-20 text-right text-muted">
+                      <span className="text-muted sm:w-20 sm:text-right">
                         {s.rate != null ? `${s.rate}% (${s.total})` : "—"}
                       </span>
                     </div>
@@ -508,9 +514,12 @@ export default function CoachAnalytics() {
               {clients.map((c) => {
                 const s = clientStats(c.id);
                 return (
-                  <div key={c.id} className="flex items-center justify-between rounded-lg border border-line p-3 text-sm">
-                    <span className="font-medium">{clientLabel(c)}</span>
-                    <div className="flex items-center gap-3">
+                  <div
+                    key={c.id}
+                    className="flex flex-col gap-1.5 rounded-lg border border-line p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="truncate font-medium">{clientLabel(c)}</span>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       {s.avgCal != null && (
                         <span className="text-muted">
                           {s.avgCal} ккал/день
@@ -518,7 +527,7 @@ export default function CoachAnalytics() {
                         </span>
                       )}
                       <ProgressBar pct={s.foodRate} />
-                      <span className="w-24 text-right text-muted">
+                      <span className="text-muted sm:w-24 sm:text-right">
                         {s.daysLogged} з {period} дн.
                       </span>
                     </div>
