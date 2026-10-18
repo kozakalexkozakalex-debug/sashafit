@@ -377,339 +377,331 @@ export default function ClientActivityCalendar({
         <p className="mb-2 text-[11px] text-muted">Чек-ін вноситься лише в неділю — інші дні неактивні.</p>
       )}
 
-      <div className="mx-auto w-full max-w-[280px]">
-        <div className="mb-1.5 flex items-center justify-between">
-          <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
-            ‹
-          </button>
-          <span className="text-xs font-medium">
-            {MONTHS[month]} {year}
-          </span>
-          <button type="button" onClick={() => setCursor(new Date(year, month + 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
-            ›
-          </button>
-        </div>
-        <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted">
-          {WEEKDAYS.map((w) => (
-            <div key={w} className="py-0.5">
-              {w}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-0.5">
-          {cells.map((d, i) => {
-            if (!d) return <div key={i} />;
-            const key = toKey(d);
-            const isToday = key === todayKey;
-            const isSelected = key === selected;
-            const wStatus = showWorkout ? workoutStatus(key) : null;
-            const hasFood = showFood && foodDates.has(key);
-            const hasCheckin = showCheckin && !!checkinByDate[key];
-            const isSunday = d.getDay() === 0;
-            const checkinOnlyMode = filter === "checkin";
-            const disabledForCheckin = checkinOnlyMode && !isSunday;
-            const wColor =
-              wStatus === "done"
-                ? "bg-green-500/20"
-                : wStatus === "missed"
-                ? "bg-red-500/15"
-                : wStatus === "planned"
-                ? "bg-yellow-500/15"
-                : "";
-            return (
-              <button
-                key={key}
-                type="button"
-                disabled={disabledForCheckin}
-                onClick={() => setSelected(key)}
-                className={`flex aspect-square flex-col items-center justify-center rounded-md border text-[11px] ${
-                  wColor || "border-line bg-paper text-muted"
-                } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-accent" : ""} ${
-                  isSelected ? "outline outline-2 outline-accent" : ""
-                } ${disabledForCheckin ? "cursor-not-allowed opacity-25" : ""} ${
-                  checkinOnlyMode && isSunday ? "border-blue-400/50" : ""
-                }`}
-              >
-                <span className="flex items-center gap-0.5">
-                  {d.getDate()}
-                  {wStatus && <span className="text-[9px] leading-none">🏋</span>}
-                </span>
-                <span className="flex gap-0.5">
-                  {hasFood && <span className="h-1 w-1 rounded-full bg-accent" />}
-                  {hasCheckin && <span className="h-1 w-1 rounded-full bg-blue-400" />}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {selected && <p className="mb-2 text-xs font-medium text-muted">{selected}</p>}
 
-      {selected && (
-        <div className="mt-3 flex flex-col gap-3 rounded-lg bg-paper p-3 text-sm">
-          <p className="font-medium">{selected}</p>
-
-          {showWorkout && (
-            <div>
-              {workout ? (
-                <div>
-                  <p className="font-medium text-ink">🏋 {workout.title}</p>
-                  <div className="mt-1.5 flex flex-col gap-1.5">
-                    {[...workout.assigned_workout_exercises]
-                      .sort((a, b) => a.name.localeCompare(b.name))
-                      .map((e) => {
-                        const draft = drafts[e.id] || { weight: "", reps: "", done: false };
-                        return (
-                          <div key={e.id} className="rounded-lg bg-surface p-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-ink">{e.name}</span>
-                              <span className="text-[11px] text-muted">
-                                {e.sets ? `план: ${e.sets}×${e.reps || "?"}` : e.reps ? `план: ${e.reps}` : ""}
-                              </span>
-                            </div>
-                            {e.exercises?.photo_path && (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={exercisePhotoUrl(e.exercises.photo_path)}
-                                alt={`Фото вправи: ${e.name}`}
-                                className="mt-1 max-h-28 rounded-lg object-cover"
-                              />
-                            )}
-                            {e.exercises?.video_url && (
-                              <a href={e.exercises.video_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[11px] text-accent underline">
-                                Відео техніки
-                              </a>
-                            )}
-                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                              <input
-                                value={draft.weight}
-                                onChange={(ev) => setDrafts((prev) => ({ ...prev, [e.id]: { ...draft, weight: ev.target.value } }))}
-                                onBlur={() => saveExercise(e.id, { weight: draft.weight })}
-                                inputMode="decimal"
-                                placeholder="Вага, кг"
-                                className="w-16 rounded-lg border border-line bg-paper px-2 py-1 text-[11px] outline-none"
-                              />
-                              <input
-                                value={draft.reps}
-                                onChange={(ev) => setDrafts((prev) => ({ ...prev, [e.id]: { ...draft, reps: ev.target.value } }))}
-                                onBlur={() => saveExercise(e.id, { reps: draft.reps })}
-                                placeholder="Повтори"
-                                className="w-20 rounded-lg border border-line bg-paper px-2 py-1 text-[11px] outline-none"
-                              />
-                              <label className="flex items-center gap-1 text-[11px] text-muted">
-                                <input type="checkbox" checked={draft.done} onChange={(ev) => saveExercise(e.id, { done: ev.target.checked })} />
-                                Виконано
-                              </label>
-                              {savingId === e.id && <span className="text-[11px] text-muted">Зберігаю…</span>}
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                  {workout.completed_at ? (
-                    <p className="mt-1.5 text-xs text-green-400">Виконано ✓</p>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={wBusy}
-                      onClick={markDone}
-                      className="mt-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
-                    >
-                      {wBusy ? "Зберігаю…" : "Відмітити виконаним"}
-                    </button>
-                  )}
-                </div>
-              ) : (
-                filter === "workout" && <p className="text-xs text-muted">На цю дату тренувань не призначено.</p>
-              )}
-            </div>
-          )}
-
-          {showCheckin && selectedCheckin && (
-            <div className="border-t border-line pt-2 first:border-t-0 first:pt-0">
-              <p className="font-medium text-ink">⚖ Чек-ін: {selectedCheckin.weight} кг</p>
-              {(selectedCheckin.waist != null || selectedCheckin.hips != null || selectedCheckin.chest != null) && (
-                <p className="text-xs text-muted">
-                  {[
-                    selectedCheckin.waist != null ? `Талія ${selectedCheckin.waist} см` : null,
-                    selectedCheckin.hips != null ? `Стегна ${selectedCheckin.hips} см` : null,
-                    selectedCheckin.chest != null ? `Груди ${selectedCheckin.chest} см` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                </p>
-              )}
-              {selectedCheckin.comment && <p className="text-xs text-muted">{selectedCheckin.comment}</p>}
-              {selectedCheckin.photoUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={selectedCheckin.photoUrl} alt="Фото чек-іну" className="mt-1.5 max-h-40 rounded-lg object-cover" />
-              )}
-            </div>
-          )}
-
-          {showFood && (
-            <div className="border-t border-line pt-2 first:border-t-0 first:pt-0">
-              <div className="mb-3 flex items-center gap-3">
-                <svg width="64" height="64" viewBox="0 0 64 64" className="flex-none -rotate-90">
-                  <circle cx="32" cy="32" r={ringR} fill="none" stroke="currentColor" className="text-line" strokeWidth="6" />
-                  <circle
-                    cx="32"
-                    cy="32"
-                    r={ringR}
-                    fill="none"
-                    stroke="currentColor"
-                    className="text-accent"
-                    strokeWidth="6"
-                    strokeLinecap="round"
-                    strokeDasharray={ringCirc}
-                    strokeDashoffset={ringOffset}
-                  />
-                  <text x="32" y="34" textAnchor="middle" transform="rotate(90 32 32)" className="fill-ink" style={{ font: "700 13px var(--font-sans, sans-serif)" }}>
-                    {Math.round(totals.calories)}
-                  </text>
-                </svg>
-                <div className="flex flex-1 flex-col gap-0.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-muted">🍽 Ккал</span>
-                    <span className="font-medium">
-                      {Math.round(totals.calories)}
-                      {target?.calories ? ` з ${target.calories}` : ""}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-muted">
-                    <span>Білки</span>
-                    <span>
-                      {Math.round(totals.protein)} г{target?.protein ? ` з ${target.protein}` : ""}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-muted">
-                    <span>Жири</span>
-                    <span>
-                      {Math.round(totals.fat)} г{target?.fat ? ` з ${target.fat}` : ""}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-muted">
-                    <span>Вуглеводи</span>
-                    <span>
-                      {Math.round(totals.carbs)} г{target?.carbs ? ` з ${target.carbs}` : ""}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                {[...MEALS, ...(otherEntries.length > 0 ? ["Інше"] : [])].map((meal) => {
-                  const list = meal === "Інше" ? otherEntries : mealGroups[meal];
-                  const isAdding = addingMeal === meal;
+      <div className="flex flex-wrap items-start gap-3">
+        {selected && showWorkout && workout && (
+          <div className="order-1 w-full flex-none rounded-lg bg-paper p-3 text-sm sm:w-60">
+            <p className="font-medium text-ink">🏋 {workout.title}</p>
+            <div className="mt-1.5 flex flex-col gap-1.5">
+              {[...workout.assigned_workout_exercises]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((e) => {
+                  const draft = drafts[e.id] || { weight: "", reps: "", done: false };
                   return (
-                    <div key={meal} className="rounded-lg bg-surface px-2 py-1.5">
+                    <div key={e.id} className="rounded-lg bg-surface p-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">{meal}</span>
-                        {meal !== "Інше" && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAddingMeal(isAdding ? null : meal);
-                              setFErr("");
-                            }}
-                            className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent"
-                          >
-                            +
-                          </button>
-                        )}
+                        <span className="text-xs font-medium text-ink">{e.name}</span>
+                        <span className="text-[11px] text-muted">
+                          {e.sets ? `план: ${e.sets}×${e.reps || "?"}` : e.reps ? `план: ${e.reps}` : ""}
+                        </span>
                       </div>
-
-                      {list.length > 0 && (
-                        <div className="mt-1 flex flex-col gap-1">
-                          {list.map((e) => (
-                            <div key={e.id} className="flex items-center justify-between rounded bg-paper px-2 py-1 text-xs">
-                              <span>
-                                {e.name}
-                                {e.grams ? ` — ${e.grams} г` : ""} ({Math.round(e.calories)} ккал)
-                              </span>
-                              <button type="button" onClick={() => removeFoodEntry(e.id)} className="text-muted">
-                                ✕
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                      {e.exercises?.photo_path && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={exercisePhotoUrl(e.exercises.photo_path)}
+                          alt={`Фото вправи: ${e.name}`}
+                          className="mt-1 max-h-28 rounded-lg object-cover"
+                        />
                       )}
-
-                      {isAdding && (
-                        <div className="mt-2 border-t border-line pt-2">
-                          <div className="relative flex gap-1.5">
-                            <input
-                              value={query}
-                              onChange={(e) => {
-                                setQuery(e.target.value);
-                                setPer100(null);
-                              }}
-                              placeholder="Пошук продукту"
-                              className="flex-1 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
-                            />
-                            <button type="button" onClick={doSearch} disabled={searching} className="rounded-lg bg-paper px-2.5 py-1.5 text-[11px] text-accent">
-                              {searching ? "…" : "Знайти"}
-                            </button>
-                          </div>
-
-                          {results.length > 0 && (
-                            <div className="mt-1 flex max-h-32 flex-col overflow-y-auto rounded-lg border border-line bg-paper">
-                              {results.map((p, i) => (
-                                <button key={i} type="button" onClick={() => pickProduct(p)} className="border-b border-line px-2 py-1.5 text-left text-[11px] last:border-b-0">
-                                  {p.name} — {Math.round(p.caloriesPer100)} ккал/100г
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {baseProducts.length > 0 && (
-                            <select
-                              value=""
-                              onChange={(e) => {
-                                const p = baseProducts.find((bp) => bp.id === e.target.value);
-                                if (p) {
-                                  pickProduct({
-                                    name: p.name,
-                                    caloriesPer100: p.calories_per_100,
-                                    proteinPer100: p.protein_per_100,
-                                    fatPer100: p.fat_per_100,
-                                    carbsPer100: p.carbs_per_100,
-                                  });
-                                }
-                              }}
-                              className="mt-1.5 w-full rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none"
-                            >
-                              <option value="">Або зі своєї бази продуктів</option>
-                              {baseProducts.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-
-                          <div className="mt-1.5 flex flex-wrap gap-1.5">
-                            <input value={grams} onChange={(e) => onGramsChange(e.target.value)} placeholder="Грам" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
-                            <input value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="Ккал" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
-                            <input value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="Білки" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
-                            <input value={fat} onChange={(e) => setFat(e.target.value)} placeholder="Жири" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
-                            <input value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="Вуглеводи" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
-                          </div>
-                          <button
-                            type="button"
-                            disabled={fBusy}
-                            onClick={addFoodEntry}
-                            className="mt-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
-                          >
-                            {fBusy ? "Зберігаю…" : "Додати запис"}
-                          </button>
-                          {fErr && <p className="mt-1 text-xs text-red-400">{fErr}</p>}
-                        </div>
+                      {e.exercises?.video_url && (
+                        <a href={e.exercises.video_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[11px] text-accent underline">
+                          Відео техніки
+                        </a>
                       )}
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <input
+                          value={draft.weight}
+                          onChange={(ev) => setDrafts((prev) => ({ ...prev, [e.id]: { ...draft, weight: ev.target.value } }))}
+                          onBlur={() => saveExercise(e.id, { weight: draft.weight })}
+                          inputMode="decimal"
+                          placeholder="Вага, кг"
+                          className="w-16 rounded-lg border border-line bg-paper px-2 py-1 text-[11px] outline-none"
+                        />
+                        <input
+                          value={draft.reps}
+                          onChange={(ev) => setDrafts((prev) => ({ ...prev, [e.id]: { ...draft, reps: ev.target.value } }))}
+                          onBlur={() => saveExercise(e.id, { reps: draft.reps })}
+                          placeholder="Повтори"
+                          className="w-20 rounded-lg border border-line bg-paper px-2 py-1 text-[11px] outline-none"
+                        />
+                        <label className="flex items-center gap-1 text-[11px] text-muted">
+                          <input type="checkbox" checked={draft.done} onChange={(ev) => saveExercise(e.id, { done: ev.target.checked })} />
+                          Виконано
+                        </label>
+                        {savingId === e.id && <span className="text-[11px] text-muted">Зберігаю…</span>}
+                      </div>
                     </div>
                   );
                 })}
+            </div>
+            {workout.completed_at ? (
+              <p className="mt-1.5 text-xs text-green-400">Виконано ✓</p>
+            ) : (
+              <button
+                type="button"
+                disabled={wBusy}
+                onClick={markDone}
+                className="mt-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
+              >
+                {wBusy ? "Зберігаю…" : "Відмітити виконаним"}
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="order-2 mx-auto w-full max-w-[280px] flex-none sm:mx-0">
+          <div className="mb-1.5 flex items-center justify-between">
+            <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
+              ‹
+            </button>
+            <span className="text-xs font-medium">
+              {MONTHS[month]} {year}
+            </span>
+            <button type="button" onClick={() => setCursor(new Date(year, month + 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
+              ›
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted">
+            {WEEKDAYS.map((w) => (
+              <div key={w} className="py-0.5">
+                {w}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-0.5">
+            {cells.map((d, i) => {
+              if (!d) return <div key={i} />;
+              const key = toKey(d);
+              const isToday = key === todayKey;
+              const isSelected = key === selected;
+              const wStatus = showWorkout ? workoutStatus(key) : null;
+              const hasFood = showFood && foodDates.has(key);
+              const hasCheckin = showCheckin && !!checkinByDate[key];
+              const isSunday = d.getDay() === 0;
+              const checkinOnlyMode = filter === "checkin";
+              const disabledForCheckin = checkinOnlyMode && !isSunday;
+              const wColor =
+                wStatus === "done"
+                  ? "bg-green-500/20"
+                  : wStatus === "missed"
+                  ? "bg-red-500/15"
+                  : wStatus === "planned"
+                  ? "bg-yellow-500/15"
+                  : "";
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={disabledForCheckin}
+                  onClick={() => setSelected(key)}
+                  className={`flex aspect-square flex-col items-center justify-center rounded-md border text-[11px] ${
+                    wColor || "border-line bg-paper text-muted"
+                  } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-accent" : ""} ${
+                    isSelected ? "outline outline-2 outline-accent" : ""
+                  } ${disabledForCheckin ? "cursor-not-allowed opacity-25" : ""} ${
+                    checkinOnlyMode && isSunday ? "border-blue-400/50" : ""
+                  }`}
+                >
+                  <span className="flex items-center gap-0.5">
+                    {d.getDate()}
+                    {wStatus && <span className="text-[9px] leading-none">🏋</span>}
+                  </span>
+                  <span className="flex gap-0.5">
+                    {hasFood && <span className="h-1 w-1 rounded-full bg-accent" />}
+                    {hasCheckin && <span className="h-1 w-1 rounded-full bg-blue-400" />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {selected && showFood && (
+          <div className="order-3 min-w-[240px] flex-1 rounded-lg bg-paper p-3 text-sm">
+            <div className="mb-3 flex items-center gap-3">
+              <svg width="64" height="64" viewBox="0 0 64 64" className="flex-none -rotate-90">
+                <circle cx="32" cy="32" r={ringR} fill="none" stroke="currentColor" className="text-line" strokeWidth="6" />
+                <circle
+                  cx="32"
+                  cy="32"
+                  r={ringR}
+                  fill="none"
+                  stroke="currentColor"
+                  className="text-accent"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeDasharray={ringCirc}
+                  strokeDashoffset={ringOffset}
+                />
+                <text x="32" y="34" textAnchor="middle" transform="rotate(90 32 32)" className="fill-ink" style={{ font: "700 13px var(--font-sans, sans-serif)" }}>
+                  {Math.round(totals.calories)}
+                </text>
+              </svg>
+              <div className="flex flex-1 flex-col gap-0.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted">🍽 Ккал</span>
+                  <span className="font-medium">
+                    {Math.round(totals.calories)}
+                    {target?.calories ? ` з ${target.calories}` : ""}
+                  </span>
+                </div>
+                <div className="flex justify-between text-muted">
+                  <span>Білки</span>
+                  <span>
+                    {Math.round(totals.protein)} г{target?.protein ? ` з ${target.protein}` : ""}
+                  </span>
+                </div>
+                <div className="flex justify-between text-muted">
+                  <span>Жири</span>
+                  <span>
+                    {Math.round(totals.fat)} г{target?.fat ? ` з ${target.fat}` : ""}
+                  </span>
+                </div>
+                <div className="flex justify-between text-muted">
+                  <span>Вуглеводи</span>
+                  <span>
+                    {Math.round(totals.carbs)} г{target?.carbs ? ` з ${target.carbs}` : ""}
+                  </span>
+                </div>
               </div>
             </div>
+
+            <div className="flex flex-col gap-2">
+              {[...MEALS, ...(otherEntries.length > 0 ? ["Інше"] : [])].map((meal) => {
+                const list = meal === "Інше" ? otherEntries : mealGroups[meal];
+                const isAdding = addingMeal === meal;
+                return (
+                  <div key={meal} className="rounded-lg bg-surface px-2 py-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">{meal}</span>
+                      {meal !== "Інше" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddingMeal(isAdding ? null : meal);
+                            setFErr("");
+                          }}
+                          className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent"
+                        >
+                          +
+                        </button>
+                      )}
+                    </div>
+
+                    {list.length > 0 && (
+                      <div className="mt-1 flex flex-col gap-1">
+                        {list.map((e) => (
+                          <div key={e.id} className="flex items-center justify-between rounded bg-paper px-2 py-1 text-xs">
+                            <span>
+                              {e.name}
+                              {e.grams ? ` — ${e.grams} г` : ""} ({Math.round(e.calories)} ккал)
+                            </span>
+                            <button type="button" onClick={() => removeFoodEntry(e.id)} className="text-muted">
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {isAdding && (
+                      <div className="mt-2 border-t border-line pt-2">
+                        <div className="relative flex gap-1.5">
+                          <input
+                            value={query}
+                            onChange={(e) => {
+                              setQuery(e.target.value);
+                              setPer100(null);
+                            }}
+                            placeholder="Пошук продукту"
+                            className="flex-1 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
+                          />
+                          <button type="button" onClick={doSearch} disabled={searching} className="rounded-lg bg-paper px-2.5 py-1.5 text-[11px] text-accent">
+                            {searching ? "…" : "Знайти"}
+                          </button>
+                        </div>
+
+                        {results.length > 0 && (
+                          <div className="mt-1 flex max-h-32 flex-col overflow-y-auto rounded-lg border border-line bg-paper">
+                            {results.map((p, i) => (
+                              <button key={i} type="button" onClick={() => pickProduct(p)} className="border-b border-line px-2 py-1.5 text-left text-[11px] last:border-b-0">
+                                {p.name} — {Math.round(p.caloriesPer100)} ккал/100г
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {baseProducts.length > 0 && (
+                          <select
+                            value=""
+                            onChange={(e) => {
+                              const p = baseProducts.find((bp) => bp.id === e.target.value);
+                              if (p) {
+                                pickProduct({
+                                  name: p.name,
+                                  caloriesPer100: p.calories_per_100,
+                                  proteinPer100: p.protein_per_100,
+                                  fatPer100: p.fat_per_100,
+                                  carbsPer100: p.carbs_per_100,
+                                });
+                              }
+                            }}
+                            className="mt-1.5 w-full rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none"
+                          >
+                            <option value="">Або зі своєї бази продуктів</option>
+                            {baseProducts.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          <input value={grams} onChange={(e) => onGramsChange(e.target.value)} placeholder="Грам" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
+                          <input value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="Ккал" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
+                          <input value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="Білки" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
+                          <input value={fat} onChange={(e) => setFat(e.target.value)} placeholder="Жири" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
+                          <input value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="Вуглеводи" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
+                        </div>
+                        <button
+                          type="button"
+                          disabled={fBusy}
+                          onClick={addFoodEntry}
+                          className="mt-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
+                        >
+                          {fBusy ? "Зберігаю…" : "Додати запис"}
+                        </button>
+                        {fErr && <p className="mt-1 text-xs text-red-400">{fErr}</p>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {selected && showCheckin && selectedCheckin && (
+        <div className="mt-3 rounded-lg bg-paper p-3 text-sm">
+          <p className="font-medium text-ink">⚖ Чек-ін: {selectedCheckin.weight} кг</p>
+          {(selectedCheckin.waist != null || selectedCheckin.hips != null || selectedCheckin.chest != null) && (
+            <p className="text-xs text-muted">
+              {[
+                selectedCheckin.waist != null ? `Талія ${selectedCheckin.waist} см` : null,
+                selectedCheckin.hips != null ? `Стегна ${selectedCheckin.hips} см` : null,
+                selectedCheckin.chest != null ? `Груди ${selectedCheckin.chest} см` : null,
+              ]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+          )}
+          {selectedCheckin.comment && <p className="text-xs text-muted">{selectedCheckin.comment}</p>}
+          {selectedCheckin.photoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={selectedCheckin.photoUrl} alt="Фото чек-іну" className="mt-1.5 max-h-40 rounded-lg object-cover" />
           )}
         </div>
       )}
