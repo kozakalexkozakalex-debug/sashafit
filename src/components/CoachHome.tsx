@@ -105,6 +105,14 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
   const [mBusy, setMBusy] = useState(false);
   const [mErr, setMErr] = useState("");
 
+  const [addOpen, setAddOpen] = useState(false);
+  const [aName, setAName] = useState("");
+  const [aGoal, setAGoal] = useState("");
+  const [aBusy, setABusy] = useState(false);
+  const [aErr, setAErr] = useState("");
+  const [aInviteCode, setAInviteCode] = useState<string | null>(null);
+  const [aCopied, setACopied] = useState(false);
+
   async function load() {
     setLoading(true);
     const monthStart = new Date();
@@ -194,6 +202,50 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
   async function deleteMeeting(id: string) {
     await supabase.from("meetings").delete().eq("id", id);
     load();
+  }
+
+  function inviteUrl(code: string) {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    return `${origin}/login?invite=${code}`;
+  }
+
+  async function addClientQuick() {
+    if (!aName.trim()) {
+      setAErr("Вкажи ім'я клієнта");
+      return;
+    }
+    setAErr("");
+    setABusy(true);
+    const { data, error } = await supabase
+      .from("clients")
+      .insert({ name: aName.trim(), goal: aGoal.trim() || null })
+      .select("invite_code")
+      .single();
+    setABusy(false);
+    if (error) {
+      setAErr(error.message);
+      return;
+    }
+    setAInviteCode(data?.invite_code || null);
+    setAName("");
+    setAGoal("");
+    load();
+  }
+
+  async function copyInvite(code: string) {
+    try {
+      await navigator.clipboard.writeText(inviteUrl(code));
+      setACopied(true);
+      setTimeout(() => setACopied(false), 1500);
+    } catch {
+      /* ігноруємо — просто немає буфера обміну */
+    }
+  }
+
+  function closeAdd() {
+    setAddOpen(false);
+    setAInviteCode(null);
+    setAErr("");
   }
 
   if (loading) {
@@ -359,6 +411,83 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
 
   return (
     <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => (addOpen ? closeAdd() : setAddOpen(true))}
+          className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-paper"
+        >
+          <span className="text-base leading-none">+</span> Додати клієнта
+        </button>
+      </div>
+
+      {addOpen && (
+        <div className="rounded-xl border border-line bg-surface p-4">
+          {aInviteCode ? (
+            <div className="text-sm">
+              <p className="mb-2 font-medium text-green-400">Клієнта додано!</p>
+              <p className="mb-2 text-muted">Надішли цю посилання клієнту — за нею він зайде і підключиться:</p>
+              <div className="flex items-center gap-2">
+                <p className="flex-1 break-all rounded bg-paper px-2 py-1 text-xs text-muted">
+                  {inviteUrl(aInviteCode)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => copyInvite(aInviteCode)}
+                  className="whitespace-nowrap rounded bg-paper px-2 py-1 text-xs text-accent"
+                >
+                  {aCopied ? "Скопійовано" : "Копіювати"}
+                </button>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAInviteCode(null)}
+                  className="rounded-lg border border-line px-3 py-1.5 text-xs"
+                >
+                  Додати ще одного
+                </button>
+                <button type="button" onClick={closeAdd} className="rounded-lg border border-line px-3 py-1.5 text-xs">
+                  Закрити
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-2">
+                <input
+                  value={aName}
+                  onChange={(e) => setAName(e.target.value)}
+                  placeholder="Ім'я клієнта"
+                  autoFocus
+                  className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                />
+                <input
+                  value={aGoal}
+                  onChange={(e) => setAGoal(e.target.value)}
+                  placeholder="Ціль (необов'язково)"
+                  className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={aBusy}
+                  onClick={addClientQuick}
+                  className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
+                >
+                  {aBusy ? "Додаю…" : "Додати"}
+                </button>
+                <button type="button" onClick={closeAdd} className="rounded-lg border border-line px-3 py-2 text-sm">
+                  Скасувати
+                </button>
+              </div>
+              {aErr && <p className="text-sm text-red-400">{aErr}</p>}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-lg border-l-2 border-accent bg-surface p-3">
           <p className="text-xs text-muted">Клієнтів</p>
