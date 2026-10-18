@@ -103,6 +103,9 @@ export default function ClientActivityCalendar({
   const [wBusy, setWBusy] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
+  // Блок тренування можна згорнути — якщо на день нічого не призначено, він
+  // згорнутий за замовчуванням і не займає місця, лишаючи тільки іконку-кнопку.
+  const [workoutOpen, setWorkoutOpen] = useState(true);
 
   async function loadWorkouts() {
     const { data } = await supabase
@@ -165,6 +168,12 @@ export default function ClientActivityCalendar({
   }, [clientId]);
 
   const workout = selected ? workouts.find((w) => w.date === selected) : null;
+
+  // За замовчуванням розгорнуто, якщо є що показати, і згорнуто, якщо
+  // тренування на день нема — тоді блок не займає місця даремно.
+  useEffect(() => {
+    setWorkoutOpen(!!workout);
+  }, [selected, workout?.id]);
 
   useEffect(() => {
     if (!workout) return;
@@ -495,9 +504,27 @@ export default function ClientActivityCalendar({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         {selected && showWorkout && (
           <div className="relative flex-1 overflow-hidden rounded-lg bg-paper p-3 text-sm">
-            <p className="font-medium text-ink">🏋 {workout ? workout.title : "Тренування"}</p>
-            {!workout && <p className="mt-1 text-muted">Тренування не призначено.</p>}
-            {workout && (
+            <button
+              type="button"
+              onClick={() => setWorkoutOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 text-left"
+            >
+              <span className={`flex items-center gap-1.5 font-medium ${workout ? "text-ink" : "text-red-400"}`}>
+                <span
+                  className={`flex h-6 w-6 flex-none items-center justify-center rounded-full text-xs ${
+                    workout ? "bg-accent/15" : "bg-red-500/15"
+                  }`}
+                >
+                  🏋
+                </span>
+                {workout ? workout.title : "Тренування не призначено"}
+              </span>
+              <span className="flex-none text-[10px] text-muted">{workoutOpen ? "▲" : "▼"}</span>
+            </button>
+            {workoutOpen && !workout && (
+              <p className="mt-1.5 text-muted">На цей день тренування не призначено.</p>
+            )}
+            {workoutOpen && workout && (
             <>
             <div className="mt-1.5 flex flex-col gap-1.5">
               {[...workout.assigned_workout_exercises]
