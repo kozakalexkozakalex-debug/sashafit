@@ -431,7 +431,7 @@ export default function ClientActivityCalendar({
           треку — інакше при появі/зникненні стрілки все "стрибало" і зміщувався центр). На sm+ все
           видно поруч без свайпу (transform вимкнено), лінії й рамка теж вимкнені. */}
       <div className="relative border-y-2 border-accent/50 py-3 sm:border-y-0 sm:py-0">
-        <div className="overflow-hidden px-7 sm:overflow-visible sm:px-0">
+        <div className="overflow-hidden sm:overflow-visible">
           <div
             onTouchStart={onDiaryTouchStart}
             onTouchMove={onDiaryTouchMove}
@@ -511,7 +511,7 @@ export default function ClientActivityCalendar({
           </div>
         )}
 
-        <div className="order-2 min-w-full shrink-0 sm:min-w-0 sm:w-auto sm:shrink">
+        <div className="order-2 min-w-full shrink-0 rounded-lg bg-paper p-3 sm:min-w-0 sm:w-auto sm:shrink sm:bg-transparent sm:p-0">
         <div className="mx-auto w-full max-w-[220px]">
           <div className="mb-1.5 flex items-center justify-between">
             <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
@@ -753,7 +753,7 @@ export default function ClientActivityCalendar({
             type="button"
             onClick={() => goSlide(slide - 1)}
             aria-label="Попередній розділ"
-            className="absolute left-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-paper text-sm text-muted shadow-sm sm:hidden"
+            className="absolute left-1 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-paper text-sm text-muted shadow-md sm:hidden"
           >
             ‹
           </button>
@@ -763,7 +763,7 @@ export default function ClientActivityCalendar({
             type="button"
             onClick={() => goSlide(slide + 1)}
             aria-label="Наступний розділ"
-            className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-paper text-sm text-muted shadow-sm sm:hidden"
+            className="absolute right-1 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-paper text-sm text-muted shadow-md sm:hidden"
           >
             ›
           </button>
