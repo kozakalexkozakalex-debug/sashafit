@@ -325,11 +325,16 @@ export default function ClientActivityCalendar({
         <h2 className="text-sm font-semibold">Календар</h2>
       </div>
 
-      <div className="mb-3 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2">
-        <p className="text-[11px] text-muted">Наступне тренування</p>
-        <p className="font-display text-base font-semibold text-ink">
-          {nextWorkout ? nextWorkoutLabel(nextWorkout.date) : "Не заплановано"}
-        </p>
+      <div className="mb-3 flex items-center gap-3 rounded-xl border border-accent/30 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent px-3 py-2.5">
+        <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-accent/20 text-xl">
+          🏋
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-wide text-muted">Наступне тренування</p>
+          <p className="truncate font-display text-xl font-bold leading-tight text-ink">
+            {nextWorkout ? nextWorkoutLabel(nextWorkout.date) : "Не заплановано"}
+          </p>
+        </div>
       </div>
 
       <div className="mb-2 flex flex-wrap gap-1.5">
