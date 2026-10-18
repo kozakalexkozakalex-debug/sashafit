@@ -107,6 +107,7 @@ export default function CoachHome({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [heatWeeks, setHeatWeeks] = useState(12);
 
   const [mTitle, setMTitle] = useState("");
   const [mClientId, setMClientId] = useState("");
@@ -400,8 +401,9 @@ export default function CoachHome({
     return d >= 0 && d <= 7;
   }).length;
 
-  // ---- Heatmap активності: останні 12 тижнів, виконані тренування по днях ----
-  const HEATMAP_DAYS = 84;
+  // ---- Heatmap активності: виконані тренування по днях, діапазон тижнів обирає коуч ----
+  const HEAT_WEEK_OPTIONS = [4, 8, 12, 24];
+  const HEATMAP_DAYS = heatWeeks * 7;
   const heatmapCells: { key: string; count: number }[] = [];
   for (let i = HEATMAP_DAYS - 1; i >= 0; i--) {
     const d = new Date(today);
@@ -582,19 +584,33 @@ export default function CoachHome({
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px] lg:items-start">
         <div className="flex flex-col gap-5">
           <div className="rounded-xl border border-line bg-surface p-4">
-            <h2 className="mb-3 flex items-baseline justify-between text-sm font-semibold">
-              <span>Активність</span>
-              <span className="text-xs font-normal text-muted">останні 12 тижнів, усі клієнти, по тижнях</span>
-            </h2>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold">Активність</h2>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted">Період:</span>
+                {HEAT_WEEK_OPTIONS.map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => setHeatWeeks(w)}
+                    className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                      heatWeeks === w ? "border-accent bg-accent text-paper" : "border-line text-muted"
+                    }`}
+                  >
+                    {w} тижн.
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="flex flex-wrap gap-6">
-              <div className="min-w-0 flex-1">
+              <div>
                 <p className="mb-1.5 text-[11px] text-muted">Тренування (виконано)</p>
-                <div className="grid grid-cols-7 gap-[3px]">
+                <div className="grid grid-cols-7 gap-[2px]">
                   {heatmapCells.map((c) => (
                     <div
                       key={c.key}
                       title={`${c.key}: ${c.count} виконано`}
-                      className={`flex aspect-square items-center justify-center rounded-sm text-[9px] font-medium ${
+                      className={`flex h-4 w-4 items-center justify-center rounded-sm text-[7px] leading-none font-medium ${
                         HEAT_SHADES[heatLevel(c.count)]
                       } ${c.count > 0 ? "text-paper" : "text-muted"}`}
                     >
@@ -603,14 +619,14 @@ export default function CoachHome({
                   ))}
                 </div>
               </div>
-              <div className="min-w-0 flex-1">
+              <div>
                 <p className="mb-1.5 text-[11px] text-muted">Харчування (клієнтів залогувало)</p>
-                <div className="grid grid-cols-7 gap-[3px]">
+                <div className="grid grid-cols-7 gap-[2px]">
                   {foodHeatmapCells.map((c) => (
                     <div
                       key={c.key}
                       title={`${c.key}: ${c.count} клієнт(ів) залогували їжу`}
-                      className={`flex aspect-square items-center justify-center rounded-sm text-[9px] font-medium ${
+                      className={`flex h-4 w-4 items-center justify-center rounded-sm text-[7px] leading-none font-medium ${
                         HEAT_SHADES[heatLevel(c.count)]
                       } ${c.count > 0 ? "text-paper" : "text-muted"}`}
                     >
