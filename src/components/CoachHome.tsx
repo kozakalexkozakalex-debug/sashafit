@@ -114,6 +114,7 @@ export default function CoachHome({
   const [mNote, setMNote] = useState("");
   const [mBusy, setMBusy] = useState(false);
   const [mErr, setMErr] = useState("");
+  const [meetingModalOpen, setMeetingModalOpen] = useState(false);
 
   const [addOpen, setAddOpen] = useState(false);
   const [aBusy, setABusy] = useState(false);
@@ -207,6 +208,7 @@ export default function CoachHome({
     setMDateTime("");
     setMLink("");
     setMNote("");
+    setMeetingModalOpen(false);
     load();
   }
 
@@ -719,60 +721,81 @@ export default function CoachHome({
             )}
           </div>
 
-          <div className="border border-dashed border-line/80 p-4">
-            <h2 className="mb-3 text-sm font-semibold">+ Нова зустріч</h2>
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap gap-2">
-                <input
-                  value={mTitle}
-                  onChange={(e) => setMTitle(e.target.value)}
-                  placeholder="Назва (напр. Дзвінок з клієнтом)"
-                  className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-                />
-                <select
-                  value={mClientId}
-                  onChange={(e) => setMClientId(e.target.value)}
-                  className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-                >
-                  <option value="">Без клієнта</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {clientLabel(c)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <input
-                  type="datetime-local"
-                  value={mDateTime}
-                  onChange={(e) => setMDateTime(e.target.value)}
-                  className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-                />
-                <input
-                  value={mLink}
-                  onChange={(e) => setMLink(e.target.value)}
-                  placeholder="Посилання на дзвінок (необов'язково)"
-                  className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-                />
-              </div>
-              <input
-                value={mNote}
-                onChange={(e) => setMNote(e.target.value)}
-                placeholder="Нотатка (необов'язково)"
-                className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-              />
-              <button
-                type="button"
-                disabled={mBusy}
-                onClick={addMeeting}
-                className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
+          <button
+            type="button"
+            onClick={() => setMeetingModalOpen(true)}
+            className="self-start rounded-lg border border-dashed border-line/80 px-4 py-2 text-sm font-semibold text-muted transition hover:border-accent/50 hover:text-ink"
+          >
+            + Нова зустріч
+          </button>
+
+          {meetingModalOpen && (
+            <div className="fixed inset-0 z-40" onClick={() => setMeetingModalOpen(false)}>
+              <div className="absolute inset-0 bg-black/50" />
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-line bg-sidebar p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:inset-0 lg:m-auto lg:h-fit lg:w-[460px] lg:rounded-xl lg:border"
               >
-                {mBusy ? "Зберігаю…" : "Додати"}
-              </button>
-              {mErr && <p className="text-sm text-red-400">{mErr}</p>}
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold">+ Нова зустріч</h2>
+                  <button type="button" onClick={() => setMeetingModalOpen(false)} className="text-xs text-muted">
+                    Закрити
+                  </button>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      value={mTitle}
+                      onChange={(e) => setMTitle(e.target.value)}
+                      placeholder="Назва (напр. Дзвінок з клієнтом)"
+                      className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                    />
+                    <select
+                      value={mClientId}
+                      onChange={(e) => setMClientId(e.target.value)}
+                      className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                    >
+                      <option value="">Без клієнта</option>
+                      {clients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {clientLabel(c)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      type="datetime-local"
+                      value={mDateTime}
+                      onChange={(e) => setMDateTime(e.target.value)}
+                      className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                    />
+                    <input
+                      value={mLink}
+                      onChange={(e) => setMLink(e.target.value)}
+                      placeholder="Посилання на дзвінок (необов'язково)"
+                      className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                    />
+                  </div>
+                  <input
+                    value={mNote}
+                    onChange={(e) => setMNote(e.target.value)}
+                    placeholder="Нотатка (необов'язково)"
+                    className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                  />
+                  <button
+                    type="button"
+                    disabled={mBusy}
+                    onClick={addMeeting}
+                    className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
+                  >
+                    {mBusy ? "Зберігаю…" : "Додати"}
+                  </button>
+                  {mErr && <p className="text-sm text-red-400">{mErr}</p>}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="rounded-xl border border-line bg-surface p-4">
             <h2 className="mb-3 text-sm font-semibold">Усі зустрічі ({meetings.length})</h2>
