@@ -323,16 +323,13 @@ export default function ClientActivityCalendar({
     <div className="rounded-xl border border-line bg-surface p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Календар</h2>
-        <span className="text-right text-[11px] text-muted">
-          {nextWorkout ? (
-            <>
-              Наступне тренування:{" "}
-              <span className="font-medium text-ink">{nextWorkoutLabel(nextWorkout.date)}</span>
-            </>
-          ) : (
-            "Тренувань не заплановано"
-          )}
-        </span>
+      </div>
+
+      <div className="mb-3 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2">
+        <p className="text-[11px] text-muted">Наступне тренування</p>
+        <p className="font-display text-base font-semibold text-ink">
+          {nextWorkout ? nextWorkoutLabel(nextWorkout.date) : "Не заплановано"}
+        </p>
       </div>
 
       <div className="mb-2 flex flex-wrap gap-1.5">

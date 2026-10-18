@@ -399,7 +399,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
     if (count <= 3) return 2;
     return 3;
   }
-  const HEAT_SHADES = ["bg-surface", "bg-accent/30", "bg-accent/60", "bg-accent"];
+  const HEAT_SHADES = ["bg-line/30", "bg-accent/35", "bg-accent/65", "bg-accent"];
 
   // ---- Прогрес клієнтів: % виконання за 30 днів, найслабші першими ----
   const since30 = new Date(today);
