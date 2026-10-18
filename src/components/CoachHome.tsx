@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import ChatPanel from "@/components/ChatPanel";
 import { clientRisk, RiskLevel } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
 
@@ -909,7 +908,6 @@ export default function CoachHome({
               </ul>
             )}
           </div>
-          <ChatPanel mode="coach" />
         </div>
       </div>
     </div>

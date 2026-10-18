@@ -17,7 +17,6 @@ type ClientOption = { id: string; name: string | null; invite_code: string };
 type Props = { mode: "client"; clientId: string } | { mode: "coach" };
 
 export default function ChatPanel(props: Props) {
-  const [collapsed, setCollapsed] = useState(false);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [activeClientId, setActiveClientId] = useState<string | null>(
     props.mode === "client" ? props.clientId : null
@@ -92,71 +91,56 @@ export default function ChatPanel(props: Props) {
   }
 
   return (
-    <div className="flex h-fit flex-col rounded-xl border border-line bg-surface">
-      <button
-        type="button"
-        onClick={() => setCollapsed((v) => !v)}
-        className="flex items-center justify-between p-3 text-left"
-      >
-        <h2 className="text-sm font-semibold">Повідомлення</h2>
-        <span className="text-xs text-muted">{collapsed ? "розгорнути" : "згорнути"}</span>
-      </button>
-
-      {!collapsed && (
-        <div className="flex flex-col gap-2.5 border-t border-line p-3">
-          {props.mode === "coach" && (
-            <select
-              value={activeClientId || ""}
-              onChange={(e) => setActiveClientId(e.target.value || null)}
-              className="rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
-            >
-              {clients.length === 0 && <option value="">Немає підключених клієнтів</option>}
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {clientLabel(c)}
-                </option>
-              ))}
-            </select>
-          )}
-
-          <div ref={scrollBoxRef} className="flex h-56 flex-col gap-2 overflow-y-auto rounded-lg bg-paper p-2">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`max-w-[85%] rounded-lg px-3 py-1.5 text-sm ${
-                  m.sender === props.mode
-                    ? "self-end bg-accent text-paper"
-                    : "self-start border border-line text-ink"
-                }`}
-              >
-                {m.body}
-              </div>
-            ))}
-            {messages.length === 0 && <p className="text-xs text-muted">Повідомлень ще немає.</p>}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") send();
-              }}
-              placeholder="Написати..."
-              disabled={!activeClientId}
-              className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none disabled:opacity-50"
-            />
-            <button
-              type="button"
-              disabled={busy || !activeClientId}
-              onClick={send}
-              className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-paper disabled:opacity-50"
-            >
-              Надіслати
-            </button>
-          </div>
-        </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+      {props.mode === "coach" && (
+        <select
+          value={activeClientId || ""}
+          onChange={(e) => setActiveClientId(e.target.value || null)}
+          className="rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
+        >
+          {clients.length === 0 && <option value="">Немає підключених клієнтів</option>}
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>
+              {clientLabel(c)}
+            </option>
+          ))}
+        </select>
       )}
+
+      <div ref={scrollBoxRef} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-lg bg-paper p-2">
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            className={`max-w-[85%] rounded-lg px-3 py-1.5 text-sm ${
+              m.sender === props.mode ? "self-end bg-accent text-paper" : "self-start border border-line text-ink"
+            }`}
+          >
+            {m.body}
+          </div>
+        ))}
+        {messages.length === 0 && <p className="text-xs text-muted">Повідомлень ще немає.</p>}
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") send();
+          }}
+          placeholder="Написати..."
+          disabled={!activeClientId}
+          className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none disabled:opacity-50"
+        />
+        <button
+          type="button"
+          disabled={busy || !activeClientId}
+          onClick={send}
+          className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-paper disabled:opacity-50"
+        >
+          Надіслати
+        </button>
+      </div>
     </div>
   );
 }

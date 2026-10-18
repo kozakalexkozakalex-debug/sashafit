@@ -13,6 +13,7 @@ import CoachAnalytics from "@/components/CoachAnalytics";
 import CoachPayments from "@/components/CoachPayments";
 import CoachCheckins from "@/components/CoachCheckins";
 import CoachHome from "@/components/CoachHome";
+import ChatLauncher from "@/components/ChatLauncher";
 import { clientRisk, RISK_LABEL } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
 
@@ -459,6 +460,8 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
         </>
       )}
       </div>
+
+      <ChatLauncher mode="coach" />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
 import ClientProfileCard from "@/components/ClientProfileCard";
-import ChatPanel from "@/components/ChatPanel";
+import ChatLauncher from "@/components/ChatLauncher";
 
 type ClientRow = {
   id: string;
@@ -343,7 +343,7 @@ export default function ClientDashboard() {
       </div>
       </div>
 
-      <ChatPanel mode="client" clientId={client.id} />
+      <ChatLauncher mode="client" clientId={client.id} />
     </div>
   );
 }
