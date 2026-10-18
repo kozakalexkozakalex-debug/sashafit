@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  closestCenter,
   DndContext,
   type DragEndEvent,
   PointerSensor,
@@ -136,6 +137,14 @@ export default function WorkoutBuilder({
     return map;
   }, [exercises]);
 
+  // Одразу розкриваємо першу категорію з вправами, щоб було видно, що тягнути.
+  useEffect(() => {
+    if (openGroup != null) return;
+    const firstWithExercises = MUSCLE_GROUPS.find((g) => byGroup[g]?.length);
+    if (firstWithExercises) setOpenGroup(firstWithExercises);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [byGroup]);
+
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: "workout-dropzone" });
 
   const sensors = useSensors(
@@ -252,7 +261,7 @@ export default function WorkoutBuilder({
         />
       </div>
 
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="flex-1 rounded-lg border border-line bg-paper p-2">
             <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted">База вправ</p>
