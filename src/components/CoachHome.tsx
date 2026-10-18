@@ -98,7 +98,7 @@ export default function CoachHome({
   const [messages, setMessages] = useState<Message[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [monthPayments, setMonthPayments] = useState<{ amount: number | null; created_at: string }[]>([]);
-  const [foodToday, setFoodToday] = useState<{ client_id: string }[]>([]);
+  const [foodEntries, setFoodEntries] = useState<{ client_id: string; date: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedSeenAt, setFeedSeenAt] = useState<string | null>(null);
 
@@ -153,7 +153,7 @@ export default function CoachHome({
           .from("payments")
           .select("amount, created_at")
           .gte("created_at", monthStart.toISOString()),
-        supabase.from("food_entries").select("client_id").eq("date", toKey(new Date())),
+        supabase.from("food_entries").select("client_id, date"),
       ]);
     setClients((cl as Client[]) || []);
     setWorkouts((wo as unknown as AssignedWorkout[]) || []);
@@ -162,7 +162,7 @@ export default function CoachHome({
     setMessages((ms as unknown as Message[]) || []);
     setPayments((pm as unknown as Payment[]) || []);
     setMonthPayments(mp || []);
-    setFoodToday((fo as { client_id: string }[]) || []);
+    setFoodEntries((fo as { client_id: string; date: string }[]) || []);
     setLoading(false);
   }
 
@@ -329,6 +329,11 @@ export default function CoachHome({
     (workoutsByDate[w.date] = workoutsByDate[w.date] || []).push(w);
   }
 
+  const foodByDate: Record<string, { client_id: string; date: string }[]> = {};
+  for (const f of foodEntries) {
+    (foodByDate[f.date] = foodByDate[f.date] || []).push(f);
+  }
+
   const cells: (Date | null)[] = [];
   for (let i = 0; i < startOffset; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
@@ -369,7 +374,7 @@ export default function CoachHome({
   const activeCount = clients.filter((c) => c.subscription_until && c.subscription_until >= todayKey).length;
   const todayWorkouts = workoutsByDate[todayKey] || [];
   const todayCount = todayWorkouts.length;
-  const foodTodayCount = new Set(foodToday.map((f) => f.client_id)).size;
+  const foodTodayCount = new Set((foodByDate[todayKey] || []).map((f) => f.client_id)).size;
 
   // ---- Спарклайни для карток статистики (останні 7 днів) ----
   const last7Keys: string[] = [];
@@ -412,6 +417,16 @@ export default function CoachHome({
     return 3;
   }
   const HEAT_SHADES = ["bg-line/30", "bg-accent/35", "bg-accent/65", "bg-accent"];
+
+  // ---- Heatmap активності харчування: останні 12 тижнів, скільки клієнтів логували їжу по днях ----
+  const foodHeatmapCells: { key: string; count: number }[] = [];
+  for (let i = HEATMAP_DAYS - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = toKey(d);
+    const count = new Set((foodByDate[key] || []).map((f) => f.client_id)).size;
+    foodHeatmapCells.push({ key, count });
+  }
 
   // ---- Прогрес клієнтів: % виконання за 30 днів, найслабші першими ----
   const since30 = new Date(today);
@@ -577,6 +592,31 @@ export default function CoachHome({
                   <div
                     key={c.key}
                     title={`${c.key}: ${c.count} виконано`}
+                    className={`h-3 w-3 rounded-sm ${HEAT_SHADES[heatLevel(c.count)]}`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted">
+              менше
+              {HEAT_SHADES.map((s, i) => (
+                <span key={i} className={`h-2.5 w-2.5 rounded-sm ${s}`} />
+              ))}
+              більше
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-3 flex items-baseline justify-between text-sm font-semibold">
+              <span>Активність харчування</span>
+              <span className="text-xs font-normal text-muted">останні 12 тижнів, усі клієнти</span>
+            </h2>
+            <div className="overflow-x-auto pb-1">
+              <div className="grid w-max grid-flow-col grid-rows-7 gap-[3px]">
+                {foodHeatmapCells.map((c) => (
+                  <div
+                    key={c.key}
+                    title={`${c.key}: ${c.count} клієнт(ів) залогували їжу`}
                     className={`h-3 w-3 rounded-sm ${HEAT_SHADES[heatLevel(c.count)]}`}
                   />
                 ))}
