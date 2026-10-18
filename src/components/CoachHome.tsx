@@ -107,7 +107,6 @@ export default function CoachHome({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [heatMonths, setHeatMonths] = useState(3);
 
   const [mTitle, setMTitle] = useState("");
   const [mClientId, setMClientId] = useState("");
@@ -401,66 +400,6 @@ export default function CoachHome({
     return d >= 0 && d <= 7;
   }).length;
 
-  // ---- Активність: календар, один рядок = один місяць, виходні підсвічені ----
-  const HEAT_MONTH_OPTIONS = [1, 3, 6, 12];
-  function heatLevel(count: number) {
-    if (count <= 0) return 0;
-    if (count === 1) return 1;
-    if (count <= 3) return 2;
-    return 3;
-  }
-  const HEAT_SHADES = ["bg-line/30", "bg-accent/35", "bg-accent/65", "bg-accent"];
-
-  type ActivityDay = { key: string; dateLabel: string; isWeekend: boolean; workoutCount: number; foodCount: number };
-  type ActivityMonthRow = { label: string; days: (ActivityDay | null)[] };
-  const activityMonthRows: ActivityMonthRow[] = [];
-  for (let m = heatMonths - 1; m >= 0; m--) {
-    const base = new Date(today.getFullYear(), today.getMonth() - m, 1);
-    const y = base.getFullYear();
-    const mon = base.getMonth();
-    const daysInThisMonth = new Date(y, mon + 1, 0).getDate();
-    const days: (ActivityDay | null)[] = [];
-    for (let day = 1; day <= 31; day++) {
-      if (day > daysInThisMonth) {
-        days.push(null);
-        continue;
-      }
-      const dd = new Date(y, mon, day);
-      const key = toKey(dd);
-      const jsDay = dd.getDay();
-      const isWeekend = jsDay === 0 || jsDay === 6;
-      const dateLabel = `${day} ${MONTHS[mon].toLowerCase()} ${y}, ${WEEKDAYS[(jsDay + 6) % 7]}`;
-      const workoutCount = (workoutsByDate[key] || []).filter((w) => w.completed_at).length;
-      const foodCount = new Set((foodByDate[key] || []).map((f) => f.client_id)).size;
-      days.push({ key, dateLabel, isWeekend, workoutCount, foodCount });
-    }
-    activityMonthRows.push({ label: `${MONTHS[mon].slice(0, 3)} ${y}`, days });
-  }
-
-  function HeatCell({ d, count, metricLabel }: { d: ActivityDay; count: number; metricLabel: string }) {
-    const isIdle = count <= 0;
-    const idleClass = d.isWeekend ? "bg-amber-50 text-neutral-800" : "bg-line/20 text-muted";
-    return (
-      <div className="group relative">
-        <div
-          className={`flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[6px] leading-none font-medium ${
-            isIdle ? idleClass : `${HEAT_SHADES[heatLevel(count)]} text-paper`
-          }`}
-        >
-          {count}
-        </div>
-        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[11px] text-white opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100">
-          <p className="font-medium">{d.dateLabel}</p>
-          <p className="text-neutral-300">
-            {metricLabel}: {count}
-            {d.isWeekend ? " · вихідний" : ""}
-          </p>
-          <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-neutral-900" />
-        </div>
-      </div>
-    );
-  }
-
   // ---- Прогрес клієнтів: % виконання за 30 днів, найслабші першими ----
   const since30 = new Date(today);
   since30.setDate(since30.getDate() - 30);
@@ -614,78 +553,6 @@ export default function CoachHome({
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px] lg:items-start">
         <div className="flex flex-col gap-5">
-          <div className="rounded-xl border border-line bg-surface p-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold">Активність</h2>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-muted">Період:</span>
-                {HEAT_MONTH_OPTIONS.map((mCount) => (
-                  <button
-                    key={mCount}
-                    type="button"
-                    onClick={() => setHeatMonths(mCount)}
-                    className={`rounded-full border px-2 py-0.5 text-[11px] ${
-                      heatMonths === mCount ? "border-accent bg-accent text-paper" : "border-line text-muted"
-                    }`}
-                  >
-                    {mCount} міс.
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-5">
-              <div>
-                <p className="mb-1.5 text-[11px] text-muted">Тренування (виконано)</p>
-                <div className="overflow-x-auto pb-1">
-                  <div className="flex flex-col gap-[2px]">
-                    {activityMonthRows.map((row) => (
-                      <div key={row.label} className="flex items-center gap-1.5">
-                        <span className="w-12 flex-none text-[9px] text-muted">{row.label}</span>
-                        <div className="grid grid-cols-[repeat(31,14px)] gap-[2px]">
-                          {row.days.map((d, i) =>
-                            d ? (
-                              <HeatCell key={i} d={d} count={d.workoutCount} metricLabel="Виконано" />
-                            ) : (
-                              <div key={i} className="h-3.5 w-3.5" />
-                            )
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div>
-                <p className="mb-1.5 text-[11px] text-muted">Харчування (клієнтів залогувало)</p>
-                <div className="overflow-x-auto pb-1">
-                  <div className="flex flex-col gap-[2px]">
-                    {activityMonthRows.map((row) => (
-                      <div key={row.label} className="flex items-center gap-1.5">
-                        <span className="w-12 flex-none text-[9px] text-muted">{row.label}</span>
-                        <div className="grid grid-cols-[repeat(31,14px)] gap-[2px]">
-                          {row.days.map((d, i) =>
-                            d ? (
-                              <HeatCell key={i} d={d} count={d.foodCount} metricLabel="Залогували їжу" />
-                            ) : (
-                              <div key={i} className="h-3.5 w-3.5" />
-                            )
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted">
-              менше
-              {HEAT_SHADES.map((s, i) => (
-                <span key={i} className={`h-2.5 w-2.5 rounded-sm ${s}`} />
-              ))}
-              більше
-            </div>
-          </div>
-
           {riskRows.length > 0 && (
             <div className="rounded-xl border border-line bg-surface p-4">
               <h2 className="mb-1 flex items-baseline justify-between text-sm font-semibold">
@@ -787,21 +654,39 @@ export default function CoachHome({
                 {cells.map((d, i) => {
                   if (!d) return <div key={i} />;
                   const key = toKey(d);
-                  const count = workoutsByDate[key]?.length || 0;
+                  const workoutCount = workoutsByDate[key]?.length || 0;
+                  const foodCount = new Set((foodByDate[key] || []).map((f) => f.client_id)).size;
+                  const hasAny = workoutCount > 0 || foodCount > 0;
                   const isToday = key === todayKey;
                   const isSelected = key === selectedDay;
                   return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setSelectedDay(key)}
-                      className={`flex aspect-square flex-col items-center justify-center rounded-md border text-[11px] ${
-                        count > 0 ? "border-accent/40 bg-accent/10" : "border-line bg-paper text-muted"
-                      } ${isToday ? "ring-1 ring-accent" : ""} ${isSelected ? "outline outline-2 outline-accent" : ""}`}
-                    >
-                      <span>{d.getDate()}</span>
-                      {count > 0 && <span className="text-[8px] text-accent">🏋{count}</span>}
-                    </button>
+                    <div key={key} className="group relative">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDay(key)}
+                        className={`flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md border text-[11px] ${
+                          hasAny ? "border-accent/40 bg-accent/10" : "border-line bg-paper text-muted"
+                        } ${isToday ? "ring-1 ring-accent" : ""} ${isSelected ? "outline outline-2 outline-accent" : ""}`}
+                      >
+                        <span>{d.getDate()}</span>
+                        {hasAny && (
+                          <span className="flex items-center gap-1 text-[7px] leading-none">
+                            {workoutCount > 0 && <span className="text-accent">🏋{workoutCount}</span>}
+                            {foodCount > 0 && <span className="text-blue-400">🍽{foodCount}</span>}
+                          </span>
+                        )}
+                      </button>
+                      {hasAny && (
+                        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[11px] text-white opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100">
+                          <p className="font-medium">
+                            {d.getDate()} {MONTHS[month].toLowerCase()} {year}
+                          </p>
+                          {workoutCount > 0 && <p className="text-neutral-300">🏋 Тренувань: {workoutCount}</p>}
+                          {foodCount > 0 && <p className="text-neutral-300">🍽 Залогували їжу: {foodCount}</p>}
+                          <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-neutral-900" />
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
