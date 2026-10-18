@@ -7,11 +7,10 @@ import {
   type DragEndEvent,
   PointerSensor,
   TouchSensor,
-  useSortable,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/lib/supabaseClient";
 
