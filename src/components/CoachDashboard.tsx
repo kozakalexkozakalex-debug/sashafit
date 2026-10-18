@@ -62,9 +62,22 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "payments", label: "Оплата" },
 ];
 
+// Знизу на мобільному — 4 найважливіші вкладки + кнопка «Ще» з рештою.
+const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "checkins", "rations"];
+const MOBILE_MORE_IDS: TabId[] = ["programs", "analytics", "payments"];
+const TAB_ICON: Record<TabId, string> = {
+  home: "🏠",
+  clients: "👥",
+  checkins: "📋",
+  programs: "🗂",
+  rations: "🍽",
+  analytics: "📊",
+  payments: "💳",
+};
+
 export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number }) {
   const [tab, setTab] = useState<TabId>("home");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -188,44 +201,58 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
     );
   }
 
-  const currentTabLabel = TABS.find((t) => t.id === tab)?.label || "";
+  const moreActive = MOBILE_MORE_IDS.includes(tab);
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-      <div className="lg:hidden">
-        <div className="flex items-center justify-between rounded-xl border border-line bg-sidebar p-2">
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen((v) => !v)}
-            aria-label="Меню"
-            aria-expanded={mobileMenuOpen}
-            className="rounded-lg border border-line bg-surface p-2 text-ink"
+    <div className="flex flex-col gap-6 pb-20 lg:flex-row lg:items-start lg:gap-8 lg:pb-0">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden">
+        {MOBILE_MAIN_IDS.map((id) => {
+          const t = TABS.find((x) => x.id === id)!;
+          const active = tab === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => {
+                setTab(id);
+                setMobileMoreOpen(false);
+              }}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
+                active ? "text-accent" : "text-muted"
+              }`}
+            >
+              <span className="text-base leading-none">{TAB_ICON[id]}</span>
+              {t.label}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setMobileMoreOpen((v) => !v)}
+          aria-expanded={mobileMoreOpen}
+          className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
+            moreActive || mobileMoreOpen ? "text-accent" : "text-muted"
+          }`}
+        >
+          <span className="text-base leading-none">⋯</span>
+          Ще
+        </button>
+      </nav>
+
+      {mobileMoreOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setMobileMoreOpen(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-line bg-sidebar p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
           >
-            {mobileMenuOpen ? (
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                <path d="M3 3L15 15M15 3L3 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                <path d="M2 4.5H16M2 9H16M2 13.5H16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            )}
-          </button>
-          <span className="font-display text-sm font-medium">{currentTabLabel}</span>
-          <span className="w-9" />
-        </div>
-        {mobileMenuOpen && (
-          <div className="mt-2 flex flex-col gap-0.5 rounded-xl border border-line bg-sidebar p-3">
-            <TabButton t={TABS[0]} onSelect={() => setMobileMenuOpen(false)} />
-            <div className="my-2 h-px bg-line" />
-            {TABS.slice(1, 6).map((t) => (
-              <TabButton key={t.id} t={t} onSelect={() => setMobileMenuOpen(false)} />
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
+            {MOBILE_MORE_IDS.map((id) => (
+              <TabButton key={id} t={TABS.find((x) => x.id === id)!} onSelect={() => setMobileMoreOpen(false)} />
             ))}
-            <div className="my-2 h-px bg-line" />
-            <TabButton t={TABS[6]} onSelect={() => setMobileMenuOpen(false)} />
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
         <TabButton t={TABS[0]} />
