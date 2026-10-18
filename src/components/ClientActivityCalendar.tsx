@@ -103,9 +103,10 @@ export default function ClientActivityCalendar({
   const [wBusy, setWBusy] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
-  // Блок тренування можна згорнути — якщо на день нічого не призначено, він
-  // згорнутий за замовчуванням і не займає місця, лишаючи тільки іконку-кнопку.
-  const [workoutOpen, setWorkoutOpen] = useState(true);
+  // Дневники тренування і харчування відкриваються поп-апом з іконки під
+  // календарем — не займають місця, поки їх не відкрили.
+  const [workoutModalOpen, setWorkoutModalOpen] = useState(false);
+  const [foodModalOpen, setFoodModalOpen] = useState(false);
 
   async function loadWorkouts() {
     const { data } = await supabase
@@ -169,11 +170,12 @@ export default function ClientActivityCalendar({
 
   const workout = selected ? workouts.find((w) => w.date === selected) : null;
 
-  // За замовчуванням розгорнуто, якщо є що показати, і згорнуто, якщо
-  // тренування на день нема — тоді блок не займає місця даремно.
+  // При перемиканні дня закриваємо поп-апи — інакше можна лишитись дивитись
+  // дневник вчорашнього дня, гадаючи, що це сьогоднішній.
   useEffect(() => {
-    setWorkoutOpen(!!workout);
-  }, [selected, workout?.id]);
+    setWorkoutModalOpen(false);
+    setFoodModalOpen(false);
+  }, [selected]);
 
   useEffect(() => {
     if (!workout) return;
@@ -498,33 +500,58 @@ export default function ClientActivityCalendar({
         </div>
       )}
 
-      {/* Дневники тренування і харчування — завжди обидва видимі під календарем:
-          один під одним на мобільному, поруч на sm+. Тренування показується навіть
-          якщо на день нічого не призначено — тоді просто підказка замість форми. */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-        {selected && showWorkout && (
-          <div className="relative flex-1 overflow-hidden rounded-lg bg-paper p-3 text-sm">
+      {/* Під календарем — дві іконки замість завжди відкритих дневників: тап
+          відкриває поп-ап знизу з тренуванням або харчуванням за вибраний день.
+          Колір іконки одразу підказує стан, не відкриваючи поп-ап. */}
+      {selected && (
+        <div className="mb-1 flex items-center justify-center gap-4">
+          {showWorkout && (
             <button
               type="button"
-              onClick={() => setWorkoutOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 text-left"
+              onClick={() => setWorkoutModalOpen(true)}
+              aria-label="Тренування"
+              className={`flex h-11 w-11 items-center justify-center rounded-full text-lg transition ${
+                !workout
+                  ? "bg-red-500/15 text-red-400"
+                  : workout.completed_at
+                  ? "bg-green-500/15 text-green-400"
+                  : "bg-accent/15 text-accent"
+              }`}
             >
-              <span className={`flex items-center gap-1.5 font-medium ${workout ? "text-ink" : "text-red-400"}`}>
-                <span
-                  className={`flex h-6 w-6 flex-none items-center justify-center rounded-full text-xs ${
-                    workout ? "bg-accent/15" : "bg-red-500/15"
-                  }`}
-                >
-                  🏋
-                </span>
-                {workout ? workout.title : "Тренування не призначено"}
-              </span>
-              <span className="flex-none text-[10px] text-muted">{workoutOpen ? "▲" : "▼"}</span>
+              🏋
             </button>
-            {workoutOpen && !workout && (
-              <p className="mt-1.5 text-muted">На цей день тренування не призначено.</p>
-            )}
-            {workoutOpen && workout && (
+          )}
+          {showFood && (
+            <button
+              type="button"
+              onClick={() => setFoodModalOpen(true)}
+              aria-label="Харчування"
+              className={`flex h-11 w-11 items-center justify-center rounded-full text-lg transition ${
+                dayEntries.length > 0 ? "bg-accent/15 text-accent" : "bg-line/30 text-muted"
+              }`}
+            >
+              🍽
+            </button>
+          )}
+        </div>
+      )}
+
+      {workoutModalOpen && selected && showWorkout && (
+        <div className="fixed inset-0 z-40" onClick={() => setWorkoutModalOpen(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-line bg-sidebar p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:inset-0 lg:m-auto lg:h-fit lg:w-[460px] lg:rounded-xl lg:border"
+          >
+            <div className="relative rounded-lg bg-paper p-3 text-sm">
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="font-medium text-ink">🏋 {workout ? workout.title : "Тренування"}</p>
+              <button type="button" onClick={() => setWorkoutModalOpen(false)} className="text-xs text-muted">
+                Закрити
+              </button>
+            </div>
+            {!workout && <p className="mt-1.5 text-muted">На цей день тренування не призначено.</p>}
+            {workout && (
             <>
             <div className="mt-1.5 flex flex-col gap-1.5">
               {[...workout.assigned_workout_exercises]
@@ -602,11 +629,25 @@ export default function ClientActivityCalendar({
             )}
             </>
             )}
+            </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {selected && showFood && (
-          <div className="flex-1 rounded-lg bg-paper p-3 text-sm">
+      {foodModalOpen && selected && showFood && (
+        <div className="fixed inset-0 z-40" onClick={() => setFoodModalOpen(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-line bg-sidebar p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:inset-0 lg:m-auto lg:h-fit lg:w-[460px] lg:rounded-xl lg:border"
+          >
+          <div className="rounded-lg bg-paper p-3 text-sm">
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="font-medium text-ink">🍽 Харчування</p>
+              <button type="button" onClick={() => setFoodModalOpen(false)} className="text-xs text-muted">
+                Закрити
+              </button>
+            </div>
             <div className="mb-3 flex items-center gap-3">
               <svg width="64" height="64" viewBox="0 0 64 64" className="flex-none -rotate-90">
                 <circle cx="32" cy="32" r={ringR} fill="none" stroke="currentColor" className="text-line" strokeWidth="6" />
@@ -769,8 +810,9 @@ export default function ClientActivityCalendar({
               })}
             </div>
           </div>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
       {selected && showCheckin && selectedCheckin && (
         <div className="mt-3 rounded-lg bg-paper p-3 text-sm">
