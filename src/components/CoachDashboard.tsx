@@ -76,6 +76,24 @@ const TAB_ICON: Record<TabId, string> = {
   payments: "💳",
 };
 
+// Поп-ап для дій над клієнтом (призначити тренування/програму/раціон) —
+// щоб вони не розпирали сторінку вниз, а виїжджали зверху (шторка на
+// мобільному, модалка по центру на десктопі). Дочірній компонент сам малює
+// свою картку й кнопку «Закрити» — ця обгортка лише позиціонує й затемнює фон.
+function QuickActionSheet({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-40" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50" />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:inset-0 lg:m-auto lg:h-fit lg:max-h-[85vh] lg:w-[520px]"
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number }) {
   const [tab, setTab] = useState<TabId>("home");
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
@@ -432,27 +450,33 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                   </div>
 
                   {showBuilder && (
-                    <WorkoutBuilder
-                      clientId={c.id}
-                      onClose={() => setShowBuilder(false)}
-                      onSaved={() => setCalendarKey((k) => k + 1)}
-                    />
+                    <QuickActionSheet onClose={() => setShowBuilder(false)}>
+                      <WorkoutBuilder
+                        clientId={c.id}
+                        onClose={() => setShowBuilder(false)}
+                        onSaved={() => setCalendarKey((k) => k + 1)}
+                      />
+                    </QuickActionSheet>
                   )}
 
                   {showAssignProgram && (
-                    <AssignProgram
-                      clientId={c.id}
-                      onClose={() => setShowAssignProgram(false)}
-                      onSaved={() => setCalendarKey((k) => k + 1)}
-                    />
+                    <QuickActionSheet onClose={() => setShowAssignProgram(false)}>
+                      <AssignProgram
+                        clientId={c.id}
+                        onClose={() => setShowAssignProgram(false)}
+                        onSaved={() => setCalendarKey((k) => k + 1)}
+                      />
+                    </QuickActionSheet>
                   )}
 
                   {showAssignRation && (
-                    <AssignRation
-                      clientId={c.id}
-                      onClose={() => setShowAssignRation(false)}
-                      onSaved={() => setCalendarKey((k) => k + 1)}
-                    />
+                    <QuickActionSheet onClose={() => setShowAssignRation(false)}>
+                      <AssignRation
+                        clientId={c.id}
+                        onClose={() => setShowAssignRation(false)}
+                        onSaved={() => setCalendarKey((k) => k + 1)}
+                      />
+                    </QuickActionSheet>
                   )}
                 </div>
               );
