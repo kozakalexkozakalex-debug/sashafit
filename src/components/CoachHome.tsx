@@ -669,19 +669,23 @@ export default function CoachHome({
                         } ${isToday ? "ring-1 ring-accent" : ""} ${isSelected ? "outline outline-2 outline-accent" : ""}`}
                       >
                         <span>{d.getDate()}</span>
-                        <span className="flex items-center gap-1 text-[7px] leading-none">
-                          {workoutCount > 0 && <span className="text-accent">🏋{workoutCount}</span>}
-                          <span className="text-blue-400">🍽{foodCount}</span>
-                        </span>
+                        {hasAny && (
+                          <span className="flex items-center gap-1 text-[7px] leading-none">
+                            {workoutCount > 0 && <span className="text-accent">🏋{workoutCount}</span>}
+                            {foodCount > 0 && <span className="text-blue-400">🍽{foodCount}</span>}
+                          </span>
+                        )}
                       </button>
-                      <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[11px] text-white opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100">
-                        <p className="font-medium">
-                          {d.getDate()} {MONTHS[month].toLowerCase()} {year}
-                        </p>
-                        {workoutCount > 0 && <p className="text-neutral-300">🏋 Тренувань: {workoutCount}</p>}
-                        <p className="text-neutral-300">🍽 Залогували їжу: {foodCount}</p>
-                        <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-neutral-900" />
-                      </div>
+                      {hasAny && (
+                        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[11px] text-white opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100">
+                          <p className="font-medium">
+                            {d.getDate()} {MONTHS[month].toLowerCase()} {year}
+                          </p>
+                          {workoutCount > 0 && <p className="text-neutral-300">🏋 Тренувань: {workoutCount}</p>}
+                          {foodCount > 0 && <p className="text-neutral-300">🍽 Залогували їжу: {foodCount}</p>}
+                          <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-neutral-900" />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
