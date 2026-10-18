@@ -148,6 +148,45 @@ export default function ClientProfileCard({
   nextSunday.setDate(now.getDate() + (isSundayNow ? 7 : daysToNextSunday));
   const nextSundayLabel = nextSunday.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit" });
 
+  // ---- макроси (ціль по харчуванню) — задає тільки тренер ----
+  const [tCalories, setTCalories] = useState("");
+  const [tProtein, setTProtein] = useState("");
+  const [tFat, setTFat] = useState("");
+  const [tCarbs, setTCarbs] = useState("");
+  const [tBusy, setTBusy] = useState(false);
+  const [tSaved, setTSaved] = useState(false);
+
+  useEffect(() => {
+    if (!readOnly) return;
+    supabase
+      .from("nutrition_targets")
+      .select("*")
+      .eq("client_id", client.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setTCalories(data?.calories != null ? String(data.calories) : "");
+        setTProtein(data?.protein != null ? String(data.protein) : "");
+        setTFat(data?.fat != null ? String(data.fat) : "");
+        setTCarbs(data?.carbs != null ? String(data.carbs) : "");
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readOnly, client.id]);
+
+  async function saveTarget() {
+    setTBusy(true);
+    setTSaved(false);
+    await supabase.from("nutrition_targets").upsert({
+      client_id: client.id,
+      calories: tCalories.trim() ? Number(tCalories) : null,
+      protein: tProtein.trim() ? Number(tProtein) : null,
+      fat: tFat.trim() ? Number(tFat) : null,
+      carbs: tCarbs.trim() ? Number(tCarbs) : null,
+      updated_at: new Date().toISOString(),
+    });
+    setTBusy(false);
+    setTSaved(true);
+  }
+
   const [ciOpen, setCiOpen] = useState(false);
   const [ciWeight, setCiWeight] = useState("");
   const [ciWaist, setCiWaist] = useState("");
@@ -399,6 +438,51 @@ export default function ClientProfileCard({
           </div>
         )}
       </div>
+
+      {readOnly && (
+        <div className="mt-3 border-t border-line pt-3">
+          <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted">Макроси (ціль на день)</p>
+          <div className="flex flex-wrap gap-1.5">
+            <input
+              value={tCalories}
+              onChange={(e) => setTCalories(e.target.value)}
+              inputMode="numeric"
+              placeholder="Ккал"
+              className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
+            />
+            <input
+              value={tProtein}
+              onChange={(e) => setTProtein(e.target.value)}
+              inputMode="numeric"
+              placeholder="Білки"
+              className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
+            />
+            <input
+              value={tFat}
+              onChange={(e) => setTFat(e.target.value)}
+              inputMode="numeric"
+              placeholder="Жири"
+              className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
+            />
+            <input
+              value={tCarbs}
+              onChange={(e) => setTCarbs(e.target.value)}
+              inputMode="numeric"
+              placeholder="Вуглеводи"
+              className="w-20 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
+            />
+            <button
+              type="button"
+              disabled={tBusy}
+              onClick={saveTarget}
+              className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
+            >
+              {tBusy ? "Зберігаю…" : "Зберегти ціль"}
+            </button>
+          </div>
+          {tSaved && <p className="mt-1 text-xs text-green-400">Збережено</p>}
+        </div>
+      )}
     </div>
   );
 }
