@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Unbounded, Golos_Text } from "next/font/google";
 import "./globals.css";
 
@@ -17,6 +17,22 @@ const body = Golos_Text({
 export const metadata: Metadata = {
   title: "SashaFit",
   description: "Платформа для онлайн-тренера та клієнтів",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "SashaFit",
+  },
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#15171B",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
