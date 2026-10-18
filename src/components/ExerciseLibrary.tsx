@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { CATEGORY_ICONS } from "@/lib/exerciseIcons";
 
 type Exercise = {
   id: string;
@@ -33,6 +34,7 @@ export default function ExerciseLibrary() {
   const [groupFilter, setGroupFilter] = useState<string>(ALL_GROUPS);
   const [addOpen, setAddOpen] = useState(false);
   const [photoUploadingId, setPhotoUploadingId] = useState<string | null>(null);
+  const [fillingIcons, setFillingIcons] = useState(false);
 
   const [name, setName] = useState("");
   const [muscleGroup, setMuscleGroup] = useState(MUSCLE_GROUPS[0]);
@@ -121,6 +123,40 @@ export default function ExerciseLibrary() {
   }
 
   const visibleExercises = groupFilter === ALL_GROUPS ? exercises : exercises.filter((ex) => ex.muscle_group === groupFilter);
+  const missingPhotoCount = exercises.filter((ex) => !ex.photo_path).length;
+
+  function dataUrlToBlob(dataUrl: string): Blob {
+    const [header, base64] = dataUrl.split(",");
+    const mime = header.match(/data:(.*?);base64/)?.[1] || "image/png";
+    const bytes = atob(base64);
+    const arr = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+    return new Blob([arr], { type: mime });
+  }
+
+  // Одним натисканням заповнює фото всім вправам без фото — однотипна
+  // схематична іконка за групою м'язів (одна й та сама картинка на групу,
+  // завантажується в сховище один раз і перевикористовується).
+  async function fillMissingPhotosWithIcons() {
+    setFillingIcons(true);
+    for (const group of MUSCLE_GROUPS) {
+      const icon = CATEGORY_ICONS[group];
+      if (!icon) continue;
+      const idsWithoutPhoto = exercises
+        .filter((ex) => !ex.photo_path && (ex.muscle_group || "Інше") === group)
+        .map((ex) => ex.id);
+      if (idsWithoutPhoto.length === 0) continue;
+
+      const path = `category-icons/${group}.png`;
+      await supabase.storage.from("exercises").upload(path, dataUrlToBlob(icon), {
+        upsert: true,
+        contentType: "image/png",
+      });
+      await supabase.from("exercises").update({ photo_path: path }).in("id", idsWithoutPhoto);
+    }
+    setFillingIcons(false);
+    load();
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -134,6 +170,22 @@ export default function ExerciseLibrary() {
           <span className="text-base leading-none">+</span> Нова вправа
         </button>
       </div>
+
+      {missingPhotoCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2">
+          <p className="text-xs text-muted">
+            Вправ без фото: {missingPhotoCount}. Можна поставити однотипні схематичні іконки за групою м&apos;язів.
+          </p>
+          <button
+            type="button"
+            disabled={fillingIcons}
+            onClick={fillMissingPhotosWithIcons}
+            className="flex-none rounded-full border border-accent px-3 py-1.5 text-xs font-semibold text-accent disabled:opacity-50"
+          >
+            {fillingIcons ? "Заповнюю…" : "🖼 Заповнити іконками"}
+          </button>
+        </div>
+      )}
 
       {/* Плашки категорій — фільтрують список нижче, не відкриваючи кожну вправу. */}
       <div className="flex flex-wrap gap-1.5">
