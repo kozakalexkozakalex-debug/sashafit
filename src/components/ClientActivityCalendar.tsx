@@ -94,9 +94,12 @@ export default function ClientActivityCalendar({
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [selected, setSelected] = useState<string | null>(null);
+  // Одразу вибираємо сьогодні, щоб щоденники (тренування/харчування) були
+  // відкриті з самого початку — не треба тапати по сьогоднішній клітинці.
+  const [selected, setSelected] = useState<string | null>(() => toKey(new Date()));
   // На мобільному тренування / календар / харчування — це три "слайди" в ряд,
-  // які перемикаються свайпом або стрілками (0 = тренування, 1 = календар, 2 = харчування).
+  // які перемикаються свайпом або стрілками. Номер слайда для старту (1 —
+  // "календар", якщо тренування теж є) уточнюється нижче ефектом на calendarSlide.
   // На sm+ всі три видно поруч завжди, свайп там не працює.
   const [slide, setSlide] = useState(1);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
