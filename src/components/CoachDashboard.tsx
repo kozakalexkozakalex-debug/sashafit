@@ -282,11 +282,11 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
         <TabButton t={TABS[0]} />
         <div className="my-2 h-px bg-line" />
-        {TABS.slice(1, 6).map((t) => (
+        {TABS.slice(1, 5).map((t) => (
           <TabButton key={t.id} t={t} />
         ))}
         <div className="my-2 h-px bg-line" />
-        <TabButton t={TABS[6]} />
+        <TabButton t={TABS[5]} />
       </nav>
 
       <div className="min-w-0 flex-1">
