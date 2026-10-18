@@ -484,7 +484,7 @@ export default function ClientActivityCalendar({
             style={{ transform: `translateX(calc(${-slide * 100}% + ${touchStartX == null ? 0 : touchDeltaX}px))` }}
           >
         {selected && showWorkout && workout && (
-          <div className="order-1 min-w-full shrink-0 rounded-lg bg-paper p-3 text-sm sm:min-w-0 sm:w-auto sm:flex-1 sm:shrink">
+          <div className="order-1 relative min-w-full shrink-0 overflow-hidden rounded-lg bg-paper p-3 text-sm sm:min-w-0 sm:w-auto sm:flex-1 sm:shrink">
             <p className="font-medium text-ink">🏋 {workout.title}</p>
             <div className="mt-1.5 flex flex-col gap-1.5">
               {[...workout.assigned_workout_exercises]
@@ -517,19 +517,26 @@ export default function ClientActivityCalendar({
                           value={draft.weight}
                           onChange={(ev) => setDrafts((prev) => ({ ...prev, [e.id]: { ...draft, weight: ev.target.value } }))}
                           onBlur={() => saveExercise(e.id, { weight: draft.weight })}
+                          disabled={!!workout.completed_at}
                           inputMode="decimal"
                           placeholder="Вага, кг"
-                          className="w-16 rounded-lg border border-line bg-paper px-2 py-1 text-[11px] outline-none"
+                          className="w-16 rounded-lg border border-line bg-paper px-2 py-1 text-[11px] outline-none disabled:opacity-60"
                         />
                         <input
                           value={draft.reps}
                           onChange={(ev) => setDrafts((prev) => ({ ...prev, [e.id]: { ...draft, reps: ev.target.value } }))}
                           onBlur={() => saveExercise(e.id, { reps: draft.reps })}
+                          disabled={!!workout.completed_at}
                           placeholder="Повтори"
-                          className="w-20 rounded-lg border border-line bg-paper px-2 py-1 text-[11px] outline-none"
+                          className="w-20 rounded-lg border border-line bg-paper px-2 py-1 text-[11px] outline-none disabled:opacity-60"
                         />
                         <label className="flex items-center gap-1 text-[11px] text-muted">
-                          <input type="checkbox" checked={draft.done} onChange={(ev) => saveExercise(e.id, { done: ev.target.checked })} />
+                          <input
+                            type="checkbox"
+                            checked={draft.done}
+                            onChange={(ev) => saveExercise(e.id, { done: ev.target.checked })}
+                            disabled={!!workout.completed_at}
+                          />
                           Виконано
                         </label>
                         {savingId === e.id && <span className="text-[11px] text-muted">Зберігаю…</span>}
@@ -538,9 +545,7 @@ export default function ClientActivityCalendar({
                   );
                 })}
             </div>
-            {workout.completed_at ? (
-              <p className="mt-1.5 text-xs text-green-400">Виконано ✓</p>
-            ) : (
+            {!workout.completed_at && (
               <button
                 type="button"
                 disabled={wBusy}
@@ -549,6 +554,13 @@ export default function ClientActivityCalendar({
               >
                 {wBusy ? "Зберігаю…" : "Відмітити виконаним"}
               </button>
+            )}
+            {workout.completed_at && (
+              <div className="absolute inset-0 flex items-center justify-center bg-paper/90">
+                <span className="-rotate-12 rounded border-2 border-green-400 px-4 py-1 font-display text-base font-bold uppercase tracking-wide text-green-400">
+                  Виконано ✓
+                </span>
+              </div>
             )}
           </div>
         )}
