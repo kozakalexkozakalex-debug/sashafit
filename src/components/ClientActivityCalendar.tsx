@@ -556,11 +556,9 @@ export default function ClientActivityCalendar({
               </button>
             )}
             {workout.completed_at && (
-              <div className="absolute inset-0 flex items-center justify-center bg-paper/90">
-                <span className="-rotate-12 rounded border-2 border-green-400 px-4 py-1 font-display text-base font-bold uppercase tracking-wide text-green-400">
-                  Виконано ✓
-                </span>
-              </div>
+              <span className="absolute right-2 top-2 rounded-full border border-green-400 bg-paper px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-green-400">
+                Виконано ✓
+              </span>
             )}
           </div>
         )}
