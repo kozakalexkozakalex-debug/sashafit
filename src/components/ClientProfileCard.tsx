@@ -265,33 +265,39 @@ export default function ClientProfileCard({
       </div>
 
       <div className="mt-3 border-t border-line pt-3">
-        <div className="mb-1.5 flex flex-wrap gap-1">
-          {METRICS.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setMetric(m.id)}
-              className={`rounded-full border px-2 py-0.5 text-[11px] ${
-                metric === m.id ? "border-accent bg-accent text-paper" : "border-line text-muted"
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
+        <div className="mb-1.5 flex items-center gap-2">
+          <span className="w-14 flex-none text-[10px] uppercase tracking-wide text-muted">Показник</span>
+          <div className="flex flex-wrap gap-1">
+            {METRICS.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setMetric(m.id)}
+                className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                  metric === m.id ? "border-accent bg-accent text-paper" : "border-line text-muted"
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="mb-2 flex flex-wrap gap-1">
-          {PERIODS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setPeriod(p.id)}
-              className={`rounded-full border px-2 py-0.5 text-[11px] ${
-                period === p.id ? "border-ink/60 bg-paper text-ink" : "border-line text-muted"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="mb-2 flex items-center gap-2">
+          <span className="w-14 flex-none text-[10px] uppercase tracking-wide text-muted">Період</span>
+          <div className="flex flex-wrap gap-1">
+            {PERIODS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPeriod(p.id)}
+                className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                  period === p.id ? "border-ink/60 bg-paper text-ink" : "border-line text-muted"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
         <TrendChart points={points} unit={metricMeta.unit} />
       </div>
