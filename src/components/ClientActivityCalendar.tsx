@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type TouchEvent } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { searchFood, FoodProduct } from "@/lib/foodApi";
 
@@ -97,13 +97,6 @@ export default function ClientActivityCalendar({
   // Одразу вибираємо сьогодні, щоб щоденники (тренування/харчування) були
   // відкриті з самого початку — не треба тапати по сьогоднішній клітинці.
   const [selected, setSelected] = useState<string | null>(() => toKey(new Date()));
-  // На мобільному тренування / календар / харчування — це три "слайди" в ряд,
-  // які перемикаються свайпом або стрілками. Номер слайда для старту (1 —
-  // "календар", якщо тренування теж є) уточнюється нижче ефектом на calendarSlide.
-  // На sm+ всі три видно поруч завжди, свайп там не працює.
-  const [slide, setSlide] = useState(1);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [touchDeltaX, setTouchDeltaX] = useState(0);
 
   // ---- тренування ----
   const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
@@ -334,42 +327,24 @@ export default function ClientActivityCalendar({
   const showFood = filter === "all" || filter === "food";
   const showCheckin = filter === "all" || filter === "checkin";
 
-  // ---- мобільний свайп між тренуванням / календарем / харчуванням ----
-  // Слайди в DOM йдуть тільки ті, що реально є для дня (тренування — якщо є,
-  // календар — завжди, харчування — якщо є), тому номер слайда рахуємо динамічно,
-  // а не фіксованими 0/1/2 — інакше збивалось би зі свайпом, коли тренування нема.
-  const hasWorkoutSlide = !!(selected && showWorkout && workout);
-  const hasFoodSlide = !!(selected && showFood);
-  const calendarSlide = hasWorkoutSlide ? 1 : 0;
-  const minSlide = 0;
-  const maxSlide = calendarSlide + (hasFoodSlide ? 1 : 0);
+  // ---- перемикання вибраного дня стрілками ----
+  // Дозволяє "перелистувати" день вперед/назад без тапу по календарю.
+  // Коли день переходить в інший місяць — підтягуємо календар за ним.
+  function shiftSelectedDay(deltaDays: number) {
+    const base = selected ? new Date(selected + "T00:00:00") : new Date();
+    base.setDate(base.getDate() + deltaDays);
+    setSelected(toKey(base));
+  }
 
-  // При виборі нового дня повертаємось на календар (на мобільному).
   useEffect(() => {
-    setSlide(calendarSlide);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!selected) return;
+    const d = new Date(selected + "T00:00:00");
+    setCursor((prev) =>
+      prev.getFullYear() === d.getFullYear() && prev.getMonth() === d.getMonth()
+        ? prev
+        : new Date(d.getFullYear(), d.getMonth(), 1)
+    );
   }, [selected]);
-
-  function goSlide(target: number) {
-    setSlide(Math.max(minSlide, Math.min(maxSlide, target)));
-  }
-
-  function onDiaryTouchStart(e: TouchEvent) {
-    setTouchStartX(e.touches[0].clientX);
-    setTouchDeltaX(0);
-  }
-  function onDiaryTouchMove(e: TouchEvent) {
-    if (touchStartX == null) return;
-    setTouchDeltaX(e.touches[0].clientX - touchStartX);
-  }
-  function onDiaryTouchEnd() {
-    if (touchStartX == null) return;
-    const threshold = 50;
-    if (touchDeltaX <= -threshold) goSlide(slide + 1);
-    else if (touchDeltaX >= threshold) goSlide(slide - 1);
-    setTouchStartX(null);
-    setTouchDeltaX(0);
-  }
 
   // ---- наступне тренування (для підказки в заголовку) ----
   const tomorrowKey = toKey(new Date(Date.now() + 24 * 60 * 60 * 1000));
@@ -423,69 +398,107 @@ export default function ClientActivityCalendar({
         <p className="mb-2 text-[11px] text-muted">Чек-ін вноситься лише в неділю — інші дні неактивні.</p>
       )}
 
-      {selected && <p className="mb-2 text-xs font-medium text-muted">{selected}</p>}
+      {/* Компактний календар — завжди зверху, не частина каруселі. Вибір дня тапом
+          по клітинці або стрілками "день назад/вперед" нижче. */}
+      <div className="mx-auto mb-3 w-full max-w-[220px]">
+        <div className="mb-1.5 flex items-center justify-between">
+          <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
+            ‹
+          </button>
+          <span className="text-xs font-medium">
+            {MONTHS[month]} {year}
+          </span>
+          <button type="button" onClick={() => setCursor(new Date(year, month + 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
+            ›
+          </button>
+        </div>
+        <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted">
+          {WEEKDAYS.map((w) => (
+            <div key={w} className="py-0.5">
+              {w}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-0.5">
+          {cells.map((d, i) => {
+            if (!d) return <div key={i} />;
+            const key = toKey(d);
+            const isToday = key === todayKey;
+            const isSelected = key === selected;
+            const wStatus = showWorkout ? workoutStatus(key) : null;
+            const hasFood = showFood && foodDates.has(key);
+            const hasCheckin = showCheckin && !!checkinByDate[key];
+            const isSunday = d.getDay() === 0;
+            const checkinOnlyMode = filter === "checkin";
+            const disabledForCheckin = checkinOnlyMode && !isSunday;
+            const wColor =
+              wStatus === "done"
+                ? "bg-green-500/20"
+                : wStatus === "missed"
+                ? "bg-red-500/15"
+                : wStatus === "planned"
+                ? "bg-yellow-500/15"
+                : "";
+            return (
+              <button
+                key={key}
+                type="button"
+                disabled={disabledForCheckin}
+                onClick={() => setSelected(key)}
+                className={`flex aspect-square flex-col items-center justify-center rounded-md border text-[11px] ${
+                  wColor || "border-line bg-paper text-muted"
+                } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-accent" : ""} ${
+                  isSelected ? "outline outline-2 outline-accent" : ""
+                } ${disabledForCheckin ? "cursor-not-allowed opacity-25" : ""} ${
+                  checkinOnlyMode && isSunday ? "border-blue-400/50" : ""
+                }`}
+              >
+                <span className="flex items-center gap-0.5">
+                  {d.getDate()}
+                  {wStatus && <span className="text-[9px] leading-none">🏋</span>}
+                </span>
+                <span className="flex gap-0.5">
+                  {hasFood && <span className="h-1 w-1 rounded-full bg-accent" />}
+                  {hasCheckin && <span className="h-1 w-1 rounded-full bg-blue-400" />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-      {/* На мобільному — горизонтальна каруселька (тренування / календар / харчування), візуально
-          виділена помаранчевими лініями зверху й знизу, щоб було видно, що це окрема зона, а не
-          продовження сторінки. Тягни вліво-вправо або тапай стрілочки (вони не впливають на ширину
-          треку — інакше при появі/зникненні стрілки все "стрибало" і зміщувався центр). На sm+ все
-          видно поруч без свайпу (transform вимкнено), лінії й рамка теж вимкнені. */}
-      {/* Пагінація над рамкою — одразу видно, скільки слайдів і куди гортати, не треба гортати
-          вниз, щоб побачити. Гантеля зліва (тренування), календарик по центру, тарілка справа
-          (харчування). Якщо гортати нема куди (нема ні тренування, ні харчування) — не показуємо. */}
-      {(hasWorkoutSlide || hasFoodSlide) && (
-        <div className="mb-2 flex items-center justify-center gap-2 sm:hidden">
-          {hasWorkoutSlide && (
-            <button
-              type="button"
-              onClick={() => goSlide(0)}
-              aria-label="Тренування"
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs transition ${
-                slide === 0 ? "bg-accent text-paper" : "bg-paper text-muted"
-              }`}
-            >
-              🏋
-            </button>
-          )}
+      {selected && (
+        <div className="mb-3 flex items-center justify-center gap-3">
           <button
             type="button"
-            onClick={() => goSlide(calendarSlide)}
-            aria-label="Календар"
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs transition ${
-              slide === calendarSlide ? "bg-accent text-paper" : "bg-paper text-muted"
-            }`}
+            onClick={() => shiftSelectedDay(-1)}
+            aria-label="Попередній день"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-paper text-sm text-muted"
           >
-            🗓
+            ‹
           </button>
-          {hasFoodSlide && (
-            <button
-              type="button"
-              onClick={() => goSlide(maxSlide)}
-              aria-label="Харчування"
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs transition ${
-                slide === maxSlide ? "bg-accent text-paper" : "bg-paper text-muted"
-              }`}
-            >
-              🍽
-            </button>
-          )}
+          <p className="text-xs font-medium text-ink">{selected}</p>
+          <button
+            type="button"
+            onClick={() => shiftSelectedDay(1)}
+            aria-label="Наступний день"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-paper text-sm text-muted"
+          >
+            ›
+          </button>
         </div>
       )}
 
-      <div className="relative border-y-2 border-accent/50 py-3 sm:border-y-0 sm:py-0">
-        <div className="overflow-hidden sm:overflow-visible">
-          <div
-            onTouchStart={onDiaryTouchStart}
-            onTouchMove={onDiaryTouchMove}
-            onTouchEnd={onDiaryTouchEnd}
-            className={`flex items-start gap-0 sm:gap-3 sm:!transform-none ${
-              touchStartX == null ? "transition-transform duration-200 ease-out" : ""
-            }`}
-            style={{ transform: `translateX(calc(${-slide * 100}% + ${touchStartX == null ? 0 : touchDeltaX}px))` }}
-          >
-        {selected && showWorkout && workout && (
-          <div className="order-1 relative min-w-full shrink-0 overflow-hidden rounded-lg bg-paper p-3 text-sm sm:min-w-0 sm:w-auto sm:flex-1 sm:shrink">
-            <p className="font-medium text-ink">🏋 {workout.title}</p>
+      {/* Дневники тренування і харчування — завжди обидва видимі під календарем:
+          один під одним на мобільному, поруч на sm+. Тренування показується навіть
+          якщо на день нічого не призначено — тоді просто підказка замість форми. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        {selected && showWorkout && (
+          <div className="relative flex-1 overflow-hidden rounded-lg bg-paper p-3 text-sm">
+            <p className="font-medium text-ink">🏋 {workout ? workout.title : "Тренування"}</p>
+            {!workout && <p className="mt-1 text-muted">Тренування не призначено.</p>}
+            {workout && (
+            <>
             <div className="mt-1.5 flex flex-col gap-1.5">
               {[...workout.assigned_workout_exercises]
                 .sort((a, b) => a.name.localeCompare(b.name))
@@ -560,80 +573,13 @@ export default function ClientActivityCalendar({
                 Виконано ✓
               </span>
             )}
+            </>
+            )}
           </div>
         )}
 
-        <div className="order-2 min-w-full shrink-0 rounded-lg bg-paper p-3 sm:min-w-0 sm:w-auto sm:shrink sm:bg-transparent sm:p-0">
-        <div className="mx-auto w-full max-w-[220px]">
-          <div className="mb-1.5 flex items-center justify-between">
-            <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
-              ‹
-            </button>
-            <span className="text-xs font-medium">
-              {MONTHS[month]} {year}
-            </span>
-            <button type="button" onClick={() => setCursor(new Date(year, month + 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
-              ›
-            </button>
-          </div>
-          <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted">
-            {WEEKDAYS.map((w) => (
-              <div key={w} className="py-0.5">
-                {w}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-0.5">
-            {cells.map((d, i) => {
-              if (!d) return <div key={i} />;
-              const key = toKey(d);
-              const isToday = key === todayKey;
-              const isSelected = key === selected;
-              const wStatus = showWorkout ? workoutStatus(key) : null;
-              const hasFood = showFood && foodDates.has(key);
-              const hasCheckin = showCheckin && !!checkinByDate[key];
-              const isSunday = d.getDay() === 0;
-              const checkinOnlyMode = filter === "checkin";
-              const disabledForCheckin = checkinOnlyMode && !isSunday;
-              const wColor =
-                wStatus === "done"
-                  ? "bg-green-500/20"
-                  : wStatus === "missed"
-                  ? "bg-red-500/15"
-                  : wStatus === "planned"
-                  ? "bg-yellow-500/15"
-                  : "";
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  disabled={disabledForCheckin}
-                  onClick={() => setSelected(key)}
-                  className={`flex aspect-square flex-col items-center justify-center rounded-md border text-[11px] ${
-                    wColor || "border-line bg-paper text-muted"
-                  } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-accent" : ""} ${
-                    isSelected ? "outline outline-2 outline-accent" : ""
-                  } ${disabledForCheckin ? "cursor-not-allowed opacity-25" : ""} ${
-                    checkinOnlyMode && isSunday ? "border-blue-400/50" : ""
-                  }`}
-                >
-                  <span className="flex items-center gap-0.5">
-                    {d.getDate()}
-                    {wStatus && <span className="text-[9px] leading-none">🏋</span>}
-                  </span>
-                  <span className="flex gap-0.5">
-                    {hasFood && <span className="h-1 w-1 rounded-full bg-accent" />}
-                    {hasCheckin && <span className="h-1 w-1 rounded-full bg-blue-400" />}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        </div>
-
         {selected && showFood && (
-          <div className="order-3 min-w-full shrink-0 rounded-lg bg-paper p-3 text-sm sm:min-w-0 sm:w-auto sm:flex-1 sm:shrink">
+          <div className="flex-1 rounded-lg bg-paper p-3 text-sm">
             <div className="mb-3 flex items-center gap-3">
               <svg width="64" height="64" viewBox="0 0 64 64" className="flex-none -rotate-90">
                 <circle cx="32" cy="32" r={ringR} fill="none" stroke="currentColor" className="text-line" strokeWidth="6" />
@@ -796,29 +742,6 @@ export default function ClientActivityCalendar({
               })}
             </div>
           </div>
-        )}
-          </div>
-        </div>
-
-        {slide > minSlide && (
-          <button
-            type="button"
-            onClick={() => goSlide(slide - 1)}
-            aria-label="Попередній розділ"
-            className="absolute left-1 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-paper text-sm text-muted shadow-md sm:hidden"
-          >
-            ‹
-          </button>
-        )}
-        {slide < maxSlide && (
-          <button
-            type="button"
-            onClick={() => goSlide(slide + 1)}
-            aria-label="Наступний розділ"
-            className="absolute right-1 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-paper text-sm text-muted shadow-md sm:hidden"
-          >
-            ›
-          </button>
         )}
       </div>
 
