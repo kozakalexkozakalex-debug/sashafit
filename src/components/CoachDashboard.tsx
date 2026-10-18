@@ -12,10 +12,11 @@ import CoachPayments from "@/components/CoachPayments";
 import CoachCheckins from "@/components/CoachCheckins";
 import CoachHome from "@/components/CoachHome";
 import { clientRisk, RISK_LABEL } from "@/lib/clientRisk";
+import { clientLabel } from "@/lib/clientLabel";
 
 type Client = {
   id: string;
-  name: string;
+  name: string | null;
   goal: string | null;
   invite_code: string;
   profile_id: string | null;
@@ -123,15 +124,11 @@ export default function CoachDashboard() {
   }
 
   async function addClient() {
-    if (!name.trim()) {
-      setErr("Вкажи ім'я клієнта");
-      return;
-    }
     setBusy(true);
     setErr("");
     const { error } = await supabase
       .from("clients")
-      .insert({ name: name.trim(), goal: goal.trim() || null });
+      .insert({ name: name.trim() || null, goal: goal.trim() || null });
     setBusy(false);
     if (error) {
       setErr(error.message);
@@ -139,6 +136,15 @@ export default function CoachDashboard() {
     }
     setName("");
     setGoal("");
+    load();
+  }
+
+  async function removeClient(id: string) {
+    if (!window.confirm("Відключити цього клієнта? Усі його дані (чек-іни, тренування, харчування) будуть видалені.")) {
+      return;
+    }
+    await supabase.from("clients").delete().eq("id", id);
+    if (openId === id) setOpenId(null);
     load();
   }
 
@@ -201,11 +207,14 @@ export default function CoachDashboard() {
         <>
           <div className="border border-dashed border-line/80 p-4">
             <h2 className="mb-3 text-sm font-semibold">+ Новий клієнт</h2>
+            <p className="mb-2 text-xs text-muted">
+              Ім'я можна не вказувати — клієнт сам впише його, коли зайде за посиланням і заповнить анкету.
+            </p>
             <div className="flex flex-wrap gap-2">
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ім'я"
+                placeholder="Ім'я (необов'язково)"
                 className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
               />
               <input
@@ -236,7 +245,7 @@ export default function CoachDashboard() {
                     onClick={() => toggleClient(c.id)}
                     className="flex w-full items-center justify-between text-left"
                   >
-                    <span className="font-medium">{c.name}</span>
+                    <span className="font-medium">{clientLabel(c)}</span>
                     <span className="flex items-center gap-2">
                       {c.profile_id && (
                         <span className="text-xs">
@@ -263,6 +272,15 @@ export default function CoachDashboard() {
                       </button>
                     </div>
                   )}
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => removeClient(c.id)}
+                      className="rounded-lg border border-line px-2.5 py-1 text-xs text-muted"
+                    >
+                      Відключити
+                    </button>
+                  </div>
 
                   {openId === c.id && (
                     <div className="mt-3 flex flex-col gap-3 border-t border-line pt-3">

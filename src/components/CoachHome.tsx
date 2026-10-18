@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ChatPanel from "@/components/ChatPanel";
 import { clientRisk, RiskLevel } from "@/lib/clientRisk";
+import { clientLabel } from "@/lib/clientLabel";
 
 type Client = {
   id: string;
-  name: string;
+  name: string | null;
+  invite_code: string;
   profile_id: string | null;
   subscription_until: string | null;
   created_at: string;
@@ -121,7 +123,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
 
     const [{ data: cl }, { data: wo }, { data: ci }, { data: mt }, { data: ms }, { data: pm }, { data: mp }] =
       await Promise.all([
-        supabase.from("clients").select("id, name, profile_id, subscription_until, created_at"),
+        supabase.from("clients").select("id, name, invite_code, profile_id, subscription_until, created_at"),
         supabase.from("assigned_workouts").select("id, date, title, client_id, completed_at, clients(name)"),
         supabase
           .from("checkins")
@@ -210,15 +212,11 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
   }
 
   async function addClientQuick() {
-    if (!aName.trim()) {
-      setAErr("Вкажи ім'я клієнта");
-      return;
-    }
     setAErr("");
     setABusy(true);
     const { data, error } = await supabase
       .from("clients")
-      .insert({ name: aName.trim(), goal: aGoal.trim() || null })
+      .insert({ name: aName.trim() || null, goal: aGoal.trim() || null })
       .select("invite_code")
       .single();
     setABusy(false);
@@ -229,6 +227,14 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
     setAInviteCode(data?.invite_code || null);
     setAName("");
     setAGoal("");
+    load();
+  }
+
+  async function cancelClient(id: string) {
+    if (!window.confirm("Відключити цього клієнта? Усі його дані (чек-іни, тренування, харчування) будуть видалені.")) {
+      return;
+    }
+    await supabase.from("clients").delete().eq("id", id);
     load();
   }
 
@@ -401,7 +407,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
       );
       if (past.length === 0) return null;
       const done = past.filter((w) => w.completed_at).length;
-      return { name: c.name, rate: Math.round((done / past.length) * 100) };
+      return { name: clientLabel(c), rate: Math.round((done / past.length) * 100) };
     })
     .filter((r): r is ProgressRow => r !== null)
     .sort((a, b) => a.rate - b.rate)
@@ -454,18 +460,14 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
             </div>
           ) : (
             <div className="flex flex-col gap-2">
+              <p className="text-xs text-muted">
+                Ім'я вказувати не треба — клієнт сам впише його, коли зайде за посиланням і заповнить анкету.
+              </p>
               <div className="flex flex-wrap gap-2">
-                <input
-                  value={aName}
-                  onChange={(e) => setAName(e.target.value)}
-                  placeholder="Ім'я клієнта"
-                  autoFocus
-                  className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-                />
                 <input
                   value={aGoal}
                   onChange={(e) => setAGoal(e.target.value)}
-                  placeholder="Ціль (необов'язково)"
+                  placeholder="Ціль (необов'язково, можна й без неї)"
                   className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
                 />
               </div>
@@ -476,7 +478,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
                   onClick={addClientQuick}
                   className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
                 >
-                  {aBusy ? "Додаю…" : "Додати"}
+                  {aBusy ? "Створюю…" : "Створити посилання"}
                 </button>
                 <button type="button" onClick={closeAdd} className="rounded-lg border border-line px-3 py-2 text-sm">
                   Скасувати
@@ -565,7 +567,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
                     className="flex items-center gap-3 border-t border-line py-2.5 first:border-t-0"
                   >
                     <span className={`h-2 w-2 flex-shrink-0 rounded-full ${RISK_DOT[r.level]}`} />
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{r.client.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{clientLabel(r.client)}</span>
                     <span className="whitespace-nowrap text-xs text-muted">{r.reason}</span>
                     {onOpenClients && (
                       <button
@@ -576,6 +578,13 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
                         Відкрити
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => cancelClient(r.client.id)}
+                      className="whitespace-nowrap rounded-full border border-line px-2.5 py-1 text-xs text-muted"
+                    >
+                      Відключити
+                    </button>
                   </div>
                 ))}
               </div>
@@ -693,7 +702,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
                   <option value="">Без клієнта</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {clientLabel(c)}
                     </option>
                   ))}
                 </select>

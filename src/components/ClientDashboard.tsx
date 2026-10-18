@@ -9,7 +9,7 @@ import ChatPanel from "@/components/ChatPanel";
 
 type ClientRow = {
   id: string;
-  name: string;
+  name: string | null;
   height: number | null;
   start_weight: number | null;
   target_weight: number | null;
@@ -43,6 +43,7 @@ export default function ClientDashboard() {
   const [client, setClient] = useState<ClientRow | null | "none">(null);
   const [editMode, setEditMode] = useState(false);
 
+  const [name, setName] = useState("");
   const [height, setHeight] = useState("");
   const [startWeight, setStartWeight] = useState("");
   const [targetWeight, setTargetWeight] = useState("");
@@ -59,6 +60,7 @@ export default function ClientDashboard() {
   const [err, setErr] = useState("");
 
   function prefillFromClient(c: ClientRow) {
+    setName(c.name || "");
     setHeight(c.height != null ? String(c.height) : "");
     setStartWeight(c.start_weight != null ? String(c.start_weight) : "");
     setTargetWeight(c.target_weight != null ? String(c.target_weight) : "");
@@ -131,6 +133,10 @@ export default function ClientDashboard() {
   }, [client]);
 
   async function saveIntake() {
+    if (!name.trim()) {
+      setErr("Вкажи своє ім'я");
+      return;
+    }
     if (!startWeight.trim()) {
       setErr("Вкажи поточну вагу");
       return;
@@ -140,6 +146,7 @@ export default function ClientDashboard() {
     const { error } = await supabase
       .from("clients")
       .update({
+        name: name.trim(),
         height: height.trim() ? Number(height) : null,
         start_weight: Number(startWeight),
         target_weight: targetWeight.trim() ? Number(targetWeight) : null,
@@ -269,6 +276,13 @@ export default function ClientDashboard() {
       <div className="rounded-xl border border-line bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">Анкета</h2>
         <div className="flex flex-col gap-3">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Твоє ім'я"
+            className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+          />
+
           <div className="flex flex-wrap gap-2">
             <input
               value={height}

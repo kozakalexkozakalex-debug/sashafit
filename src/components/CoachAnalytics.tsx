@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { clientLabel } from "@/lib/clientLabel";
 
-type Client = { id: string; name: string; profile_id: string | null };
+type Client = { id: string; name: string | null; invite_code: string; profile_id: string | null };
 type Checkin = { client_id: string; weight: number | null; created_at: string };
 type AssignedWorkout = { client_id: string; date: string; completed_at: string | null };
 type FoodEntry = {
@@ -34,7 +35,7 @@ export default function CoachAnalytics() {
       const since = daysAgoKey(30);
 
       const [{ data: cl }, { data: ci }, { data: wo }, { data: fe }] = await Promise.all([
-        supabase.from("clients").select("id, name, profile_id"),
+        supabase.from("clients").select("id, name, invite_code, profile_id"),
         supabase.from("checkins").select("client_id, weight, created_at").order("created_at", { ascending: true }),
         supabase.from("assigned_workouts").select("client_id, date, completed_at").gte("date", since),
         supabase.from("food_entries").select("client_id, date, calories, protein, fat, carbs").gte("date", since),
@@ -129,7 +130,7 @@ export default function CoachAnalytics() {
                 className="flex items-center justify-between rounded-lg border border-line p-3 text-sm"
               >
                 <div>
-                  <span className="font-medium">{c.name}</span>
+                  <span className="font-medium">{clientLabel(c)}</span>
                   {!c.profile_id && <span className="stamp ml-2 text-accent">очікує</span>}
                 </div>
                 <div className="flex gap-4 text-muted">

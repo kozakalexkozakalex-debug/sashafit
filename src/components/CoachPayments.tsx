@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import CoachClientPayments from "@/components/CoachClientPayments";
+import { clientLabel } from "@/lib/clientLabel";
 
 type Client = {
   id: string;
-  name: string;
+  name: string | null;
+  invite_code: string;
   profile_id: string | null;
   subscription_until: string | null;
 };
@@ -29,7 +31,7 @@ export default function CoachPayments() {
   async function load() {
     setLoading(true);
     const [{ data: cl }, { data: pay }] = await Promise.all([
-      supabase.from("clients").select("id, name, profile_id, subscription_until"),
+      supabase.from("clients").select("id, name, invite_code, profile_id, subscription_until"),
       supabase.from("payments").select("amount, paid_at"),
     ]);
     setClients((cl as Client[]) || []);
@@ -98,7 +100,7 @@ export default function CoachPayments() {
                   onClick={() => setOpenId(openId === c.id ? null : c.id)}
                   className="flex w-full items-center justify-between text-left"
                 >
-                  <span className="font-medium">{c.name}</span>
+                  <span className="font-medium">{clientLabel(c)}</span>
                   {c.subscription_until ? (
                     <span className={`stamp ${isActive ? "text-green-400" : "text-red-400"}`}>
                       {isActive ? "активна до" : "закінчилась"} {c.subscription_until}
