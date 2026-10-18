@@ -39,6 +39,113 @@ type Checkin = {
   created_at: string;
 };
 
+type WorkoutSummary = { date: string; completed_at: string | null };
+type FoodSummary = { date: string; calories: number };
+
+function toKey(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Стрік — скільки днів поспіль підряд (рахуючи від сьогодні назад) виконані
+// призначені тренування. Дні без призначеного тренування (відпочинок) не
+// рвуть стрік, просто пропускаються. Пропущене призначене тренування рве стрік.
+function computeStreak(workouts: WorkoutSummary[]): number {
+  const byDate = new Map(workouts.map((w) => [w.date, w]));
+  let streak = 0;
+  const cursor = new Date();
+  for (let i = 0; i < 60; i++) {
+    const key = toKey(cursor);
+    const w = byDate.get(key);
+    if (w) {
+      if (w.completed_at) streak++;
+      else break;
+    }
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+function ClientHomeSummary({
+  client,
+  checkins,
+  workouts,
+  foodToday,
+  targetCalories,
+}: {
+  client: ClientRow;
+  checkins: Checkin[];
+  workouts: WorkoutSummary[];
+  foodToday: number;
+  targetCalories: number | null;
+}) {
+  const todayKey = toKey(new Date());
+  const todayWorkout = workouts.find((w) => w.date === todayKey) || null;
+  const streak = computeStreak(workouts);
+
+  const latestWeight = checkins.length > 0 ? checkins[0].weight : client.start_weight;
+  const start = client.start_weight;
+  const target = client.target_weight;
+  let progressPct: number | null = null;
+  let kgLeft: number | null = null;
+  if (start != null && target != null && latestWeight != null && start !== target) {
+    const total = Math.abs(start - target);
+    const done = total - Math.abs(latestWeight - target);
+    progressPct = Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+    kgLeft = Math.round(Math.abs(latestWeight - target) * 10) / 10;
+  }
+
+  return (
+    <div className="rounded-xl border border-line bg-surface p-3">
+      <h2 className="mb-2.5 font-display text-lg font-bold text-ink">
+        Привіт, {client.name || "друже"}!
+      </h2>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="rounded-lg border-l-2 border-accent bg-paper p-2.5">
+          <p className="text-[10px] uppercase tracking-wide text-muted">Прогрес до цілі</p>
+          {progressPct == null ? (
+            <p className="mt-1 text-sm text-muted">Вкажи бажану вагу в анкеті</p>
+          ) : kgLeft === 0 ? (
+            <p className="mt-1 font-display text-lg font-bold text-green-400">Ціль досягнута 🎉</p>
+          ) : (
+            <>
+              <p className="mt-1 font-display text-lg font-bold text-ink">{kgLeft} кг лишилось</p>
+              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-line">
+                <div className="h-full rounded-full bg-accent" style={{ width: `${progressPct}%` }} />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="rounded-lg border-l-2 border-accent bg-paper p-2.5">
+          <p className="text-[10px] uppercase tracking-wide text-muted">Стрік тренувань</p>
+          <p className="mt-1 font-display text-lg font-bold text-ink">
+            {streak > 0 ? `🔥 ${streak} ${streak === 1 ? "день" : "днів"} поспіль` : "Почни сьогодні"}
+          </p>
+        </div>
+
+        <div className="rounded-lg border-l-2 border-accent bg-paper p-2.5">
+          <p className="text-[10px] uppercase tracking-wide text-muted">Сьогодні</p>
+          <p className="mt-1 text-sm text-ink">
+            🏋{" "}
+            {!todayWorkout
+              ? "тренування нема"
+              : todayWorkout.completed_at
+              ? "виконано ✓"
+              : "ще не виконано"}
+          </p>
+          <p className="text-sm text-muted">
+            🍽 {Math.round(foodToday)}
+            {targetCalories ? ` з ${targetCalories}` : ""} ккал
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ClientDashboard() {
   const [client, setClient] = useState<ClientRow | null | "none">(null);
   const [editMode, setEditMode] = useState(false);
@@ -77,10 +184,37 @@ export default function ClientDashboard() {
 
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  // Для блоку "Головна" зверху — стрік, статус сьогодні. Легкі вибірки
+  // (тільки потрібні поля), окремо від повного завантаження в календарі.
+  const [workoutsSummary, setWorkoutsSummary] = useState<WorkoutSummary[]>([]);
+  const [foodToday, setFoodToday] = useState(0);
+  const [targetCalories, setTargetCalories] = useState<number | null>(null);
 
   async function load() {
     const { data } = await supabase.from("clients").select("*").maybeSingle();
     setClient((data as ClientRow) ?? "none");
+  }
+
+  async function loadHomeSummary(clientId: string) {
+    const { data: wk } = await supabase
+      .from("assigned_workouts")
+      .select("date, completed_at")
+      .eq("client_id", clientId);
+    setWorkoutsSummary((wk as WorkoutSummary[]) || []);
+
+    const { data: fd } = await supabase
+      .from("food_entries")
+      .select("date, calories")
+      .eq("client_id", clientId)
+      .eq("date", toKey(new Date()));
+    setFoodToday(((fd as FoodSummary[]) || []).reduce((s, e) => s + (e.calories || 0), 0));
+
+    const { data: nt } = await supabase
+      .from("nutrition_targets")
+      .select("calories")
+      .eq("client_id", clientId)
+      .maybeSingle();
+    setTargetCalories(nt?.calories ?? null);
   }
 
   async function loadCheckins(clientId: string) {
@@ -112,6 +246,7 @@ export default function ClientDashboard() {
   useEffect(() => {
     if (client && client !== "none" && client.start_weight !== null) {
       loadCheckins(client.id);
+      loadHomeSummary(client.id);
     }
   }, [client]);
 
@@ -324,6 +459,14 @@ export default function ClientDashboard() {
 
   return (
     <div className="flex flex-col gap-3">
+      <ClientHomeSummary
+        client={client}
+        checkins={checkins}
+        workouts={workoutsSummary}
+        foodToday={foodToday}
+        targetCalories={targetCalories}
+      />
+
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
       <div className="flex flex-col gap-3 lg:w-1/3 lg:flex-none">
         <ClientProfileCard
