@@ -436,6 +436,10 @@ export default function ClientDashboard() {
 
   return (
     <div className="flex flex-col gap-3">
+      <AnalyticsPanel clientId={client.id} />
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+      <div className="flex flex-col gap-3 lg:w-1/3 lg:flex-none">
       <div className="rounded-xl border border-line bg-surface p-3">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Моя анкета</h2>
@@ -555,8 +559,12 @@ export default function ClientDashboard() {
           </div>
         )}
       </div>
+      </div>
 
-      <ClientActivityCalendar clientId={client.id} checkins={checkinMarkers} />
+      <div className="lg:flex-1">
+        <ClientActivityCalendar clientId={client.id} checkins={checkinMarkers} />
+      </div>
+      </div>
 
       <div className="rounded-xl border border-line bg-surface p-3">
         <button type="button" onClick={() => setHistoryOpen((v) => !v)} className="flex w-full items-center justify-between text-left">
@@ -668,7 +676,6 @@ export default function ClientDashboard() {
       </div>
 
       <ChatPanel mode="client" clientId={client.id} />
-      <AnalyticsPanel clientId={client.id} />
     </div>
   );
 }

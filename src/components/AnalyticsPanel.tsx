@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 type Checkin = { weight: number | null; created_at: string };
@@ -173,58 +173,132 @@ export default function AnalyticsPanel({ clientId }: { clientId: string }) {
   const caloriePoints = loggedDays.map((d) => ({ date: d, value: totalsByDate[d].calories }));
   const proteinPoints = loggedDays.map((d) => ({ date: d, value: totalsByDate[d].protein }));
 
+  const lastWeight = weightPoints.length > 0 ? weightPoints[weightPoints.length - 1].weight : null;
+
+  return <StatTiles weightPoints={weightPoints} lastWeight={lastWeight} pastWorkouts={pastWorkouts.length} doneCount={doneCount} completionRate={completionRate} loggedDays={loggedDays.length} avgCalories={avg("calories")} target={target} caloriePoints={caloriePoints} proteinPoints={proteinPoints} avgProtein={avg("protein")} avgFat={avg("fat")} avgCarbs={avg("carbs")} />;
+}
+
+function StatTiles({
+  weightPoints,
+  lastWeight,
+  pastWorkouts,
+  doneCount,
+  completionRate,
+  loggedDays,
+  avgCalories,
+  avgProtein,
+  avgFat,
+  avgCarbs,
+  target,
+  caloriePoints,
+  proteinPoints,
+}: {
+  weightPoints: { date: string; weight: number }[];
+  lastWeight: number | null;
+  pastWorkouts: number;
+  doneCount: number;
+  completionRate: number | null;
+  loggedDays: number;
+  avgCalories: number | null;
+  avgProtein: number | null;
+  avgFat: number | null;
+  avgCarbs: number | null;
+  target: NutritionTarget;
+  caloriePoints: { date: string; value: number }[];
+  proteinPoints: { date: string; value: number }[];
+}) {
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  const toggle = (id: string) => setOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+
   return (
-    <div className="rounded-xl border border-line bg-surface p-4">
-      <h2 className="mb-3 text-sm font-semibold">Аналітика</h2>
+    <div className="grid grid-cols-3 gap-2">
+      <Tile
+        id="weight"
+        label="Вага"
+        value={lastWeight != null ? `${lastWeight} кг` : "—"}
+        open={!!open.weight}
+        onToggle={() => toggle("weight")}
+      >
+        <p className="mb-2 text-xs text-muted">Динаміка ваги</p>
+        <WeightChart points={weightPoints} />
+      </Tile>
 
-      <div className="flex flex-col gap-4">
-        <div>
-          <p className="mb-2 text-xs text-muted">Динаміка ваги</p>
-          <WeightChart points={weightPoints} />
-        </div>
+      <Tile
+        id="workouts"
+        label="Тренування"
+        value={completionRate != null ? `${completionRate}%` : "—"}
+        open={!!open.workouts}
+        onToggle={() => toggle("workouts")}
+      >
+        {pastWorkouts > 0 ? (
+          <p className="text-sm text-muted">
+            Виконано {doneCount} з {pastWorkouts} за останні 30 днів ({completionRate}%)
+          </p>
+        ) : (
+          <p className="text-sm text-muted">Ще немає призначених тренувань за останні 30 днів.</p>
+        )}
+      </Tile>
 
-        <div className="rounded-lg bg-paper p-3 text-sm">
-          <p className="mb-1 font-medium">Тренування (останні 30 днів)</p>
-          {pastWorkouts.length > 0 ? (
-            <p className="text-muted">
-              Виконано {doneCount} з {pastWorkouts.length} ({completionRate}%)
+      <Tile
+        id="food"
+        label="Харчування"
+        value={avgCalories != null ? `${avgCalories} ккал` : "—"}
+        open={!!open.food}
+        onToggle={() => toggle("food")}
+      >
+        {loggedDays > 0 ? (
+          <>
+            <p className="text-sm text-muted">
+              {[
+                `${avgCalories} ккал`,
+                `Б ${avgProtein} / Ж ${avgFat} / В ${avgCarbs} г`,
+                `середнє за ${loggedDays} ${loggedDays === 1 ? "день" : "днів"} з записами, останні 30 днів`,
+              ].join(", ")}
             </p>
-          ) : (
-            <p className="text-muted">Ще немає призначених тренувань у цьому періоді.</p>
-          )}
-        </div>
-
-        <div className="rounded-lg bg-paper p-3 text-sm">
-          <p className="mb-1 font-medium">Харчування (середнє за дні з записами, останні 30 днів)</p>
-          {loggedDays.length > 0 ? (
-            <>
-              <p className="text-muted">
-                {[
-                  `${avg("calories")} ккал`,
-                  `Б ${avg("protein")} / Ж ${avg("fat")} / В ${avg("carbs")} г`,
-                  `за ${loggedDays.length} ${loggedDays.length === 1 ? "день" : "днів"}`,
-                ].join(", ")}
-              </p>
-              <div className="mt-3 flex flex-col gap-3">
-                <div>
-                  <p className="mb-1 text-xs text-muted">
-                    Калорії по днях{target?.calories ? ` (пунктир — ціль ${target.calories} ккал)` : ""}
-                  </p>
-                  <MetricChart points={caloriePoints} target={target?.calories ?? null} unit="ккал" />
-                </div>
-                <div>
-                  <p className="mb-1 text-xs text-muted">
-                    Білки по днях{target?.protein ? ` (пунктир — ціль ${target.protein} г)` : ""}
-                  </p>
-                  <MetricChart points={proteinPoints} target={target?.protein ?? null} unit="г" />
-                </div>
+            <div className="mt-3 flex flex-col gap-3">
+              <div>
+                <p className="mb-1 text-xs text-muted">
+                  Калорії по днях{target?.calories ? ` (пунктир — ціль ${target.calories} ккал)` : ""}
+                </p>
+                <MetricChart points={caloriePoints} target={target?.calories ?? null} unit="ккал" />
               </div>
-            </>
-          ) : (
-            <p className="text-muted">Ще немає записів харчування у цьому періоді.</p>
-          )}
-        </div>
-      </div>
+              <div>
+                <p className="mb-1 text-xs text-muted">
+                  Білки по днях{target?.protein ? ` (пунктир — ціль ${target.protein} г)` : ""}
+                </p>
+                <MetricChart points={proteinPoints} target={target?.protein ?? null} unit="г" />
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-muted">Ще немає записів харчування за останні 30 днів.</p>
+        )}
+      </Tile>
+    </div>
+  );
+}
+
+function Tile({
+  label,
+  value,
+  open,
+  onToggle,
+  children,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className={`rounded-xl border border-line bg-surface ${open ? "col-span-3" : ""}`}>
+      <button type="button" onClick={onToggle} className="flex w-full flex-col gap-0.5 p-2.5 text-left sm:flex-row sm:items-end sm:justify-between">
+        <span className="text-xs text-muted">{label}</span>
+        <span className="font-display text-lg font-semibold text-ink">{value}</span>
+      </button>
+      {open && <div className="border-t border-line p-3">{children}</div>}
     </div>
   );
 }
