@@ -25,9 +25,14 @@ const MUSCLE_GROUPS = [
   "Інше",
 ];
 
+const ALL_GROUPS = "Всі";
+
 export default function ExerciseLibrary() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
+  const [groupFilter, setGroupFilter] = useState<string>(ALL_GROUPS);
+  const [addOpen, setAddOpen] = useState(false);
+  const [photoUploadingId, setPhotoUploadingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [muscleGroup, setMuscleGroup] = useState(MUSCLE_GROUPS[0]);
@@ -93,6 +98,7 @@ export default function ExerciseLibrary() {
     setDescription("");
     setVideoUrl("");
     setPhotoFile(null);
+    setAddOpen(false);
     load();
   }
 
@@ -101,74 +107,135 @@ export default function ExerciseLibrary() {
     load();
   }
 
+  // Додати/замінити картинку вже існуючій вправі — не треба видаляти й
+  // створювати заново. Можна завантажити хоч схематичну картинку, якщо нема фото.
+  async function uploadPhotoForExisting(id: string, file: File) {
+    setPhotoUploadingId(id);
+    const path = `${Date.now()}-${file.name}`;
+    const { error: upErr } = await supabase.storage.from("exercises").upload(path, file);
+    if (!upErr) {
+      await supabase.from("exercises").update({ photo_path: path }).eq("id", id);
+      load();
+    }
+    setPhotoUploadingId(null);
+  }
+
+  const visibleExercises = groupFilter === ALL_GROUPS ? exercises : exercises.filter((ex) => ex.muscle_group === groupFilter);
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="border border-dashed border-line/80 p-4">
-        <h2 className="mb-3 text-sm font-semibold">+ Нова вправа</h2>
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Назва (напр. Присідання зі штангою)"
-              className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-            />
-            <select
-              value={muscleGroup}
-              onChange={(e) => setMuscleGroup(e.target.value)}
-              className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-            >
-              {MUSCLE_GROUPS.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-            <input
-              value={equipment}
-              onChange={(e) => setEquipment(e.target.value)}
-              placeholder="Інвентар (необов'язково)"
-              className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-            />
-          </div>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Техніка виконання (необов'язково)"
-            rows={2}
-            className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
-              className="text-sm text-muted"
-            />
-            <input
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="Посилання на відео (YouTube, Reels тощо)"
-              className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-            />
-            <button
-              type="button"
-              disabled={busy}
-              onClick={addExercise}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
-            >
-              {busy ? "Зберігаю…" : "Додати"}
-            </button>
-          </div>
-          {err && <p className="text-sm text-red-400">{err}</p>}
-        </div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Вправи ({visibleExercises.length})</h2>
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-paper"
+        >
+          <span className="text-base leading-none">+</span> Нова вправа
+        </button>
       </div>
 
+      {/* Плашки категорій — фільтрують список нижче, не відкриваючи кожну вправу. */}
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => setGroupFilter(ALL_GROUPS)}
+          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+            groupFilter === ALL_GROUPS ? "border-accent bg-accent text-paper" : "border-line bg-paper text-muted hover:text-ink"
+          }`}
+        >
+          {ALL_GROUPS}
+        </button>
+        {MUSCLE_GROUPS.map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => setGroupFilter(g)}
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+              groupFilter === g ? "border-accent bg-accent text-paper" : "border-line bg-paper text-muted hover:text-ink"
+            }`}
+          >
+            {g}
+          </button>
+        ))}
+      </div>
+
+      {addOpen && (
+        <div className="fixed inset-0 z-40" onClick={() => setAddOpen(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-line bg-sidebar p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:inset-0 lg:m-auto lg:h-fit lg:w-[460px] lg:rounded-xl lg:border"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">+ Нова вправа</h2>
+              <button type="button" onClick={() => setAddOpen(false)} className="text-xs text-muted">
+                Закрити
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Назва (напр. Присідання зі штангою)"
+                className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+              />
+              <div className="flex flex-wrap gap-2">
+                <select
+                  value={muscleGroup}
+                  onChange={(e) => setMuscleGroup(e.target.value)}
+                  className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                >
+                  {MUSCLE_GROUPS.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={equipment}
+                  onChange={(e) => setEquipment(e.target.value)}
+                  placeholder="Інвентар (необов'язково)"
+                  className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                />
+              </div>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Техніка виконання (необов'язково)"
+                rows={2}
+                className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+              />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+                className="text-sm text-muted"
+              />
+              <input
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="Посилання на відео (YouTube, Reels тощо)"
+                className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+              />
+              <button
+                type="button"
+                disabled={busy}
+                onClick={addExercise}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
+              >
+                {busy ? "Зберігаю…" : "Додати"}
+              </button>
+              {err && <p className="text-sm text-red-400">{err}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Вправи ({exercises.length})</h2>
         {loading && <p className="text-sm text-muted">Завантаження…</p>}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {exercises.map((ex) => {
+          {visibleExercises.map((ex) => {
             const url = photoUrl(ex.photo_path);
             return (
               <div
@@ -179,9 +246,25 @@ export default function ExerciseLibrary() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={url} alt={ex.name} className="h-32 w-full object-cover" />
                 ) : (
-                  <div className="flex h-32 w-full items-center justify-center bg-paper text-xs text-muted">
-                    Без фото
-                  </div>
+                  <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-1 bg-paper text-xs text-muted hover:text-accent">
+                    {photoUploadingId === ex.id ? (
+                      "Завантажую…"
+                    ) : (
+                      <>
+                        <span className="text-lg leading-none">🖼</span>
+                        Додати картинку
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadPhotoForExisting(ex.id, f);
+                      }}
+                    />
+                  </label>
                 )}
                 <div className="flex flex-1 flex-col gap-1.5 p-3">
                   <div className="flex items-start justify-between gap-2">
@@ -213,8 +296,10 @@ export default function ExerciseLibrary() {
               </div>
             );
           })}
-          {!loading && exercises.length === 0 && (
-            <p className="text-sm text-muted">Вправ ще немає.</p>
+          {!loading && visibleExercises.length === 0 && (
+            <p className="text-sm text-muted">
+              {exercises.length === 0 ? "Вправ ще немає." : "У цій категорії вправ немає."}
+            </p>
           )}
         </div>
       </div>
