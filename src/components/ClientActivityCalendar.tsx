@@ -306,10 +306,33 @@ export default function ClientActivityCalendar({
   const showFood = filter === "all" || filter === "food";
   const showCheckin = filter === "all" || filter === "checkin";
 
+  // ---- наступне тренування (для підказки в заголовку) ----
+  const tomorrowKey = toKey(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const nextWorkout = [...workouts].filter((w) => w.date >= todayKey).sort((a, b) => a.date.localeCompare(b.date))[0] || null;
+  const FULL_WEEKDAYS = ["Неділя", "Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота"];
+
+  function nextWorkoutLabel(dateKey: string) {
+    const d = new Date(dateKey + "T00:00:00");
+    const dm = `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (dateKey === todayKey) return `Сьогодні (${dm})`;
+    if (dateKey === tomorrowKey) return `Завтра (${dm})`;
+    return `${FULL_WEEKDAYS[d.getDay()]} (${dm})`;
+  }
+
   return (
     <div className="rounded-xl border border-line bg-surface p-3">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Календар</h2>
+        <span className="text-right text-[11px] text-muted">
+          {nextWorkout ? (
+            <>
+              Наступне тренування:{" "}
+              <span className="font-medium text-ink">{nextWorkoutLabel(nextWorkout.date)}</span>
+            </>
+          ) : (
+            "Тренувань не заплановано"
+          )}
+        </span>
       </div>
 
       <div className="mb-2 flex flex-wrap gap-1.5">
@@ -383,7 +406,10 @@ export default function ClientActivityCalendar({
                   checkinOnlyMode && isSunday ? "border-blue-400/50" : ""
                 }`}
               >
-                <span>{d.getDate()}</span>
+                <span className="flex items-center gap-0.5">
+                  {d.getDate()}
+                  {wStatus && <span className="text-[9px] leading-none">🏋</span>}
+                </span>
                 <span className="flex gap-0.5">
                   {hasFood && <span className="h-1 w-1 rounded-full bg-accent" />}
                   {hasCheckin && <span className="h-1 w-1 rounded-full bg-blue-400" />}
