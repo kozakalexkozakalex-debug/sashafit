@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type TouchEvent } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { searchFood, FoodProduct } from "@/lib/foodApi";
 
@@ -95,9 +95,12 @@ export default function ClientActivityCalendar({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selected, setSelected] = useState<string | null>(null);
-  // На мобільному показуємо тільки один щоденник за раз (перемикач пігулками),
-  // щоб вони не падали один під одним. На sm+ обидва видно поруч завжди.
-  const [diaryTab, setDiaryTab] = useState<"workout" | "food">("workout");
+  // На мобільному тренування / календар / харчування — це три "слайди" в ряд,
+  // які перемикаються свайпом або стрілками (0 = тренування, 1 = календар, 2 = харчування).
+  // На sm+ всі три видно поруч завжди, свайп там не працює.
+  const [slide, setSlide] = useState(1);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchDeltaX, setTouchDeltaX] = useState(0);
 
   // ---- тренування ----
   const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
@@ -166,11 +169,6 @@ export default function ClientActivityCalendar({
   }, [clientId]);
 
   const workout = selected ? workouts.find((w) => w.date === selected) : null;
-
-  // При виборі нового дня показуємо щоденник тренувань першим (на мобільному).
-  useEffect(() => {
-    setDiaryTab("workout");
-  }, [selected]);
 
   useEffect(() => {
     if (!workout) return;
@@ -333,6 +331,43 @@ export default function ClientActivityCalendar({
   const showFood = filter === "all" || filter === "food";
   const showCheckin = filter === "all" || filter === "checkin";
 
+  // ---- мобільний свайп між тренуванням / календарем / харчуванням ----
+  // Слайди в DOM йдуть тільки ті, що реально є для дня (тренування — якщо є,
+  // календар — завжди, харчування — якщо є), тому номер слайда рахуємо динамічно,
+  // а не фіксованими 0/1/2 — інакше збивалось би зі свайпом, коли тренування нема.
+  const hasWorkoutSlide = !!(selected && showWorkout && workout);
+  const hasFoodSlide = !!(selected && showFood);
+  const calendarSlide = hasWorkoutSlide ? 1 : 0;
+  const minSlide = 0;
+  const maxSlide = calendarSlide + (hasFoodSlide ? 1 : 0);
+
+  // При виборі нового дня повертаємось на календар (на мобільному).
+  useEffect(() => {
+    setSlide(calendarSlide);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
+  function goSlide(target: number) {
+    setSlide(Math.max(minSlide, Math.min(maxSlide, target)));
+  }
+
+  function onDiaryTouchStart(e: TouchEvent) {
+    setTouchStartX(e.touches[0].clientX);
+    setTouchDeltaX(0);
+  }
+  function onDiaryTouchMove(e: TouchEvent) {
+    if (touchStartX == null) return;
+    setTouchDeltaX(e.touches[0].clientX - touchStartX);
+  }
+  function onDiaryTouchEnd() {
+    if (touchStartX == null) return;
+    const threshold = 50;
+    if (touchDeltaX <= -threshold) goSlide(slide + 1);
+    else if (touchDeltaX >= threshold) goSlide(slide - 1);
+    setTouchStartX(null);
+    setTouchDeltaX(0);
+  }
+
   // ---- наступне тренування (для підказки в заголовку) ----
   const tomorrowKey = toKey(new Date(Date.now() + 24 * 60 * 60 * 1000));
   const nextWorkout =
@@ -387,32 +422,32 @@ export default function ClientActivityCalendar({
 
       {selected && <p className="mb-2 text-xs font-medium text-muted">{selected}</p>}
 
-      {!!(selected && showWorkout && workout) && !!(selected && showFood) && (
-        <div className="mb-2 flex gap-1.5 sm:hidden">
+      {/* На мобільному — горизонтальна каруселька (тренування / календар / харчування):
+          тягни вліво-вправо або тапай стрілочки. На sm+ все видно поруч без свайпу (transform вимкнено). */}
+      <div className="flex items-center gap-1">
+        {slide > minSlide && (
           <button
             type="button"
-            onClick={() => setDiaryTab("workout")}
-            className={`rounded-full border px-3 py-1 text-xs font-medium ${
-              diaryTab === "workout" ? "border-accent bg-accent text-paper" : "border-line text-muted"
-            }`}
+            onClick={() => goSlide(slide - 1)}
+            aria-label="Попередній розділ"
+            className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-line bg-paper text-sm text-muted sm:hidden"
           >
-            🏋 Тренування
+            ‹
           </button>
-          <button
-            type="button"
-            onClick={() => setDiaryTab("food")}
-            className={`rounded-full border px-3 py-1 text-xs font-medium ${
-              diaryTab === "food" ? "border-accent bg-accent text-paper" : "border-line text-muted"
-            }`}
-          >
-            🍽 Харчування
-          </button>
-        </div>
-      )}
+        )}
 
-      <div className="flex flex-col items-start gap-3 sm:flex-row">
+        <div className="min-w-0 flex-1 overflow-hidden sm:overflow-visible">
+          <div
+            onTouchStart={onDiaryTouchStart}
+            onTouchMove={onDiaryTouchMove}
+            onTouchEnd={onDiaryTouchEnd}
+            className={`flex items-start gap-0 sm:gap-3 sm:!transform-none ${
+              touchStartX == null ? "transition-transform duration-200 ease-out" : ""
+            }`}
+            style={{ transform: `translateX(calc(${-slide * 100}% + ${touchStartX == null ? 0 : touchDeltaX}px))` }}
+          >
         {selected && showWorkout && workout && (
-          <div className={`order-1 w-full rounded-lg bg-paper p-3 text-sm sm:flex-1 ${diaryTab === "workout" ? "block" : "hidden"} sm:block`}>
+          <div className="order-1 min-w-full shrink-0 rounded-lg bg-paper p-3 text-sm sm:min-w-0 sm:w-auto sm:flex-1 sm:shrink">
             <p className="font-medium text-ink">🏋 {workout.title}</p>
             <div className="mt-1.5 flex flex-col gap-1.5">
               {[...workout.assigned_workout_exercises]
@@ -481,7 +516,8 @@ export default function ClientActivityCalendar({
           </div>
         )}
 
-        <div className="order-2 mx-auto w-full max-w-[220px] flex-none">
+        <div className="order-2 min-w-full shrink-0 sm:min-w-0 sm:w-auto sm:shrink">
+        <div className="mx-auto w-full max-w-[220px]">
           <div className="mb-1.5 flex items-center justify-between">
             <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
               ‹
@@ -547,9 +583,10 @@ export default function ClientActivityCalendar({
             })}
           </div>
         </div>
+        </div>
 
         {selected && showFood && (
-          <div className={`order-3 w-full rounded-lg bg-paper p-3 text-sm sm:flex-1 ${diaryTab === "food" ? "block" : "hidden"} sm:block`}>
+          <div className="order-3 min-w-full shrink-0 rounded-lg bg-paper p-3 text-sm sm:min-w-0 sm:w-auto sm:flex-1 sm:shrink">
             <div className="mb-3 flex items-center gap-3">
               <svg width="64" height="64" viewBox="0 0 64 64" className="flex-none -rotate-90">
                 <circle cx="32" cy="32" r={ringR} fill="none" stroke="currentColor" className="text-line" strokeWidth="6" />
@@ -712,6 +749,19 @@ export default function ClientActivityCalendar({
               })}
             </div>
           </div>
+        )}
+          </div>
+        </div>
+
+        {slide < maxSlide && (
+          <button
+            type="button"
+            onClick={() => goSlide(slide + 1)}
+            aria-label="Наступний розділ"
+            className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-line bg-paper text-sm text-muted sm:hidden"
+          >
+            ›
+          </button>
         )}
       </div>
 
