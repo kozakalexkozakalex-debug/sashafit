@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { clientLabel } from "@/lib/clientLabel";
 
+type SubTab = "clients" | "workouts" | "food";
+
 type Client = { id: string; name: string | null; invite_code: string; profile_id: string | null };
 type Checkin = { client_id: string; weight: number | null; created_at: string };
 type AssignedWorkout = { client_id: string; date: string; completed_at: string | null };
@@ -23,6 +25,7 @@ function daysAgoKey(n: number) {
 }
 
 export default function CoachAnalytics() {
+  const [sub, setSub] = useState<SubTab>("clients");
   const [clients, setClients] = useState<Client[]>([]);
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
@@ -90,59 +93,161 @@ export default function CoachAnalytics() {
     return { rate, total: cw.length, lastWeight };
   }
 
+  const foodLoggedClientIds = new Set(food.map((f) => f.client_id));
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Зведення по всіх клієнтах</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-lg bg-paper p-3">
-            <p className="text-xs text-muted">Клієнтів</p>
-            <p className="font-display text-lg font-medium">{clients.length}</p>
-          </div>
-          <div className="rounded-lg bg-paper p-3">
-            <p className="text-xs text-muted">Підключено</p>
-            <p className="font-display text-lg font-medium">{connected}</p>
-          </div>
-          <div className="rounded-lg bg-paper p-3">
-            <p className="text-xs text-muted">Виконання тренувань (30 дн.)</p>
-            <p className="font-display text-lg font-medium">{overallCompletion != null ? `${overallCompletion}%` : "—"}</p>
-          </div>
-          <div className="rounded-lg bg-paper p-3">
-            <p className="text-xs text-muted">Середньо ккал/день (30 дн.)</p>
-            <p className="font-display text-lg font-medium">{avg("calories") ?? "—"}</p>
-          </div>
-        </div>
-        {dailyTotals.length > 0 && (
-          <p className="mt-2 text-xs text-muted">
-            Білки {avg("protein")} / Жири {avg("fat")} / Вуглеводи {avg("carbs")} г в середньому за день
-          </p>
-        )}
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-5">
+        <button
+          type="button"
+          onClick={() => setSub("clients")}
+          className={`font-display text-sm font-medium ${
+            sub === "clients" ? "text-accent" : "text-muted"
+          }`}
+        >
+          Клієнти
+        </button>
+        <button
+          type="button"
+          onClick={() => setSub("workouts")}
+          className={`font-display text-sm font-medium ${
+            sub === "workouts" ? "text-accent" : "text-muted"
+          }`}
+        >
+          Тренування
+        </button>
+        <button
+          type="button"
+          onClick={() => setSub("food")}
+          className={`font-display text-sm font-medium ${
+            sub === "food" ? "text-accent" : "text-muted"
+          }`}
+        >
+          Харчування
+        </button>
       </div>
 
-      <div className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">По клієнтах</h2>
-        <div className="flex flex-col gap-2">
-          {clients.map((c) => {
-            const s = clientStats(c.id);
-            return (
-              <div
-                key={c.id}
-                className="flex items-center justify-between rounded-lg border border-line p-3 text-sm"
-              >
-                <div>
-                  <span className="font-medium">{clientLabel(c)}</span>
-                  {!c.profile_id && <span className="stamp ml-2 text-accent">очікує</span>}
-                </div>
-                <div className="flex gap-4 text-muted">
-                  <span>{s.lastWeight != null ? `${s.lastWeight} кг` : "—"}</span>
-                  <span>{s.rate != null ? `${s.rate}% (${s.total})` : "—"}</span>
-                </div>
+      {sub === "clients" && (
+        <div className="flex flex-col gap-6">
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold">Зведення</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+              <div className="rounded-lg bg-paper p-3">
+                <p className="text-xs text-muted">Клієнтів</p>
+                <p className="font-display text-lg font-medium">{clients.length}</p>
               </div>
-            );
-          })}
-          {clients.length === 0 && <p className="text-sm text-muted">Клієнтів ще немає.</p>}
+              <div className="rounded-lg bg-paper p-3">
+                <p className="text-xs text-muted">Підключено</p>
+                <p className="font-display text-lg font-medium">{connected}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold">По клієнтах — вага та статус</h2>
+            <div className="flex flex-col gap-2">
+              {clients.map((c) => {
+                const s = clientStats(c.id);
+                return (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between rounded-lg border border-line p-3 text-sm"
+                  >
+                    <div>
+                      <span className="font-medium">{clientLabel(c)}</span>
+                      {!c.profile_id && <span className="stamp ml-2 text-accent">очікує</span>}
+                    </div>
+                    <div className="flex gap-4 text-muted">
+                      <span>{s.lastWeight != null ? `${s.lastWeight} кг` : "—"}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {clients.length === 0 && <p className="text-sm text-muted">Клієнтів ще немає.</p>}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {sub === "workouts" && (
+        <div className="flex flex-col gap-6">
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold">Зведення (30 дн.)</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+              <div className="rounded-lg bg-paper p-3">
+                <p className="text-xs text-muted">Виконання тренувань</p>
+                <p className="font-display text-lg font-medium">
+                  {overallCompletion != null ? `${overallCompletion}%` : "—"}
+                </p>
+              </div>
+              <div className="rounded-lg bg-paper p-3">
+                <p className="text-xs text-muted">Призначено тренувань</p>
+                <p className="font-display text-lg font-medium">{pastWorkouts.length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold">По клієнтах — виконання</h2>
+            <div className="flex flex-col gap-2">
+              {clients.map((c) => {
+                const s = clientStats(c.id);
+                return (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between rounded-lg border border-line p-3 text-sm"
+                  >
+                    <span className="font-medium">{clientLabel(c)}</span>
+                    <span className="text-muted">{s.rate != null ? `${s.rate}% (${s.total})` : "—"}</span>
+                  </div>
+                );
+              })}
+              {clients.length === 0 && <p className="text-sm text-muted">Клієнтів ще немає.</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sub === "food" && (
+        <div className="flex flex-col gap-6">
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold">Зведення (30 дн.)</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+              <div className="rounded-lg bg-paper p-3">
+                <p className="text-xs text-muted">Середньо ккал/день</p>
+                <p className="font-display text-lg font-medium">{avg("calories") ?? "—"}</p>
+              </div>
+              <div className="rounded-lg bg-paper p-3">
+                <p className="text-xs text-muted">Логує харчування</p>
+                <p className="font-display text-lg font-medium">{foodLoggedClientIds.size}</p>
+              </div>
+            </div>
+            {dailyTotals.length > 0 && (
+              <p className="mt-2 text-xs text-muted">
+                Білки {avg("protein")} / Жири {avg("fat")} / Вуглеводи {avg("carbs")} г в середньому за день
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold">По клієнтах — хто логує</h2>
+            <div className="flex flex-col gap-2">
+              {clients.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between rounded-lg border border-line p-3 text-sm"
+                >
+                  <span className="font-medium">{clientLabel(c)}</span>
+                  <span className="text-muted">
+                    {foodLoggedClientIds.has(c.id) ? "логує" : "не логує"}
+                  </span>
+                </div>
+              ))}
+              {clients.length === 0 && <p className="text-sm text-muted">Клієнтів ще немає.</p>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
