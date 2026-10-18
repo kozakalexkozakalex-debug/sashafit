@@ -437,6 +437,30 @@ export default function CoachHome({
     activityMonthRows.push({ label: `${MONTHS[mon].slice(0, 3)} ${y}`, days });
   }
 
+  function HeatCell({ d, count, metricLabel }: { d: ActivityDay; count: number; metricLabel: string }) {
+    const isIdle = count <= 0;
+    const idleClass = d.isWeekend ? "bg-amber-50 text-neutral-800" : "bg-line/20 text-muted";
+    return (
+      <div className="group relative">
+        <div
+          className={`flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[6px] leading-none font-medium ${
+            isIdle ? idleClass : `${HEAT_SHADES[heatLevel(count)]} text-paper`
+          }`}
+        >
+          {count}
+        </div>
+        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[11px] text-white opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100">
+          <p className="font-medium">{d.dateLabel}</p>
+          <p className="text-neutral-300">
+            {metricLabel}: {count}
+            {d.isWeekend ? " · вихідний" : ""}
+          </p>
+          <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-neutral-900" />
+        </div>
+      </div>
+    );
+  }
+
   // ---- Прогрес клієнтів: % виконання за 30 днів, найслабші першими ----
   const since30 = new Date(today);
   since30.setDate(since30.getDate() - 30);
@@ -620,19 +644,7 @@ export default function CoachHome({
                         <div className="grid grid-cols-[repeat(31,14px)] gap-[2px]">
                           {row.days.map((d, i) =>
                             d ? (
-                              <div
-                                key={i}
-                                title={`${d.dateLabel}: ${d.workoutCount} виконано${d.isWeekend ? " · вихідний" : ""}`}
-                                className={`flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[6px] leading-none font-medium ${
-                                  d.workoutCount > 0
-                                    ? `${HEAT_SHADES[heatLevel(d.workoutCount)]} text-paper`
-                                    : d.isWeekend
-                                    ? "bg-accent/10 text-muted"
-                                    : "bg-line/20 text-muted"
-                                }`}
-                              >
-                                {d.workoutCount}
-                              </div>
+                              <HeatCell key={i} d={d} count={d.workoutCount} metricLabel="Виконано" />
                             ) : (
                               <div key={i} className="h-3.5 w-3.5" />
                             )
@@ -653,19 +665,7 @@ export default function CoachHome({
                         <div className="grid grid-cols-[repeat(31,14px)] gap-[2px]">
                           {row.days.map((d, i) =>
                             d ? (
-                              <div
-                                key={i}
-                                title={`${d.dateLabel}: ${d.foodCount} клієнт(ів) залогували їжу${d.isWeekend ? " · вихідний" : ""}`}
-                                className={`flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[6px] leading-none font-medium ${
-                                  d.foodCount > 0
-                                    ? `${HEAT_SHADES[heatLevel(d.foodCount)]} text-paper`
-                                    : d.isWeekend
-                                    ? "bg-accent/10 text-muted"
-                                    : "bg-line/20 text-muted"
-                                }`}
-                              >
-                                {d.foodCount}
-                              </div>
+                              <HeatCell key={i} d={d} count={d.foodCount} metricLabel="Залогували їжу" />
                             ) : (
                               <div key={i} className="h-3.5 w-3.5" />
                             )
