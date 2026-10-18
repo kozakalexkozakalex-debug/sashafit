@@ -308,7 +308,10 @@ export default function ClientActivityCalendar({
 
   // ---- наступне тренування (для підказки в заголовку) ----
   const tomorrowKey = toKey(new Date(Date.now() + 24 * 60 * 60 * 1000));
-  const nextWorkout = [...workouts].filter((w) => w.date >= todayKey).sort((a, b) => a.date.localeCompare(b.date))[0] || null;
+  const nextWorkout =
+    [...workouts]
+      .filter((w) => w.date >= todayKey && !w.completed_at)
+      .sort((a, b) => a.date.localeCompare(b.date))[0] || null;
   const FULL_WEEKDAYS = ["Неділя", "Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота"];
 
   function nextWorkoutLabel(dateKey: string) {
