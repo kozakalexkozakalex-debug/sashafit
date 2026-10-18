@@ -430,6 +430,48 @@ export default function ClientActivityCalendar({
           продовження сторінки. Тягни вліво-вправо або тапай стрілочки (вони не впливають на ширину
           треку — інакше при появі/зникненні стрілки все "стрибало" і зміщувався центр). На sm+ все
           видно поруч без свайпу (transform вимкнено), лінії й рамка теж вимкнені. */}
+      {/* Пагінація над рамкою — одразу видно, скільки слайдів і куди гортати, не треба гортати
+          вниз, щоб побачити. Гантеля зліва (тренування), календарик по центру, тарілка справа
+          (харчування). Якщо гортати нема куди (нема ні тренування, ні харчування) — не показуємо. */}
+      {(hasWorkoutSlide || hasFoodSlide) && (
+        <div className="mb-2 flex items-center justify-center gap-2 sm:hidden">
+          {hasWorkoutSlide && (
+            <button
+              type="button"
+              onClick={() => goSlide(0)}
+              aria-label="Тренування"
+              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs transition ${
+                slide === 0 ? "bg-accent text-paper" : "bg-paper text-muted"
+              }`}
+            >
+              🏋
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => goSlide(calendarSlide)}
+            aria-label="Календар"
+            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs transition ${
+              slide === calendarSlide ? "bg-accent text-paper" : "bg-paper text-muted"
+            }`}
+          >
+            🗓
+          </button>
+          {hasFoodSlide && (
+            <button
+              type="button"
+              onClick={() => goSlide(maxSlide)}
+              aria-label="Харчування"
+              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs transition ${
+                slide === maxSlide ? "bg-accent text-paper" : "bg-paper text-muted"
+              }`}
+            >
+              🍽
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="relative border-y-2 border-accent/50 py-3 sm:border-y-0 sm:py-0">
         <div className="overflow-hidden sm:overflow-visible">
           <div
@@ -769,48 +811,6 @@ export default function ClientActivityCalendar({
           </button>
         )}
       </div>
-
-      {/* Пагінація під рамкою — одразу видно, скільки слайдів і куди гортати:
-          гантеля зліва (тренування), календарик по центру, тарілка справа (харчування).
-          Якщо гортати нема куди (нема ні тренування, ні харчування) — не показуємо. */}
-      {(hasWorkoutSlide || hasFoodSlide) && (
-      <div className="mb-3 flex items-center justify-center gap-2 sm:hidden">
-        {hasWorkoutSlide && (
-          <button
-            type="button"
-            onClick={() => goSlide(0)}
-            aria-label="Тренування"
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs transition ${
-              slide === 0 ? "bg-accent text-paper" : "bg-paper text-muted"
-            }`}
-          >
-            🏋
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => goSlide(calendarSlide)}
-          aria-label="Календар"
-          className={`flex h-6 w-6 items-center justify-center rounded-full text-xs transition ${
-            slide === calendarSlide ? "bg-accent text-paper" : "bg-paper text-muted"
-          }`}
-        >
-          🗓
-        </button>
-        {hasFoodSlide && (
-          <button
-            type="button"
-            onClick={() => goSlide(maxSlide)}
-            aria-label="Харчування"
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs transition ${
-              slide === maxSlide ? "bg-accent text-paper" : "bg-paper text-muted"
-            }`}
-          >
-            🍽
-          </button>
-        )}
-      </div>
-      )}
 
       {selected && showCheckin && selectedCheckin && (
         <div className="mt-3 rounded-lg bg-paper p-3 text-sm">
