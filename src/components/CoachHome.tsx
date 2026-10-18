@@ -461,7 +461,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
           ) : (
             <div className="flex flex-col gap-2">
               <p className="text-xs text-muted">
-                Ім'я вказувати не треба — клієнт сам впише його, коли зайде за посиланням і заповнить анкету.
+                Ім&apos;я вказувати не треба — клієнт сам впише його, коли зайде за посиланням і заповнить анкету.
               </p>
               <div className="flex flex-wrap gap-2">
                 <input

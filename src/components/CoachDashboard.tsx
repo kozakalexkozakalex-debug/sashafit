@@ -208,7 +208,7 @@ export default function CoachDashboard() {
           <div className="border border-dashed border-line/80 p-4">
             <h2 className="mb-3 text-sm font-semibold">+ Новий клієнт</h2>
             <p className="mb-2 text-xs text-muted">
-              Ім'я можна не вказувати — клієнт сам впише його, коли зайде за посиланням і заповнить анкету.
+              Ім&apos;я можна не вказувати — клієнт сам впише його, коли зайде за посиланням і заповнить анкету.
             </p>
             <div className="flex flex-wrap gap-2">
               <input
