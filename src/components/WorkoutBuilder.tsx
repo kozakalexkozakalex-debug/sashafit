@@ -31,7 +31,7 @@ type WorkoutItem = {
 
 const MUSCLE_GROUPS = ["Ноги", "Спина", "Груди", "Плечі", "Руки", "Прес", "Кардіо", "Все тіло", "Інше"];
 
-function LibraryExercise({ ex }: { ex: Exercise }) {
+function LibraryExercise({ ex, onAdd }: { ex: Exercise; onAdd: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `lib-${ex.id}`,
     data: { type: "library", exercise: ex },
@@ -42,14 +42,26 @@ function LibraryExercise({ ex }: { ex: Exercise }) {
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
-      {...attributes}
-      className={`cursor-grab touch-none rounded-lg border border-line bg-paper px-2.5 py-1.5 text-xs active:cursor-grabbing ${
+      className={`flex items-center gap-2 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-xs ${
         isDragging ? "opacity-40" : ""
       }`}
     >
-      {ex.name}
-      {ex.equipment && <span className="ml-1 text-muted">· {ex.equipment}</span>}
+      <span
+        {...listeners}
+        {...attributes}
+        className="flex-1 cursor-grab touch-none active:cursor-grabbing"
+      >
+        {ex.name}
+        {ex.equipment && <span className="ml-1 text-muted">· {ex.equipment}</span>}
+      </span>
+      <button
+        type="button"
+        onClick={onAdd}
+        className="flex-none rounded-full bg-accent px-1.5 py-0.5 text-xs font-bold text-paper"
+        title="Додати в тренування"
+      >
+        +
+      </button>
     </div>
   );
 }
@@ -284,7 +296,7 @@ export default function WorkoutBuilder({
                   {openGroup === g && (
                     <div className="mb-1 flex flex-col gap-1 pl-1">
                       {byGroup[g].map((ex) => (
-                        <LibraryExercise key={ex.id} ex={ex} />
+                        <LibraryExercise key={ex.id} ex={ex} onAdd={() => addItem(ex)} />
                       ))}
                     </div>
                   )}
