@@ -25,7 +25,7 @@ export default function ChatPanel(props: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollBoxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (props.mode !== "coach") return;
@@ -73,7 +73,10 @@ export default function ChatPanel(props: Props) {
   }, [activeClientId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Прокручуємо тільки саме віконце чату до останнього повідомлення —
+    // НЕ scrollIntoView, бо він тягне за собою всю сторінку (ламає Головну).
+    const box = scrollBoxRef.current;
+    if (box) box.scrollTop = box.scrollHeight;
   }, [messages]);
 
   async function send() {
@@ -116,7 +119,7 @@ export default function ChatPanel(props: Props) {
             </select>
           )}
 
-          <div className="flex h-56 flex-col gap-2 overflow-y-auto rounded-lg bg-paper p-2">
+          <div ref={scrollBoxRef} className="flex h-56 flex-col gap-2 overflow-y-auto rounded-lg bg-paper p-2">
             {messages.map((m) => (
               <div
                 key={m.id}
@@ -130,7 +133,6 @@ export default function ChatPanel(props: Props) {
               </div>
             ))}
             {messages.length === 0 && <p className="text-xs text-muted">Повідомлень ще немає.</p>}
-            <div ref={bottomRef} />
           </div>
 
           <div className="flex gap-2">
