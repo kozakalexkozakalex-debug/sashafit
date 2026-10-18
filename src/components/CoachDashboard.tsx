@@ -62,8 +62,6 @@ const TABS: { id: TabId; label: string }[] = [
 export default function CoachDashboard() {
   const [tab, setTab] = useState<TabId>("home");
   const [clients, setClients] = useState<Client[]>([]);
-  const [name, setName] = useState("");
-  const [goal, setGoal] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -126,16 +124,12 @@ export default function CoachDashboard() {
   async function addClient() {
     setBusy(true);
     setErr("");
-    const { error } = await supabase
-      .from("clients")
-      .insert({ name: name.trim() || null, goal: goal.trim() || null });
+    const { error } = await supabase.from("clients").insert({ name: null, goal: null });
     setBusy(false);
     if (error) {
       setErr(error.message);
       return;
     }
-    setName("");
-    setGoal("");
     load();
   }
 
@@ -208,28 +202,17 @@ export default function CoachDashboard() {
           <div className="border border-dashed border-line/80 p-4">
             <h2 className="mb-3 text-sm font-semibold">+ Новий клієнт</h2>
             <p className="mb-2 text-xs text-muted">
-              Ім&apos;я можна не вказувати — клієнт сам впише його, коли зайде за посиланням і заповнить анкету.
+              Нічого вказувати не треба — просто створи посилання. Клієнт сам впише своє ім&apos;я, коли зайде за ним
+              і заповнить анкету.
             </p>
             <div className="flex flex-wrap gap-2">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ім'я (необов'язково)"
-                className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-              />
-              <input
-                value={goal}
-                onChange={(e) => setGoal(e.target.value)}
-                placeholder="Ціль (необов'язково)"
-                className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-              />
               <button
                 type="button"
                 disabled={busy}
                 onClick={addClient}
                 className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
               >
-                Додати
+                {busy ? "Створюю…" : "Створити посилання"}
               </button>
             </div>
             {err && <p className="mt-2 text-sm text-red-400">{err}</p>}

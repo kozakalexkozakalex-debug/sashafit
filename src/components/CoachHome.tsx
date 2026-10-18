@@ -108,8 +108,6 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
   const [mErr, setMErr] = useState("");
 
   const [addOpen, setAddOpen] = useState(false);
-  const [aName, setAName] = useState("");
-  const [aGoal, setAGoal] = useState("");
   const [aBusy, setABusy] = useState(false);
   const [aErr, setAErr] = useState("");
   const [aInviteCode, setAInviteCode] = useState<string | null>(null);
@@ -216,7 +214,7 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
     setABusy(true);
     const { data, error } = await supabase
       .from("clients")
-      .insert({ name: aName.trim() || null, goal: aGoal.trim() || null })
+      .insert({ name: null, goal: null })
       .select("invite_code")
       .single();
     setABusy(false);
@@ -225,8 +223,6 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
       return;
     }
     setAInviteCode(data?.invite_code || null);
-    setAName("");
-    setAGoal("");
     load();
   }
 
@@ -461,16 +457,9 @@ export default function CoachHome({ onOpenClients }: { onOpenClients?: () => voi
           ) : (
             <div className="flex flex-col gap-2">
               <p className="text-xs text-muted">
-                Ім&apos;я вказувати не треба — клієнт сам впише його, коли зайде за посиланням і заповнить анкету.
+                Нічого вказувати не треба — просто створи посилання. Клієнт сам впише своє ім&apos;я, коли зайде за
+                ним і заповнить анкету.
               </p>
-              <div className="flex flex-wrap gap-2">
-                <input
-                  value={aGoal}
-                  onChange={(e) => setAGoal(e.target.value)}
-                  placeholder="Ціль (необов'язково, можна й без неї)"
-                  className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-                />
-              </div>
               <div className="flex gap-2">
                 <button
                   type="button"
