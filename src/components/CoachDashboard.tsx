@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
 import ClientProfileCard from "@/components/ClientProfileCard";
+import WorkoutBuilder from "@/components/WorkoutBuilder";
 import ProgramsSection from "@/components/ProgramsSection";
 import NutritionSection from "@/components/NutritionSection";
 import CoachAnalytics from "@/components/CoachAnalytics";
@@ -70,6 +71,8 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
   }, [goHomeSignal]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [calendarKey, setCalendarKey] = useState(0);
   const [checkinsByClient, setCheckinsByClient] = useState<Record<string, Checkin[]>>({});
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [lastCheckinByClient, setLastCheckinByClient] = useState<Record<string, string>>({});
@@ -97,6 +100,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
   }, []);
 
   async function selectClient(clientId: string) {
+    setShowBuilder(false);
     if (selectedId === clientId) {
       setSelectedId(null);
       return;
@@ -303,13 +307,30 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
               }));
 
               return (
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
-                  <div className="flex flex-col gap-3 lg:w-1/3 lg:flex-none">
-                    <ClientProfileCard client={c} checkins={checkins} readOnly />
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+                    <div className="flex flex-col gap-3 lg:w-1/3 lg:flex-none">
+                      <ClientProfileCard client={c} checkins={checkins} readOnly />
+                      <button
+                        type="button"
+                        onClick={() => setShowBuilder((v) => !v)}
+                        className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-accent"
+                      >
+                        {showBuilder ? "Сховати конструктор" : "Призначити тренування"}
+                      </button>
+                    </div>
+                    <div className="lg:flex-1">
+                      <ClientActivityCalendar key={calendarKey} clientId={c.id} checkins={markers} />
+                    </div>
                   </div>
-                  <div className="lg:flex-1">
-                    <ClientActivityCalendar clientId={c.id} checkins={markers} />
-                  </div>
+
+                  {showBuilder && (
+                    <WorkoutBuilder
+                      clientId={c.id}
+                      onClose={() => setShowBuilder(false)}
+                      onSaved={() => setCalendarKey((k) => k + 1)}
+                    />
+                  )}
                 </div>
               );
             })()}
