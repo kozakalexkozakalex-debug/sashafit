@@ -424,7 +424,24 @@ export default function CoachHome({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-end">
+      {/* Дві головні дії поруч: спочатку зустріч, потім клієнт — так логічніше,
+          бо обидві відкривають свою форму нижче/в модалці, і їм не треба бути
+          розкидані по різних кінцях сторінки. */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setMeetingModalOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-md shadow-accent/30 transition hover:brightness-110 active:scale-[0.98]"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <rect x="1.5" y="3" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M1.5 6.5H14.5" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M5 1.5V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            <path d="M11 1.5V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            <path d="M8 8.5V12.5M6 10.5H10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          </svg>
+          Нова зустріч
+        </button>
         <button
           type="button"
           onClick={() => (addOpen ? closeAdd() : setAddOpen(true))}
@@ -720,21 +737,6 @@ export default function CoachHome({
               </div>
             )}
           </div>
-
-          <button
-            type="button"
-            onClick={() => setMeetingModalOpen(true)}
-            className="inline-flex w-fit items-center gap-2 self-start rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-paper shadow-md shadow-accent/30 transition hover:brightness-110 active:scale-[0.98]"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <rect x="1.5" y="3" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" />
-              <path d="M1.5 6.5H14.5" stroke="currentColor" strokeWidth="1.4" />
-              <path d="M5 1.5V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <path d="M11 1.5V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <path d="M8 8.5V12.5M6 10.5H10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-            Нова зустріч
-          </button>
 
           {meetingModalOpen && (
             <div className="fixed inset-0 z-40" onClick={() => setMeetingModalOpen(false)}>
