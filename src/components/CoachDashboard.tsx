@@ -51,27 +51,26 @@ type Checkin = {
   created_at: string;
 };
 
-type TabId = "home" | "clients" | "checkins" | "programs" | "rations" | "analytics" | "payments";
+type TabId = "home" | "clients" | "checkins" | "library" | "analytics" | "payments";
+type LibrarySubTab = "workouts" | "food";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "home", label: "Головна" },
   { id: "clients", label: "Клієнти" },
   { id: "checkins", label: "Чек-іни" },
-  { id: "programs", label: "Програми" },
-  { id: "rations", label: "Харчування" },
+  { id: "library", label: "База" },
   { id: "analytics", label: "Аналітика" },
   { id: "payments", label: "Оплата" },
 ];
 
 // Знизу на мобільному — 4 найважливіші вкладки + кнопка «Ще» з рештою.
-const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "checkins", "rations"];
-const MOBILE_MORE_IDS: TabId[] = ["programs", "analytics", "payments"];
+const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "checkins", "library"];
+const MOBILE_MORE_IDS: TabId[] = ["analytics", "payments"];
 const TAB_ICON: Record<TabId, string> = {
   home: "🏠",
   clients: "👥",
   checkins: "📋",
-  programs: "🗂",
-  rations: "🍽",
+  library: "🗂",
   analytics: "📊",
   payments: "💳",
 };
@@ -96,6 +95,7 @@ function QuickActionSheet({ onClose, children }: { onClose: () => void; children
 
 export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number }) {
   const [tab, setTab] = useState<TabId>("home");
+  const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>("workouts");
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [busy, setBusy] = useState(false);
@@ -294,10 +294,34 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
         <CoachHome onOpenClients={() => setTab("clients")} onNavigate={(t) => setTab(t)} />
       ) : tab === "checkins" ? (
         <CoachCheckins />
-      ) : tab === "programs" ? (
-        <ProgramsSection />
-      ) : tab === "rations" ? (
-        <NutritionSection />
+      ) : tab === "library" ? (
+        <div>
+          <div className="mb-3 flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => setLibrarySubTab("workouts")}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                librarySubTab === "workouts"
+                  ? "border-accent bg-accent text-paper"
+                  : "border-line bg-paper text-muted hover:text-ink"
+              }`}
+            >
+              🏋 Тренування
+            </button>
+            <button
+              type="button"
+              onClick={() => setLibrarySubTab("food")}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                librarySubTab === "food"
+                  ? "border-accent bg-accent text-paper"
+                  : "border-line bg-paper text-muted hover:text-ink"
+              }`}
+            >
+              🍽 Харчування
+            </button>
+          </div>
+          {librarySubTab === "workouts" ? <ProgramsSection /> : <NutritionSection />}
+        </div>
       ) : tab === "analytics" ? (
         <CoachAnalytics />
       ) : tab === "payments" ? (
