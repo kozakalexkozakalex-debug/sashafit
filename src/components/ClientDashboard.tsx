@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import ClientCalendar from "@/components/ClientCalendar";
-import ClientNutrition from "@/components/ClientNutrition";
+import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
 import ChatPanel from "@/components/ChatPanel";
 
@@ -77,6 +76,8 @@ export default function ClientDashboard() {
 
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [ciOpen, setCiOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [ciWeight, setCiWeight] = useState("");
   const [ciWaist, setCiWaist] = useState("");
   const [ciHips, setCiHips] = useState("");
@@ -211,6 +212,7 @@ export default function ClientDashboard() {
     setCiChest("");
     setCiComment("");
     setCiFile(null);
+    setCiOpen(false);
     loadCheckins(c.id);
   }
 
@@ -273,9 +275,9 @@ export default function ClientDashboard() {
 
   if (isFirstFill || editMode) {
     return (
-      <div className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Анкета</h2>
-        <div className="flex flex-col gap-3">
+      <div className="rounded-xl border border-line bg-surface p-3">
+        <h2 className="mb-2.5 text-sm font-semibold">Анкета</h2>
+        <div className="flex flex-col gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -415,10 +417,21 @@ export default function ClientDashboard() {
     );
   }
 
+  const checkinMarkers: CheckinMarker[] = checkins.map((c) => ({
+    id: c.id,
+    date: c.created_at.slice(0, 10),
+    weight: c.weight,
+    waist: c.waist,
+    hips: c.hips,
+    chest: c.chest,
+    comment: c.comment,
+    photoUrl: c.photo_path ? photoUrls[c.id] || null : null,
+  }));
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="rounded-xl border border-line bg-surface p-4">
-        <div className="mb-3 flex items-center justify-between">
+    <div className="flex flex-col gap-3">
+      <div className="rounded-xl border border-line bg-surface p-3">
+        <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Моя анкета</h2>
           <button
             type="button"
@@ -462,67 +475,78 @@ export default function ClientDashboard() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Новий чек-ін</h2>
-        <div className="flex flex-col gap-3">
-          <input
-            value={ciWeight}
-            onChange={(e) => setCiWeight(e.target.value)}
-            inputMode="decimal"
-            placeholder="Вага, кг"
-            className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-          />
-          <div className="flex gap-2">
+      <div className="rounded-xl border border-line bg-surface p-3">
+        <button type="button" onClick={() => setCiOpen((v) => !v)} className="flex w-full items-center justify-between text-left">
+          <h2 className="text-sm font-semibold">Новий чек-ін</h2>
+          <span className="text-xs text-accent">{ciOpen ? "згорнути" : "додати"}</span>
+        </button>
+        {ciOpen && (
+          <div className="mt-2.5 flex flex-col gap-2">
             <input
-              value={ciWaist}
-              onChange={(e) => setCiWaist(e.target.value)}
+              value={ciWeight}
+              onChange={(e) => setCiWeight(e.target.value)}
               inputMode="decimal"
-              placeholder="Талія, см"
-              className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+              placeholder="Вага, кг"
+              className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
             />
+            <div className="flex gap-2">
+              <input
+                value={ciWaist}
+                onChange={(e) => setCiWaist(e.target.value)}
+                inputMode="decimal"
+                placeholder="Талія, см"
+                className="flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
+              />
+              <input
+                value={ciHips}
+                onChange={(e) => setCiHips(e.target.value)}
+                inputMode="decimal"
+                placeholder="Стегна, см"
+                className="flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
+              />
+              <input
+                value={ciChest}
+                onChange={(e) => setCiChest(e.target.value)}
+                inputMode="decimal"
+                placeholder="Груди, см"
+                className="flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
+              />
+            </div>
             <input
-              value={ciHips}
-              onChange={(e) => setCiHips(e.target.value)}
-              inputMode="decimal"
-              placeholder="Стегна, см"
-              className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setCiFile(e.target.files?.[0] ?? null)}
+              className="text-xs text-muted"
             />
-            <input
-              value={ciChest}
-              onChange={(e) => setCiChest(e.target.value)}
-              inputMode="decimal"
-              placeholder="Груди, см"
-              className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+            <textarea
+              value={ciComment}
+              onChange={(e) => setCiComment(e.target.value)}
+              placeholder="Коментар (необов'язково)"
+              rows={2}
+              className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
             />
+            <button
+              type="button"
+              disabled={ciBusy}
+              onClick={addCheckin}
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-bold text-paper disabled:opacity-50"
+            >
+              {ciBusy ? "Зберігаю…" : "Зберегти чек-ін"}
+            </button>
+            {ciErr && <p className="text-sm text-red-400">{ciErr}</p>}
           </div>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setCiFile(e.target.files?.[0] ?? null)}
-            className="text-sm text-muted"
-          />
-          <textarea
-            value={ciComment}
-            onChange={(e) => setCiComment(e.target.value)}
-            placeholder="Коментар (необов'язково)"
-            rows={2}
-            className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-          />
-          <button
-            type="button"
-            disabled={ciBusy}
-            onClick={addCheckin}
-            className="rounded-lg bg-accent px-4 py-2.5 text-sm font-bold text-paper disabled:opacity-50"
-          >
-            {ciBusy ? "Зберігаю…" : "Зберегти чек-ін"}
-          </button>
-          {ciErr && <p className="text-sm text-red-400">{ciErr}</p>}
-        </div>
+        )}
       </div>
 
-      <div className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Історія чек-інів ({checkins.length})</h2>
-        <div className="flex flex-col gap-2">
+      <ClientActivityCalendar clientId={client.id} checkins={checkinMarkers} />
+
+      <div className="rounded-xl border border-line bg-surface p-3">
+        <button type="button" onClick={() => setHistoryOpen((v) => !v)} className="flex w-full items-center justify-between text-left">
+          <h2 className="text-sm font-semibold">Історія чек-інів ({checkins.length})</h2>
+          <span className="text-xs text-accent">{historyOpen ? "згорнути" : "показати"}</span>
+        </button>
+        {historyOpen && (
+        <div className="mt-2.5 flex flex-col gap-1.5">
           {checkins.map((c) =>
             editingCheckinId === c.id ? (
               <div key={c.id} className="rounded-lg border border-accent/50 bg-paper p-3 text-sm">
@@ -582,15 +606,15 @@ export default function ClientDashboard() {
                 {ecErr && <p className="mt-1 text-xs text-red-400">{ecErr}</p>}
               </div>
             ) : (
-              <div key={c.id} className="rounded-lg border border-line p-3 text-sm">
+              <div key={c.id} className="rounded-lg border border-line p-2 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">{c.weight} кг</span>
-                  <span className="text-xs text-muted">
+                  <span className="font-medium text-sm">{c.weight} кг</span>
+                  <span className="text-muted">
                     {new Date(c.created_at).toLocaleDateString("uk-UA")}
                   </span>
                 </div>
                 {(c.waist != null || c.hips != null || c.chest != null) && (
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-0.5 text-muted">
                     {[
                       c.waist != null ? `Талія ${c.waist} см` : null,
                       c.hips != null ? `Стегна ${c.hips} см` : null,
@@ -600,33 +624,32 @@ export default function ClientDashboard() {
                       .join(", ")}
                   </p>
                 )}
-                {c.comment && <p className="mt-1 text-muted">{c.comment}</p>}
+                {c.comment && <p className="mt-0.5 text-muted">{c.comment}</p>}
                 {c.photo_path && photoUrls[c.id] && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={photoUrls[c.id]}
                     alt="Фото чек-іну"
-                    className="mt-2 max-h-48 rounded-lg object-cover"
+                    className="mt-1.5 max-h-40 rounded-lg object-cover"
                   />
                 )}
-                <div className="mt-2 flex items-center gap-3">
-                  <button type="button" onClick={() => startEditCheckin(c)} className="text-xs text-accent">
+                <div className="mt-1.5 flex items-center gap-3">
+                  <button type="button" onClick={() => startEditCheckin(c)} className="text-accent">
                     Редагувати
                   </button>
-                  <button type="button" onClick={() => deleteCheckin(c.id)} className="text-xs text-muted">
+                  <button type="button" onClick={() => deleteCheckin(c.id)} className="text-muted">
                     Видалити
                   </button>
                 </div>
               </div>
             )
           )}
-          {checkins.length === 0 && <p className="text-sm text-muted">Чек-інів ще немає.</p>}
+          {checkins.length === 0 && <p className="text-xs text-muted">Чек-інів ще немає.</p>}
         </div>
+        )}
       </div>
 
       <ChatPanel mode="client" clientId={client.id} />
-      <ClientCalendar clientId={client.id} />
-      <ClientNutrition clientId={client.id} />
       <AnalyticsPanel clientId={client.id} />
     </div>
   );

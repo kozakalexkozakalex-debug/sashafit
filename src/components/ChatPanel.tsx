@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { clientLabel } from "@/lib/clientLabel";
 
 type Message = {
   id: string;
@@ -11,7 +12,7 @@ type Message = {
   created_at: string;
 };
 
-type ClientOption = { id: string; name: string };
+type ClientOption = { id: string; name: string | null; invite_code: string };
 
 type Props = { mode: "client"; clientId: string } | { mode: "coach" };
 
@@ -31,7 +32,7 @@ export default function ChatPanel(props: Props) {
     (async () => {
       const { data } = await supabase
         .from("clients")
-        .select("id, name")
+        .select("id, name, invite_code")
         .not("profile_id", "is", null)
         .order("name");
       const rows = (data as ClientOption[]) || [];
@@ -92,14 +93,14 @@ export default function ChatPanel(props: Props) {
       <button
         type="button"
         onClick={() => setCollapsed((v) => !v)}
-        className="flex items-center justify-between p-4 text-left"
+        className="flex items-center justify-between p-3 text-left"
       >
         <h2 className="text-sm font-semibold">Повідомлення</h2>
         <span className="text-xs text-muted">{collapsed ? "розгорнути" : "згорнути"}</span>
       </button>
 
       {!collapsed && (
-        <div className="flex flex-col gap-3 border-t border-line p-4">
+        <div className="flex flex-col gap-2.5 border-t border-line p-3">
           {props.mode === "coach" && (
             <select
               value={activeClientId || ""}
@@ -109,13 +110,13 @@ export default function ChatPanel(props: Props) {
               {clients.length === 0 && <option value="">Немає підключених клієнтів</option>}
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {clientLabel(c)}
                 </option>
               ))}
             </select>
           )}
 
-          <div className="flex h-72 flex-col gap-2 overflow-y-auto rounded-lg bg-paper p-2">
+          <div className="flex h-56 flex-col gap-2 overflow-y-auto rounded-lg bg-paper p-2">
             {messages.map((m) => (
               <div
                 key={m.id}
