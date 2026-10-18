@@ -146,9 +146,16 @@ function ClientHomeSummary({
   );
 }
 
+type TabId = "home" | "profile";
+const TABS: { id: TabId; label: string; icon: string }[] = [
+  { id: "home", label: "Головна", icon: "🏠" },
+  { id: "profile", label: "Профіль", icon: "👤" },
+];
+
 export default function ClientDashboard() {
   const [client, setClient] = useState<ClientRow | null | "none">(null);
   const [editMode, setEditMode] = useState(false);
+  const [tab, setTab] = useState<TabId>("home");
 
   const [name, setName] = useState("");
   const [height, setHeight] = useState("");
@@ -458,35 +465,73 @@ export default function ClientDashboard() {
   }));
 
   return (
-    <div className="flex flex-col gap-3">
-      <ClientHomeSummary
-        client={client}
-        checkins={checkins}
-        workouts={workoutsSummary}
-        foodToday={foodToday}
-        targetCalories={targetCalories}
-      />
+    <div className="flex flex-col gap-6 pb-20 lg:flex-row lg:items-start lg:gap-8 lg:pb-0">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden">
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
+                active ? "text-accent" : "text-muted"
+              }`}
+            >
+              <span className="text-base leading-none">{t.icon}</span>
+              {t.label}
+            </button>
+          );
+        })}
+      </nav>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
-      <div className="flex flex-col gap-3 lg:w-1/3 lg:flex-none">
-        <ClientProfileCard
-          client={client}
-          checkins={checkins}
-          onEditAnketa={() => {
-            prefillFromClient(client);
-            setEditMode(true);
-          }}
-          onAvatarUpdated={load}
-          onCheckinAdded={() => loadCheckins(client.id)}
-        />
-      </div>
+      <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`w-full rounded-md border-l-2 px-3 py-2 text-left font-display text-sm font-medium transition ${
+                active ? "border-accent bg-accent/15 text-ink" : "border-transparent text-muted hover:bg-line/30 hover:text-ink"
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </nav>
 
-      <div className="lg:flex-1">
-        <ClientActivityCalendar clientId={client.id} checkins={checkinMarkers} />
-      </div>
-      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-3">
+          {tab === "home" ? (
+            <>
+              <ClientHomeSummary
+                client={client}
+                checkins={checkins}
+                workouts={workoutsSummary}
+                foodToday={foodToday}
+                targetCalories={targetCalories}
+              />
+              <ClientActivityCalendar clientId={client.id} checkins={checkinMarkers} />
+            </>
+          ) : (
+            <ClientProfileCard
+              client={client}
+              checkins={checkins}
+              onEditAnketa={() => {
+                prefillFromClient(client);
+                setEditMode(true);
+              }}
+              onAvatarUpdated={load}
+              onCheckinAdded={() => loadCheckins(client.id)}
+            />
+          )}
 
-      <ChatLauncher mode="client" clientId={client.id} />
+          <ChatLauncher mode="client" clientId={client.id} />
+        </div>
+      </div>
     </div>
   );
 }
