@@ -379,9 +379,9 @@ export default function ClientActivityCalendar({
 
       {selected && <p className="mb-2 text-xs font-medium text-muted">{selected}</p>}
 
-      <div className="flex flex-wrap items-start gap-3">
+      <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-3">
         {selected && showWorkout && workout && (
-          <div className="order-1 max-h-[322px] w-full flex-none overflow-y-auto rounded-lg bg-paper p-3 text-sm sm:w-60">
+          <div className="order-1 max-h-[322px] overflow-y-auto rounded-lg bg-paper p-3 text-sm">
             <p className="font-medium text-ink">🏋 {workout.title}</p>
             <div className="mt-1.5 flex flex-col gap-1.5">
               {[...workout.assigned_workout_exercises]
@@ -450,7 +450,7 @@ export default function ClientActivityCalendar({
           </div>
         )}
 
-        <div className="order-2 mx-auto w-full max-w-[280px] flex-none sm:mx-0">
+        <div className="order-2 mx-auto w-full max-w-[280px] sm:max-w-none">
           <div className="mb-1.5 flex items-center justify-between">
             <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
               ‹
@@ -518,7 +518,7 @@ export default function ClientActivityCalendar({
         </div>
 
         {selected && showFood && (
-          <div className="order-3 max-h-[322px] min-w-[240px] flex-1 overflow-y-auto rounded-lg bg-paper p-3 text-sm">
+          <div className="order-3 max-h-[322px] overflow-y-auto rounded-lg bg-paper p-3 text-sm">
             <div className="mb-3 flex items-center gap-3">
               <svg width="64" height="64" viewBox="0 0 64 64" className="flex-none -rotate-90">
                 <circle cx="32" cy="32" r={ringR} fill="none" stroke="currentColor" className="text-line" strokeWidth="6" />
