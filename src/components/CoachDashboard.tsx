@@ -95,19 +95,6 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
   const [tab, setTab] = useState<TabId>("home");
   const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>("workouts");
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
-  // Бічне меню на десктопі можна згорнути — тоді лишається тільки вузька
-  // "ручка" зі стрілкою. Запам'ятовуємо вибір, щоб не збивалось після оновлення.
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  useEffect(() => {
-    const saved = localStorage.getItem("sf_sidebar_open");
-    if (saved === "0") setSidebarOpen(false);
-  }, []);
-  function toggleSidebar() {
-    setSidebarOpen((v) => {
-      localStorage.setItem("sf_sidebar_open", v ? "0" : "1");
-      return !v;
-    });
-  }
   const [clients, setClients] = useState<Client[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -290,43 +277,15 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
         </div>
       )}
 
-      {/* Згортне бічне меню: коли розгорнуте — звичайна панель з кнопками;
-          коли згорнуте — від неї лишається тільки вузька "ручка" зі стрілкою,
-          саме меню зникає повністю (не займає місця). Ручку не ставимо зверху
-          зліва — там кнопка "SashaFit"/Домой у шапці сторінки. */}
-      <div className="hidden lg:sticky lg:top-6 lg:flex lg:flex-none lg:items-start">
-        {sidebarOpen ? (
-          <nav className="flex w-56 flex-col gap-0.5 rounded-xl border border-line bg-sidebar p-3 pb-3">
-            <div className="mb-1 flex items-center justify-between px-1">
-              <span className="text-[10px] uppercase tracking-wide text-muted">Меню</span>
-              <button
-                type="button"
-                onClick={toggleSidebar}
-                aria-label="Згорнути меню"
-                className="rounded-md px-1.5 py-1 text-xs text-muted transition hover:bg-line/30 hover:text-ink"
-              >
-                ‹‹
-              </button>
-            </div>
-            <TabButton t={TABS[0]} />
-            <div className="my-2 h-px bg-line" />
-            {TABS.slice(1, 4).map((t) => (
-              <TabButton key={t.id} t={t} />
-            ))}
-            <div className="my-2 h-px bg-line" />
-            <TabButton t={TABS[4]} />
-          </nav>
-        ) : (
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            aria-label="Розгорнути меню"
-            className="flex h-9 w-5 items-center justify-center rounded-r-lg border border-l-0 border-line bg-sidebar text-xs text-muted transition hover:text-ink"
-          >
-            ››
-          </button>
-        )}
-      </div>
+      <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
+        <TabButton t={TABS[0]} />
+        <div className="my-2 h-px bg-line" />
+        {TABS.slice(1, 4).map((t) => (
+          <TabButton key={t.id} t={t} />
+        ))}
+        <div className="my-2 h-px bg-line" />
+        <TabButton t={TABS[4]} />
+      </nav>
 
       <div className="min-w-0 flex-1">
       {tab === "home" ? (
