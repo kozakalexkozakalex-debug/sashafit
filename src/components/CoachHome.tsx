@@ -107,7 +107,7 @@ export default function CoachHome({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [heatWeeks, setHeatWeeks] = useState(12);
+  const [heatMonths, setHeatMonths] = useState(3);
 
   const [mTitle, setMTitle] = useState("");
   const [mClientId, setMClientId] = useState("");
@@ -401,17 +401,8 @@ export default function CoachHome({
     return d >= 0 && d <= 7;
   }).length;
 
-  // ---- Heatmap активності: виконані тренування по днях, діапазон тижнів обирає коуч ----
-  const HEAT_WEEK_OPTIONS = [4, 8, 12, 24];
-  const HEATMAP_DAYS = heatWeeks * 7;
-  const heatmapCells: { key: string; count: number }[] = [];
-  for (let i = HEATMAP_DAYS - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = toKey(d);
-    const count = (workoutsByDate[key] || []).filter((w) => w.completed_at).length;
-    heatmapCells.push({ key, count });
-  }
+  // ---- Активність: календар, один рядок = один місяць, виходні підсвічені ----
+  const HEAT_MONTH_OPTIONS = [1, 3, 6, 12];
   function heatLevel(count: number) {
     if (count <= 0) return 0;
     if (count === 1) return 1;
@@ -420,14 +411,28 @@ export default function CoachHome({
   }
   const HEAT_SHADES = ["bg-line/30", "bg-accent/35", "bg-accent/65", "bg-accent"];
 
-  // ---- Heatmap активності харчування: останні 12 тижнів, скільки клієнтів логували їжу по днях ----
-  const foodHeatmapCells: { key: string; count: number }[] = [];
-  for (let i = HEATMAP_DAYS - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = toKey(d);
-    const count = new Set((foodByDate[key] || []).map((f) => f.client_id)).size;
-    foodHeatmapCells.push({ key, count });
+  type ActivityDay = { key: string; isWeekend: boolean; workoutCount: number; foodCount: number };
+  type ActivityMonthRow = { label: string; days: (ActivityDay | null)[] };
+  const activityMonthRows: ActivityMonthRow[] = [];
+  for (let m = heatMonths - 1; m >= 0; m--) {
+    const base = new Date(today.getFullYear(), today.getMonth() - m, 1);
+    const y = base.getFullYear();
+    const mon = base.getMonth();
+    const daysInThisMonth = new Date(y, mon + 1, 0).getDate();
+    const days: (ActivityDay | null)[] = [];
+    for (let day = 1; day <= 31; day++) {
+      if (day > daysInThisMonth) {
+        days.push(null);
+        continue;
+      }
+      const dd = new Date(y, mon, day);
+      const key = toKey(dd);
+      const isWeekend = dd.getDay() === 0 || dd.getDay() === 6;
+      const workoutCount = (workoutsByDate[key] || []).filter((w) => w.completed_at).length;
+      const foodCount = new Set((foodByDate[key] || []).map((f) => f.client_id)).size;
+      days.push({ key, isWeekend, workoutCount, foodCount });
+    }
+    activityMonthRows.push({ label: `${MONTHS[mon].slice(0, 3)} ${y}`, days });
   }
 
   // ---- Прогрес клієнтів: % виконання за 30 днів, найслабші першими ----
@@ -588,51 +593,85 @@ export default function CoachHome({
               <h2 className="text-sm font-semibold">Активність</h2>
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] text-muted">Період:</span>
-                {HEAT_WEEK_OPTIONS.map((w) => (
+                {HEAT_MONTH_OPTIONS.map((mCount) => (
                   <button
-                    key={w}
+                    key={mCount}
                     type="button"
-                    onClick={() => setHeatWeeks(w)}
+                    onClick={() => setHeatMonths(mCount)}
                     className={`rounded-full border px-2 py-0.5 text-[11px] ${
-                      heatWeeks === w ? "border-accent bg-accent text-paper" : "border-line text-muted"
+                      heatMonths === mCount ? "border-accent bg-accent text-paper" : "border-line text-muted"
                     }`}
                   >
-                    {w} тижн.
+                    {mCount} міс.
                   </button>
                 ))}
               </div>
             </div>
-            <div className="flex flex-wrap gap-6">
+            <div className="flex flex-col gap-5">
               <div>
                 <p className="mb-1.5 text-[11px] text-muted">Тренування (виконано)</p>
-                <div className="grid grid-cols-7 gap-[2px]">
-                  {heatmapCells.map((c) => (
-                    <div
-                      key={c.key}
-                      title={`${c.key}: ${c.count} виконано`}
-                      className={`flex h-4 w-4 items-center justify-center rounded-sm text-[7px] leading-none font-medium ${
-                        HEAT_SHADES[heatLevel(c.count)]
-                      } ${c.count > 0 ? "text-paper" : "text-muted"}`}
-                    >
-                      {c.count}
-                    </div>
-                  ))}
+                <div className="overflow-x-auto pb-1">
+                  <div className="flex flex-col gap-[2px]">
+                    {activityMonthRows.map((row) => (
+                      <div key={row.label} className="flex items-center gap-1.5">
+                        <span className="w-12 flex-none text-[9px] text-muted">{row.label}</span>
+                        <div className="grid grid-cols-[repeat(31,14px)] gap-[2px]">
+                          {row.days.map((d, i) =>
+                            d ? (
+                              <div
+                                key={i}
+                                title={`${d.key}: ${d.workoutCount} виконано${d.isWeekend ? " · вихідний" : ""}`}
+                                className={`flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[6px] leading-none font-medium ${
+                                  d.workoutCount > 0
+                                    ? `${HEAT_SHADES[heatLevel(d.workoutCount)]} text-paper`
+                                    : d.isWeekend
+                                    ? "bg-accent/10 text-muted"
+                                    : "bg-line/20 text-muted"
+                                }`}
+                              >
+                                {d.workoutCount}
+                              </div>
+                            ) : (
+                              <div key={i} className="h-3.5 w-3.5" />
+                            )
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div>
                 <p className="mb-1.5 text-[11px] text-muted">Харчування (клієнтів залогувало)</p>
-                <div className="grid grid-cols-7 gap-[2px]">
-                  {foodHeatmapCells.map((c) => (
-                    <div
-                      key={c.key}
-                      title={`${c.key}: ${c.count} клієнт(ів) залогували їжу`}
-                      className={`flex h-4 w-4 items-center justify-center rounded-sm text-[7px] leading-none font-medium ${
-                        HEAT_SHADES[heatLevel(c.count)]
-                      } ${c.count > 0 ? "text-paper" : "text-muted"}`}
-                    >
-                      {c.count}
-                    </div>
-                  ))}
+                <div className="overflow-x-auto pb-1">
+                  <div className="flex flex-col gap-[2px]">
+                    {activityMonthRows.map((row) => (
+                      <div key={row.label} className="flex items-center gap-1.5">
+                        <span className="w-12 flex-none text-[9px] text-muted">{row.label}</span>
+                        <div className="grid grid-cols-[repeat(31,14px)] gap-[2px]">
+                          {row.days.map((d, i) =>
+                            d ? (
+                              <div
+                                key={i}
+                                title={`${d.key}: ${d.foodCount} клієнт(ів) залогували їжу${d.isWeekend ? " · вихідний" : ""}`}
+                                className={`flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[6px] leading-none font-medium ${
+                                  d.foodCount > 0
+                                    ? `${HEAT_SHADES[heatLevel(d.foodCount)]} text-paper`
+                                    : d.isWeekend
+                                    ? "bg-accent/10 text-muted"
+                                    : "bg-line/20 text-muted"
+                                }`}
+                              >
+                                {d.foodCount}
+                              </div>
+                            ) : (
+                              <div key={i} className="h-3.5 w-3.5" />
+                            )
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
