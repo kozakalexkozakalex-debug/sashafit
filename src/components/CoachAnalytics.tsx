@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { clientLabel } from "@/lib/clientLabel";
+import CoachCheckins from "@/components/CoachCheckins";
 
-type SubTab = "clients" | "workouts" | "food";
+type SubTab = "checkins" | "clients" | "workouts" | "food";
 type Period = 7 | 30 | 90;
 
 type Client = { id: string; name: string | null; invite_code: string; profile_id: string | null };
@@ -143,7 +144,7 @@ function ProgressBar({ pct }: { pct: number }) {
 }
 
 export default function CoachAnalytics() {
-  const [sub, setSub] = useState<SubTab>("clients");
+  const [sub, setSub] = useState<SubTab>("checkins");
   const [period, setPeriod] = useState<Period>(30);
   const [clients, setClients] = useState<Client[]>([]);
   const [checkins, setCheckins] = useState<Checkin[]>([]);
@@ -279,6 +280,13 @@ export default function CoachAnalytics() {
         <div className="flex gap-5">
           <button
             type="button"
+            onClick={() => setSub("checkins")}
+            className={`font-display text-sm font-medium ${sub === "checkins" ? "text-accent" : "text-muted"}`}
+          >
+            Чек-іни
+          </button>
+          <button
+            type="button"
             onClick={() => setSub("clients")}
             className={`font-display text-sm font-medium ${sub === "clients" ? "text-accent" : "text-muted"}`}
           >
@@ -314,6 +322,8 @@ export default function CoachAnalytics() {
           ))}
         </div>
       </div>
+
+      {sub === "checkins" && <CoachCheckins />}
 
       {sub === "clients" && (
         <div className="flex flex-col gap-6">

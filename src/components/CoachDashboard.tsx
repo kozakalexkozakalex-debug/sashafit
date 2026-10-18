@@ -11,7 +11,6 @@ import ProgramsSection from "@/components/ProgramsSection";
 import NutritionSection from "@/components/NutritionSection";
 import CoachAnalytics from "@/components/CoachAnalytics";
 import CoachPayments from "@/components/CoachPayments";
-import CoachCheckins from "@/components/CoachCheckins";
 import CoachHome from "@/components/CoachHome";
 import ChatLauncher from "@/components/ChatLauncher";
 import { clientRisk, RISK_LABEL } from "@/lib/clientRisk";
@@ -51,25 +50,24 @@ type Checkin = {
   created_at: string;
 };
 
-type TabId = "home" | "clients" | "checkins" | "library" | "analytics" | "payments";
+type TabId = "home" | "clients" | "library" | "analytics" | "payments";
 type LibrarySubTab = "workouts" | "food";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "home", label: "Головна" },
   { id: "clients", label: "Клієнти" },
-  { id: "checkins", label: "Чек-іни" },
   { id: "library", label: "База" },
   { id: "analytics", label: "Аналітика" },
   { id: "payments", label: "Оплата" },
 ];
 
 // Знизу на мобільному — 4 найважливіші вкладки + кнопка «Ще» з рештою.
-const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "checkins", "library"];
-const MOBILE_MORE_IDS: TabId[] = ["analytics", "payments"];
+// Чек-іни тепер всередині «Аналітики» (перша підвкладка), окремої кнопки нема.
+const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "library", "analytics"];
+const MOBILE_MORE_IDS: TabId[] = ["payments"];
 const TAB_ICON: Record<TabId, string> = {
   home: "🏠",
   clients: "👥",
-  checkins: "📋",
   library: "🗂",
   analytics: "📊",
   payments: "💳",
@@ -282,18 +280,16 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
         <TabButton t={TABS[0]} />
         <div className="my-2 h-px bg-line" />
-        {TABS.slice(1, 5).map((t) => (
+        {TABS.slice(1, 4).map((t) => (
           <TabButton key={t.id} t={t} />
         ))}
         <div className="my-2 h-px bg-line" />
-        <TabButton t={TABS[5]} />
+        <TabButton t={TABS[4]} />
       </nav>
 
       <div className="min-w-0 flex-1">
       {tab === "home" ? (
         <CoachHome onOpenClients={() => setTab("clients")} onNavigate={(t) => setTab(t)} />
-      ) : tab === "checkins" ? (
-        <CoachCheckins />
       ) : tab === "library" ? (
         <div>
           <div className="mb-3 flex gap-1.5">

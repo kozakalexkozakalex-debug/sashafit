@@ -81,7 +81,7 @@ const RISK_DOT: Record<RiskLevel, string> = {
   ok: "bg-green-400",
 };
 
-type NavTab = "clients" | "checkins" | "library" | "analytics" | "payments";
+type NavTab = "clients" | "library" | "analytics" | "payments";
 
 export default function CoachHome({
   onOpenClients,
