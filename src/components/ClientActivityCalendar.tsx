@@ -35,7 +35,10 @@ type FoodEntry = {
   protein: number;
   fat: number;
   carbs: number;
+  meal: string | null;
 };
+
+const MEALS = ["Сніданок", "Обід", "Вечеря", "Перекус"];
 type Target = { calories: number | null; protein: number | null; fat: number | null; carbs: number | null } | null;
 type BaseProduct = {
   id: string;
@@ -126,6 +129,7 @@ export default function ClientActivityCalendar({
   const [carbs, setCarbs] = useState("");
   const [fBusy, setFBusy] = useState(false);
   const [fErr, setFErr] = useState("");
+  const [addingMeal, setAddingMeal] = useState<string | null>(null);
 
   async function loadFood() {
     const { data } = await supabase
@@ -245,6 +249,7 @@ export default function ClientActivityCalendar({
       protein: Number(protein) || 0,
       fat: Number(fat) || 0,
       carbs: Number(carbs) || 0,
+      meal: addingMeal,
     });
     setFBusy(false);
     if (error) {
@@ -258,6 +263,7 @@ export default function ClientActivityCalendar({
     setProtein("");
     setFat("");
     setCarbs("");
+    setAddingMeal(null);
     loadFood();
   }
 
@@ -300,6 +306,19 @@ export default function ClientActivityCalendar({
     }),
     { calories: 0, protein: 0, fat: 0, carbs: 0 }
   );
+
+  const mealGroups: Record<string, FoodEntry[]> = {};
+  for (const m of MEALS) mealGroups[m] = [];
+  const otherEntries: FoodEntry[] = [];
+  for (const e of dayEntries) {
+    if (e.meal && MEALS.includes(e.meal)) mealGroups[e.meal].push(e);
+    else otherEntries.push(e);
+  }
+  const caloriesTarget = target?.calories || 0;
+  const ringPct = caloriesTarget > 0 ? Math.min(100, Math.round((totals.calories / caloriesTarget) * 100)) : 0;
+  const ringR = 26;
+  const ringCirc = 2 * Math.PI * ringR;
+  const ringOffset = ringCirc - (ringPct / 100) * ringCirc;
 
   const selectedCheckin = selected ? checkinByDate[selected] : null;
   const showWorkout = filter === "all" || filter === "workout";
@@ -529,107 +548,166 @@ export default function ClientActivityCalendar({
 
           {showFood && (
             <div className="border-t border-line pt-2 first:border-t-0 first:pt-0">
-              <div className="mb-1.5 flex flex-col gap-0.5 text-xs">
-                <div className="flex justify-between">
-                  <span>🍽 Ккал</span>
-                  <span>
-                    {Math.round(totals.calories)}
-                    {target?.calories ? ` / ${target.calories}` : ""}
-                  </span>
-                </div>
-                {dayEntries.length > 0 && (
-                  <div className="flex justify-between text-muted">
-                    <span>Б / Ж / В</span>
-                    <span>
-                      {Math.round(totals.protein)} / {Math.round(totals.fat)} / {Math.round(totals.carbs)} г
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1">
-                {dayEntries.map((e) => (
-                  <div key={e.id} className="flex items-center justify-between rounded bg-surface px-2 py-1 text-xs">
-                    <span>
-                      {e.name}
-                      {e.grams ? ` — ${e.grams} г` : ""} ({Math.round(e.calories)} ккал)
-                    </span>
-                    <button type="button" onClick={() => removeFoodEntry(e.id)} className="text-muted">
-                      ✕
-                    </button>
-                  </div>
-                ))}
-                {dayEntries.length === 0 && <p className="text-xs text-muted">Записів ще немає.</p>}
-              </div>
-
-              <div className="mt-2 border-t border-line pt-2">
-                <div className="relative flex gap-1.5">
-                  <input
-                    value={query}
-                    onChange={(e) => {
-                      setQuery(e.target.value);
-                      setPer100(null);
-                    }}
-                    placeholder="Пошук продукту"
-                    className="flex-1 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs outline-none"
+              <div className="mb-3 flex items-center gap-3">
+                <svg width="64" height="64" viewBox="0 0 64 64" className="flex-none -rotate-90">
+                  <circle cx="32" cy="32" r={ringR} fill="none" stroke="currentColor" className="text-line" strokeWidth="6" />
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r={ringR}
+                    fill="none"
+                    stroke="currentColor"
+                    className="text-accent"
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={ringCirc}
+                    strokeDashoffset={ringOffset}
                   />
-                  <button type="button" onClick={doSearch} disabled={searching} className="rounded-lg bg-surface px-2.5 py-1.5 text-[11px] text-accent">
-                    {searching ? "…" : "Знайти"}
-                  </button>
-                </div>
-
-                {results.length > 0 && (
-                  <div className="mt-1 flex max-h-32 flex-col overflow-y-auto rounded-lg border border-line bg-surface">
-                    {results.map((p, i) => (
-                      <button key={i} type="button" onClick={() => pickProduct(p)} className="border-b border-line px-2 py-1.5 text-left text-[11px] last:border-b-0">
-                        {p.name} — {Math.round(p.caloriesPer100)} ккал/100г
-                      </button>
-                    ))}
+                  <text x="32" y="34" textAnchor="middle" transform="rotate(90 32 32)" className="fill-ink" style={{ font: "700 13px var(--font-sans, sans-serif)" }}>
+                    {Math.round(totals.calories)}
+                  </text>
+                </svg>
+                <div className="flex flex-1 flex-col gap-0.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted">🍽 Ккал</span>
+                    <span className="font-medium">
+                      {Math.round(totals.calories)}
+                      {target?.calories ? ` з ${target.calories}` : ""}
+                    </span>
                   </div>
-                )}
-
-                {baseProducts.length > 0 && (
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      const p = baseProducts.find((bp) => bp.id === e.target.value);
-                      if (p) {
-                        pickProduct({
-                          name: p.name,
-                          caloriesPer100: p.calories_per_100,
-                          proteinPer100: p.protein_per_100,
-                          fatPer100: p.fat_per_100,
-                          carbsPer100: p.carbs_per_100,
-                        });
-                      }
-                    }}
-                    className="mt-1.5 w-full rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] outline-none"
-                  >
-                    <option value="">Або зі своєї бази продуктів</option>
-                    {baseProducts.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  <input value={grams} onChange={(e) => onGramsChange(e.target.value)} placeholder="Грам" className="w-16 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] outline-none" />
-                  <input value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="Ккал" className="w-16 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] outline-none" />
-                  <input value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="Білки" className="w-16 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] outline-none" />
-                  <input value={fat} onChange={(e) => setFat(e.target.value)} placeholder="Жири" className="w-16 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] outline-none" />
-                  <input value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="Вуглеводи" className="w-16 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] outline-none" />
+                  <div className="flex justify-between text-muted">
+                    <span>Білки</span>
+                    <span>
+                      {Math.round(totals.protein)} г{target?.protein ? ` з ${target.protein}` : ""}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted">
+                    <span>Жири</span>
+                    <span>
+                      {Math.round(totals.fat)} г{target?.fat ? ` з ${target.fat}` : ""}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted">
+                    <span>Вуглеводи</span>
+                    <span>
+                      {Math.round(totals.carbs)} г{target?.carbs ? ` з ${target.carbs}` : ""}
+                    </span>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  disabled={fBusy}
-                  onClick={addFoodEntry}
-                  className="mt-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
-                >
-                  {fBusy ? "Зберігаю…" : "Додати запис"}
-                </button>
-                {fErr && <p className="mt-1 text-xs text-red-400">{fErr}</p>}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {[...MEALS, ...(otherEntries.length > 0 ? ["Інше"] : [])].map((meal) => {
+                  const list = meal === "Інше" ? otherEntries : mealGroups[meal];
+                  const isAdding = addingMeal === meal;
+                  return (
+                    <div key={meal} className="rounded-lg bg-surface px-2 py-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium">{meal}</span>
+                        {meal !== "Інше" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAddingMeal(isAdding ? null : meal);
+                              setFErr("");
+                            }}
+                            className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent"
+                          >
+                            +
+                          </button>
+                        )}
+                      </div>
+
+                      {list.length > 0 && (
+                        <div className="mt-1 flex flex-col gap-1">
+                          {list.map((e) => (
+                            <div key={e.id} className="flex items-center justify-between rounded bg-paper px-2 py-1 text-xs">
+                              <span>
+                                {e.name}
+                                {e.grams ? ` — ${e.grams} г` : ""} ({Math.round(e.calories)} ккал)
+                              </span>
+                              <button type="button" onClick={() => removeFoodEntry(e.id)} className="text-muted">
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {isAdding && (
+                        <div className="mt-2 border-t border-line pt-2">
+                          <div className="relative flex gap-1.5">
+                            <input
+                              value={query}
+                              onChange={(e) => {
+                                setQuery(e.target.value);
+                                setPer100(null);
+                              }}
+                              placeholder="Пошук продукту"
+                              className="flex-1 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
+                            />
+                            <button type="button" onClick={doSearch} disabled={searching} className="rounded-lg bg-paper px-2.5 py-1.5 text-[11px] text-accent">
+                              {searching ? "…" : "Знайти"}
+                            </button>
+                          </div>
+
+                          {results.length > 0 && (
+                            <div className="mt-1 flex max-h-32 flex-col overflow-y-auto rounded-lg border border-line bg-paper">
+                              {results.map((p, i) => (
+                                <button key={i} type="button" onClick={() => pickProduct(p)} className="border-b border-line px-2 py-1.5 text-left text-[11px] last:border-b-0">
+                                  {p.name} — {Math.round(p.caloriesPer100)} ккал/100г
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {baseProducts.length > 0 && (
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const p = baseProducts.find((bp) => bp.id === e.target.value);
+                                if (p) {
+                                  pickProduct({
+                                    name: p.name,
+                                    caloriesPer100: p.calories_per_100,
+                                    proteinPer100: p.protein_per_100,
+                                    fatPer100: p.fat_per_100,
+                                    carbsPer100: p.carbs_per_100,
+                                  });
+                                }
+                              }}
+                              className="mt-1.5 w-full rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none"
+                            >
+                              <option value="">Або зі своєї бази продуктів</option>
+                              {baseProducts.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            <input value={grams} onChange={(e) => onGramsChange(e.target.value)} placeholder="Грам" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
+                            <input value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="Ккал" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
+                            <input value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="Білки" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
+                            <input value={fat} onChange={(e) => setFat(e.target.value)} placeholder="Жири" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
+                            <input value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="Вуглеводи" className="w-16 rounded-lg border border-line bg-paper px-2 py-1.5 text-[11px] outline-none" />
+                          </div>
+                          <button
+                            type="button"
+                            disabled={fBusy}
+                            onClick={addFoodEntry}
+                            className="mt-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
+                          >
+                            {fBusy ? "Зберігаю…" : "Додати запис"}
+                          </button>
+                          {fErr && <p className="mt-1 text-xs text-red-400">{fErr}</p>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
