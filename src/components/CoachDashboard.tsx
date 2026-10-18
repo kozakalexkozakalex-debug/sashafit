@@ -64,6 +64,7 @@ const TABS: { id: TabId; label: string }[] = [
 
 export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number }) {
   const [tab, setTab] = useState<TabId>("home");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -169,16 +170,17 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
     }
   }
 
-  function TabButton({ t }: { t: { id: TabId; label: string } }) {
+  function TabButton({ t, onSelect }: { t: { id: TabId; label: string }; onSelect?: () => void }) {
     const active = tab === t.id;
     return (
       <button
         type="button"
-        onClick={() => setTab(t.id)}
-        className={`whitespace-nowrap rounded-full border px-4 py-1.5 font-display text-sm font-medium transition lg:w-full lg:rounded-md lg:border-0 lg:border-l-2 lg:px-3 lg:py-2 lg:text-left ${
-          active
-            ? "border-accent bg-accent text-paper lg:bg-accent/15 lg:text-ink"
-            : "border-line bg-surface text-muted hover:border-accent/50 hover:text-ink lg:border-transparent lg:bg-transparent lg:hover:bg-line/30"
+        onClick={() => {
+          setTab(t.id);
+          onSelect?.();
+        }}
+        className={`w-full rounded-md border-l-2 px-3 py-2 text-left font-display text-sm font-medium transition ${
+          active ? "border-accent bg-accent/15 text-ink" : "border-transparent text-muted hover:bg-line/30 hover:text-ink"
         }`}
       >
         {t.label}
@@ -186,15 +188,52 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
     );
   }
 
+  const currentTabLabel = TABS.find((t) => t.id === tab)?.label || "";
+
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-      <nav className="flex gap-2 overflow-x-auto pb-1 lg:sticky lg:top-6 lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:overflow-visible lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
+      <div className="lg:hidden">
+        <div className="flex items-center justify-between rounded-xl border border-line bg-sidebar p-2">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            aria-label="Меню"
+            aria-expanded={mobileMenuOpen}
+            className="rounded-lg border border-line bg-surface p-2 text-ink"
+          >
+            {mobileMenuOpen ? (
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <path d="M3 3L15 15M15 3L3 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <path d="M2 4.5H16M2 9H16M2 13.5H16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
+          <span className="font-display text-sm font-medium">{currentTabLabel}</span>
+          <span className="w-9" />
+        </div>
+        {mobileMenuOpen && (
+          <div className="mt-2 flex flex-col gap-0.5 rounded-xl border border-line bg-sidebar p-3">
+            <TabButton t={TABS[0]} onSelect={() => setMobileMenuOpen(false)} />
+            <div className="my-2 h-px bg-line" />
+            {TABS.slice(1, 6).map((t) => (
+              <TabButton key={t.id} t={t} onSelect={() => setMobileMenuOpen(false)} />
+            ))}
+            <div className="my-2 h-px bg-line" />
+            <TabButton t={TABS[6]} onSelect={() => setMobileMenuOpen(false)} />
+          </div>
+        )}
+      </div>
+
+      <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
         <TabButton t={TABS[0]} />
-        <div className="hidden h-px bg-line lg:my-2 lg:block" />
+        <div className="my-2 h-px bg-line" />
         {TABS.slice(1, 6).map((t) => (
           <TabButton key={t.id} t={t} />
         ))}
-        <div className="hidden h-px bg-line lg:my-2 lg:block" />
+        <div className="my-2 h-px bg-line" />
         <TabButton t={TABS[6]} />
       </nav>
 
