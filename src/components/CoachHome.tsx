@@ -583,46 +583,44 @@ export default function CoachHome({
         <div className="flex flex-col gap-5">
           <div className="rounded-xl border border-line bg-surface p-4">
             <h2 className="mb-3 flex items-baseline justify-between text-sm font-semibold">
-              <span>Активність тренувань</span>
-              <span className="text-xs font-normal text-muted">останні 12 тижнів, усі клієнти</span>
+              <span>Активність</span>
+              <span className="text-xs font-normal text-muted">останні 12 тижнів, усі клієнти, по тижнях</span>
             </h2>
-            <div className="overflow-x-auto pb-1">
-              <div className="grid w-max grid-flow-col grid-rows-7 gap-[3px]">
-                {heatmapCells.map((c) => (
-                  <div
-                    key={c.key}
-                    title={`${c.key}: ${c.count} виконано`}
-                    className={`h-3 w-3 rounded-sm ${HEAT_SHADES[heatLevel(c.count)]}`}
-                  />
-                ))}
+            <div className="flex flex-wrap gap-6">
+              <div className="min-w-0 flex-1">
+                <p className="mb-1.5 text-[11px] text-muted">Тренування (виконано)</p>
+                <div className="grid grid-cols-7 gap-[3px]">
+                  {heatmapCells.map((c) => (
+                    <div
+                      key={c.key}
+                      title={`${c.key}: ${c.count} виконано`}
+                      className={`flex aspect-square items-center justify-center rounded-sm text-[9px] font-medium ${
+                        HEAT_SHADES[heatLevel(c.count)]
+                      } ${c.count > 0 ? "text-paper" : "text-muted"}`}
+                    >
+                      {c.count}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="mb-1.5 text-[11px] text-muted">Харчування (клієнтів залогувало)</p>
+                <div className="grid grid-cols-7 gap-[3px]">
+                  {foodHeatmapCells.map((c) => (
+                    <div
+                      key={c.key}
+                      title={`${c.key}: ${c.count} клієнт(ів) залогували їжу`}
+                      className={`flex aspect-square items-center justify-center rounded-sm text-[9px] font-medium ${
+                        HEAT_SHADES[heatLevel(c.count)]
+                      } ${c.count > 0 ? "text-paper" : "text-muted"}`}
+                    >
+                      {c.count}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted">
-              менше
-              {HEAT_SHADES.map((s, i) => (
-                <span key={i} className={`h-2.5 w-2.5 rounded-sm ${s}`} />
-              ))}
-              більше
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-line bg-surface p-4">
-            <h2 className="mb-3 flex items-baseline justify-between text-sm font-semibold">
-              <span>Активність харчування</span>
-              <span className="text-xs font-normal text-muted">останні 12 тижнів, усі клієнти</span>
-            </h2>
-            <div className="overflow-x-auto pb-1">
-              <div className="grid w-max grid-flow-col grid-rows-7 gap-[3px]">
-                {foodHeatmapCells.map((c) => (
-                  <div
-                    key={c.key}
-                    title={`${c.key}: ${c.count} клієнт(ів) залогували їжу`}
-                    className={`h-3 w-3 rounded-sm ${HEAT_SHADES[heatLevel(c.count)]}`}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted">
+            <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted">
               менше
               {HEAT_SHADES.map((s, i) => (
                 <span key={i} className={`h-2.5 w-2.5 rounded-sm ${s}`} />
