@@ -7,17 +7,18 @@ import {
   type DragEndEvent,
   PointerSensor,
   TouchSensor,
-  useDraggable,
-  useDroppable,
+  useSortable,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/lib/supabaseClient";
 
-// Конструктор тренування: тягнеш вправи з бібліотеки (зліва) у список
-// тренування на обрану дату (справа), одразу вказуєш підходи/повтори.
+// Конструктор тренування: тапаєш по вправі з бібліотеки (зверху) — вона
+// додається в список тренування на обрану дату (знизу). Перетягувати можна
+// тільки вже додані вправи в списку, щоб міняти їх порядок — бібліотеку
+// більше не тягнемо, бо на телефоні це блокувало скрол списку.
 
 type Exercise = { id: string; name: string; muscle_group: string | null; equipment: string | null };
 
@@ -32,37 +33,20 @@ type WorkoutItem = {
 const MUSCLE_GROUPS = ["Ноги", "Спина", "Груди", "Плечі", "Руки", "Прес", "Кардіо", "Все тіло", "Інше"];
 
 function LibraryExercise({ ex, onAdd }: { ex: Exercise; onAdd: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `lib-${ex.id}`,
-    data: { type: "library", exercise: ex },
-  });
-  const style = transform ? { transform: CSS.Translate.toString(transform), zIndex: 10 } : undefined;
-
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`flex items-center gap-2 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-xs ${
-        isDragging ? "opacity-40" : ""
-      }`}
+    <button
+      type="button"
+      onClick={onAdd}
+      className="flex items-center gap-2 rounded-lg border border-line bg-paper px-3 py-2.5 text-left text-sm transition active:bg-accent/10"
     >
-      <span
-        {...listeners}
-        {...attributes}
-        className="flex-1 cursor-grab touch-none active:cursor-grabbing"
-      >
+      <span className="flex-1">
         {ex.name}
-        {ex.equipment && <span className="ml-1 text-muted">· {ex.equipment}</span>}
+        {ex.equipment && <span className="ml-1 text-xs text-muted">· {ex.equipment}</span>}
       </span>
-      <button
-        type="button"
-        onClick={onAdd}
-        className="flex-none rounded-full bg-accent px-1.5 py-0.5 text-xs font-bold text-paper"
-        title="Додати в тренування"
-      >
+      <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-accent text-base font-bold leading-none text-paper">
         +
-      </button>
-    </div>
+      </span>
+    </button>
   );
 }
 
@@ -126,7 +110,7 @@ export default function WorkoutBuilder({
   onSaved: () => void;
 }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [items, setItems] = useState<WorkoutItem[]>([]);
   const [busy, setBusy] = useState(false);
@@ -149,22 +133,21 @@ export default function WorkoutBuilder({
     return map;
   }, [exercises]);
 
-  // Одразу розкриваємо першу категорію з вправами, щоб було видно, що тягнути.
+  const groupsWithExercises = MUSCLE_GROUPS.filter((g) => byGroup[g]?.length);
+
+  // Одразу вибираємо першу категорію з вправами, щоб було що показати.
   useEffect(() => {
-    if (openGroup != null) return;
-    const firstWithExercises = MUSCLE_GROUPS.find((g) => byGroup[g]?.length);
-    if (firstWithExercises) setOpenGroup(firstWithExercises);
+    if (activeGroup != null) return;
+    if (groupsWithExercises.length > 0) setActiveGroup(groupsWithExercises[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [byGroup]);
-
-  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: "workout-dropzone" });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } })
   );
 
-  function addItem(ex: Exercise, atIndex?: number) {
+  function addItem(ex: Exercise) {
     const item: WorkoutItem = {
       uid: `${ex.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       exerciseId: ex.id,
@@ -172,38 +155,18 @@ export default function WorkoutBuilder({
       sets: "",
       reps: "",
     };
-    setItems((prev) => {
-      if (atIndex == null) return [...prev, item];
-      const next = [...prev];
-      next.splice(atIndex, 0, item);
-      return next;
-    });
+    setItems((prev) => [...prev, item]);
   }
 
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
-    if (!over) return;
-
-    const activeData = active.data.current as { type?: string; exercise?: Exercise } | undefined;
-
-    if (activeData?.type === "library" && activeData.exercise) {
-      if (over.id === "workout-dropzone") {
-        addItem(activeData.exercise);
-        return;
-      }
-      const overIndex = items.findIndex((i) => i.uid === over.id);
-      addItem(activeData.exercise, overIndex !== -1 ? overIndex : undefined);
-      return;
-    }
-
-    if (active.id !== over.id) {
-      setItems((prev) => {
-        const oldIndex = prev.findIndex((i) => i.uid === active.id);
-        const newIndex = prev.findIndex((i) => i.uid === over.id);
-        if (oldIndex === -1 || newIndex === -1) return prev;
-        return arrayMove(prev, oldIndex, newIndex);
-      });
-    }
+    if (!over || active.id === over.id) return;
+    setItems((prev) => {
+      const oldIndex = prev.findIndex((i) => i.uid === active.id);
+      const newIndex = prev.findIndex((i) => i.uid === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
   }
 
   function updateItem(uid: string, patch: Partial<WorkoutItem>) {
@@ -263,71 +226,70 @@ export default function WorkoutBuilder({
         </button>
       </div>
 
-      <div className="mb-3 flex items-center gap-2">
-        <label className="text-xs text-muted">Дата:</label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="rounded-lg border border-line bg-paper px-2 py-1 text-xs outline-none"
-        />
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted">Дата:</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="rounded-lg border border-line bg-paper px-2 py-1 text-xs outline-none"
+          />
+        </div>
+        {/* Завжди на видноті, скільки вже додано — не треба гортати вниз, щоб перевірити. */}
+        <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+          У тренуванні: {items.length}
+        </span>
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="flex-1 rounded-lg border border-line bg-paper p-2">
-            <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted">База вправ</p>
-            {exercises.length === 0 && (
-              <p className="text-xs text-muted">Спочатку додай вправи у вкладці «Програми → База вправ».</p>
-            )}
-            <div className="flex flex-col gap-1.5">
-              {MUSCLE_GROUPS.filter((g) => byGroup[g]?.length).map((g) => (
-                <div key={g}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenGroup((prev) => (prev === g ? null : g))}
-                    className="flex w-full items-center justify-between py-1 text-left text-xs font-medium"
-                  >
-                    <span>
-                      {g} ({byGroup[g].length})
-                    </span>
-                    <span className="text-muted">{openGroup === g ? "–" : "+"}</span>
-                  </button>
-                  {openGroup === g && (
-                    <div className="mb-1 flex flex-col gap-1 pl-1">
-                      {byGroup[g].map((ex) => (
-                        <LibraryExercise key={ex.id} ex={ex} onAdd={() => addItem(ex)} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+      {exercises.length === 0 ? (
+        <p className="text-xs text-muted">Спочатку додай вправи у вкладці «Програми → База вправ».</p>
+      ) : (
+        <>
+          {/* Категорії горизонтальними пігулками, що гортаються вбік — швидко перемикаєшся,
+              не гортаючи довгий список вниз. */}
+          <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
+            {groupsWithExercises.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setActiveGroup(g)}
+                className={`flex-none whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                  activeGroup === g
+                    ? "border-accent bg-accent text-paper"
+                    : "border-line bg-paper text-muted hover:text-ink"
+                }`}
+              >
+                {g} ({byGroup[g].length})
+              </button>
+            ))}
           </div>
 
-          <div
-            ref={setDropRef}
-            className={`flex-1 rounded-lg border p-2 ${
-              isOver ? "border-accent bg-accent/5" : "border-line bg-paper"
-            }`}
-          >
-            <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted">Тренування на {date}</p>
-            <SortableContext items={items.map((i) => i.uid)} strategy={verticalListSortingStrategy}>
-              <div className="flex flex-col gap-1.5">
-                {items.map((item) => (
-                  <WorkoutRow
-                    key={item.uid}
-                    item={item}
-                    onChange={(patch) => updateItem(item.uid, patch)}
-                    onRemove={() => removeItem(item.uid)}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-            {items.length === 0 && (
-              <p className="py-4 text-center text-xs text-muted">Перетягни вправи сюди зліва</p>
-            )}
+          <div className="mb-3 flex max-h-64 flex-col gap-1.5 overflow-y-auto rounded-lg border border-line bg-paper p-2">
+            {activeGroup &&
+              byGroup[activeGroup]?.map((ex) => <LibraryExercise key={ex.id} ex={ex} onAdd={() => addItem(ex)} />)}
           </div>
+        </>
+      )}
+
+      <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted">Тренування на {date}</p>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <div className="rounded-lg border border-line bg-paper p-2">
+          <SortableContext items={items.map((i) => i.uid)} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-col gap-1.5">
+              {items.map((item) => (
+                <WorkoutRow
+                  key={item.uid}
+                  item={item}
+                  onChange={(patch) => updateItem(item.uid, patch)}
+                  onRemove={() => removeItem(item.uid)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+          {items.length === 0 && (
+            <p className="py-4 text-center text-xs text-muted">Тапни по вправі вище, щоб додати</p>
+          )}
         </div>
       </DndContext>
 
