@@ -381,7 +381,7 @@ export default function ClientActivityCalendar({
 
       <div className="flex flex-wrap items-start gap-3">
         {selected && showWorkout && workout && (
-          <div className="order-1 w-full flex-none rounded-lg bg-paper p-3 text-sm sm:w-60">
+          <div className="order-1 max-h-[322px] w-full flex-none overflow-y-auto rounded-lg bg-paper p-3 text-sm sm:w-60">
             <p className="font-medium text-ink">🏋 {workout.title}</p>
             <div className="mt-1.5 flex flex-col gap-1.5">
               {[...workout.assigned_workout_exercises]
@@ -518,7 +518,7 @@ export default function ClientActivityCalendar({
         </div>
 
         {selected && showFood && (
-          <div className="order-3 min-w-[240px] flex-1 rounded-lg bg-paper p-3 text-sm">
+          <div className="order-3 max-h-[322px] min-w-[240px] flex-1 overflow-y-auto rounded-lg bg-paper p-3 text-sm">
             <div className="mb-3 flex items-center gap-3">
               <svg width="64" height="64" viewBox="0 0 64 64" className="flex-none -rotate-90">
                 <circle cx="32" cy="32" r={ringR} fill="none" stroke="currentColor" className="text-line" strokeWidth="6" />
