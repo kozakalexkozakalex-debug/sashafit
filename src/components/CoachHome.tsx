@@ -712,7 +712,7 @@ export default function CoachHome({
           {meetingModalOpen &&
             typeof document !== "undefined" &&
             createPortal(
-              <div className="fixed inset-0 z-50" onClick={() => setMeetingModalOpen(false)}>
+              <div className="fixed inset-0 z-[70]" onClick={() => setMeetingModalOpen(false)}>
               <div className="absolute inset-0 bg-black/50" />
               <div
                 onClick={(e) => e.stopPropagation()}

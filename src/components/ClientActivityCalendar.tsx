@@ -624,7 +624,7 @@ export default function ClientActivityCalendar({
       )}
 
       {workoutModalOpen && selected && showWorkout && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-50" onClick={() => setWorkoutModalOpen(false)}>
+        <div className="fixed inset-0 z-[70]" onClick={() => setWorkoutModalOpen(false)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
             onClick={(e) => e.stopPropagation()}
@@ -761,7 +761,7 @@ export default function ClientActivityCalendar({
       )}
 
       {foodModalOpen && selected && showFood && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-50" onClick={() => setFoodModalOpen(false)}>
+        <div className="fixed inset-0 z-[70]" onClick={() => setFoodModalOpen(false)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
             onClick={(e) => e.stopPropagation()}
