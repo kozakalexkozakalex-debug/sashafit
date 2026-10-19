@@ -544,20 +544,30 @@ export default function CoachDashboard({
             </button>
           </div>
           <div className="rounded-xl border border-line bg-surface p-4">
-            <h2 className="mb-1 text-sm font-semibold">Новий клієнт</h2>
-            <p className="mb-3 text-xs text-muted">
-              Нічого вказувати не треба — просто створи посилання. Клієнт сам впише своє ім&apos;я, коли зайде за ним
-              і заповнить анкету.
-            </p>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={addClient}
-              className="w-full rounded-lg bg-accent px-4 py-3 text-sm font-bold text-paper shadow-md shadow-accent/30 transition hover:brightness-110 disabled:opacity-50"
-            >
-              {busy ? "Створюю…" : "+ Створити посилання для нового клієнта"}
-            </button>
-            {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Заявки ({pendingClients.length})</h2>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={addClient}
+                className="rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
+              >
+                {busy ? "Створюю…" : "+ Нове посилання"}
+              </button>
+            </div>
+            {err && <p className="mb-2 text-sm text-red-400">{err}</p>}
+            {pendingClients.length === 0 ? (
+              <p className="text-sm text-muted">
+                Заявок ще немає. Натисни «+ Нове посилання», щоб створити посилання для нового клієнта — воно зʼявиться
+                тут, поки клієнт не зайде за ним.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {pendingClients.map((c) => (
+                  <ClientCard key={c.id} c={c} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -580,7 +590,7 @@ export default function CoachDashboard({
           </div>
           <div className="rounded-xl border border-line bg-surface p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Клієнти ({clients.length})</h2>
+              <h2 className="text-sm font-semibold">Клієнти ({connectedClients.length})</h2>
               <div className="flex gap-1">
                 <button
                   type="button"
@@ -607,34 +617,13 @@ export default function CoachDashboard({
               </div>
             </div>
 
-            {clients.length === 0 ? (
+            {connectedClients.length === 0 ? (
               <p className="text-sm text-muted">Клієнтів ще немає.</p>
             ) : clientsView === "cards" ? (
-              <div className="flex flex-col gap-5">
-                {pendingClients.length > 0 && (
-                  <div>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                      Заявки ({pendingClients.length})
-                    </h3>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                      {pendingClients.map((c) => (
-                        <ClientCard key={c.id} c={c} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {connectedClients.length > 0 && (
-                  <div>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                      Клієнти ({connectedClients.length})
-                    </h3>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                      {connectedClients.map((c) => (
-                        <ClientCard key={c.id} c={c} />
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {connectedClients.map((c) => (
+                  <ClientCard key={c.id} c={c} />
+                ))}
               </div>
             ) : (
               <div>
@@ -668,29 +657,8 @@ export default function CoachDashboard({
                 )}
                 <div className="overflow-x-auto">
                   <div className="min-w-[680px]">
-                    {pendingClients.length > 0 && (
-                      <>
-                        <p className="px-2 pt-1 text-xs font-semibold uppercase tracking-wide text-muted">
-                          Заявки ({pendingClients.length})
-                        </p>
-                        <div className="grid grid-cols-[28px_1.6fr_1fr_1fr_1fr_160px] gap-2 border-b border-line px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted">
-                          <span></span>
-                          <span>Клієнт</span>
-                          <span>Статус</span>
-                          <span>Приєднався</span>
-                          <span>Ризик</span>
-                          <span></span>
-                        </div>
-                        {pendingClients.map((c) => (
-                          <ClientRow key={c.id} c={c} />
-                        ))}
-                      </>
-                    )}
                     {connectedClients.length > 0 && (
                       <>
-                        <p className="px-2 pt-4 text-xs font-semibold uppercase tracking-wide text-muted">
-                          Клієнти ({connectedClients.length})
-                        </p>
                         <div className="grid grid-cols-[28px_1.6fr_1fr_1fr_1fr_160px] gap-2 border-b border-line px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted">
                           <span></span>
                           <span>Клієнт</span>
