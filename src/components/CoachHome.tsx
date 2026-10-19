@@ -87,9 +87,13 @@ type NavTab = "clients" | "library" | "analytics" | "payments";
 export default function CoachHome({
   onOpenClients,
   onNavigate,
+  actionSignal,
 }: {
   onOpenClients?: () => void;
   onNavigate?: (tab: NavTab) => void;
+  // Дозволяє відкрити форму "Нова зустріч"/"Новий клієнт" ззовні — з бокового
+  // меню на мобільному (CoachDashboard), а не тільки з кнопок на цій сторінці.
+  actionSignal?: { type: "meeting" | "client"; ts: number } | null;
 }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
@@ -123,6 +127,14 @@ export default function CoachHome({
   const [aInviteCode, setAInviteCode] = useState<string | null>(null);
   const [aCopied, setACopied] = useState(false);
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
+
+  // Відкриття форми за сигналом ззовні (з бокового меню на мобільному).
+  useEffect(() => {
+    if (!actionSignal) return;
+    if (actionSignal.type === "meeting") setMeetingModalOpen(true);
+    if (actionSignal.type === "client") setAddOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actionSignal?.ts]);
 
   // Кастомні питання чек-іна — тренер сам налаштовує, що додатково питати
   // в щотижневому чек-іні (сон/стрес/самопочуття/довільне).
@@ -717,8 +729,10 @@ export default function CoachHome({
           </div>
 
           {/* Дві головні дії поруч під календарем: зустріч зліва, клієнт справа —
-              так логічніше, бо обидві відкривають свою форму нижче/в модалці. */}
-          <div className="flex items-center justify-end gap-2">
+              так логічніше, бо обидві відкривають свою форму нижче/в модалці.
+              На мобільному ці кнопки сховані — там вони в бічному меню (іконка
+              зліва у верхній панелі), щоб не займати місце на головній. */}
+          <div className="hidden items-center justify-end gap-2 lg:flex">
             <button
               type="button"
               onClick={() => setMeetingModalOpen(true)}
