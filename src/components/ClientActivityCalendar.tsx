@@ -15,6 +15,7 @@ type AWExercise = {
   actual_weight: number | null;
   actual_reps: string | null;
   done: boolean;
+  rpe: number | null;
   exercises: { photo_path: string | null; video_url: string | null } | null;
 };
 type AssignedWorkout = {
@@ -24,7 +25,10 @@ type AssignedWorkout = {
   completed_at: string | null;
   assigned_workout_exercises: AWExercise[];
 };
-type Draft = { weight: string; reps: string; done: boolean };
+type Draft = { weight: string; reps: string; done: boolean; rpe: string };
+
+// Тривалість таймера відпочинку після відмітки підходу виконаним.
+const REST_SECONDS = 90;
 
 type FoodEntry = {
   id: string;
@@ -103,6 +107,10 @@ export default function ClientActivityCalendar({
   const [wBusy, setWBusy] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
+  // Таймер відпочинку — один активний за раз, запускається після відмітки
+  // підходу виконаним (Hevy-стиль: не треба самому дивитись на годинник).
+  const [restSecondsLeft, setRestSecondsLeft] = useState<number | null>(null);
+  const [restLabel, setRestLabel] = useState<string>("");
   // Дневники тренування і харчування відкриваються поп-апом з іконки під
   // календарем — не займають місця, поки їх не відкрили.
   const [workoutModalOpen, setWorkoutModalOpen] = useState(false);
@@ -114,6 +122,36 @@ export default function ClientActivityCalendar({
       .select("*, assigned_workout_exercises(*, exercises(photo_path, video_url))")
       .eq("client_id", clientId);
     setWorkouts((data as unknown as AssignedWorkout[]) || []);
+  }
+
+  // Тікаємо таймер відпочинку щосекунди, поки він активний.
+  useEffect(() => {
+    if (restSecondsLeft == null || restSecondsLeft <= 0) return;
+    const t = setTimeout(() => setRestSecondsLeft((s) => (s != null ? s - 1 : null)), 1000);
+    return () => clearTimeout(t);
+  }, [restSecondsLeft]);
+
+  // Попередній результат по цій вправі (назва) — останнє виконане входження
+  // з усіх минулих тренувань клієнта, окрім поточного.
+  function previousResult(name: string, excludeWorkoutId: string) {
+    const past = workouts
+      .filter((w) => w.id !== excludeWorkoutId && w.date < (workout?.date || "9999-99-99"))
+      .flatMap((w) => w.assigned_workout_exercises.filter((e) => e.name === name && e.done && e.actual_weight != null).map((e) => ({ date: w.date, weight: e.actual_weight as number, reps: e.actual_reps })));
+    if (past.length === 0) return null;
+    past.sort((a, b) => b.date.localeCompare(a.date));
+    return past[0];
+  }
+
+  // Максимальна вага, яку клієнт колись підіймав на цій вправі (для детекції PR).
+  function bestWeight(name: string, excludeExerciseId: string) {
+    let best = -Infinity;
+    for (const w of workouts) {
+      for (const e of w.assigned_workout_exercises) {
+        if (e.id === excludeExerciseId) continue;
+        if (e.name === name && e.done && e.actual_weight != null && e.actual_weight > best) best = e.actual_weight;
+      }
+    }
+    return best === -Infinity ? null : best;
   }
 
   function exercisePhotoUrl(path: string) {
@@ -185,13 +223,14 @@ export default function ClientActivityCalendar({
         weight: e.actual_weight != null ? String(e.actual_weight) : "",
         reps: e.actual_reps || "",
         done: e.done,
+        rpe: e.rpe != null ? String(e.rpe) : "",
       };
     }
     setDrafts(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workout?.id]);
 
-  async function saveExercise(exerciseId: string, patch: Partial<Draft>) {
+  async function saveExercise(exerciseId: string, patch: Partial<Draft>, exerciseName?: string) {
     const draft = { ...drafts[exerciseId], ...patch };
     setDrafts((prev) => ({ ...prev, [exerciseId]: draft }));
     setSavingId(exerciseId);
@@ -201,9 +240,15 @@ export default function ClientActivityCalendar({
         actual_weight: draft.weight.trim() ? Number(draft.weight) : null,
         actual_reps: draft.reps.trim() || null,
         done: draft.done,
+        rpe: draft.rpe.trim() ? Number(draft.rpe) : null,
       })
       .eq("id", exerciseId);
     setSavingId(null);
+    // Якщо щойно відмітили підхід виконаним — запускаємо таймер відпочинку.
+    if (patch.done === true && exerciseName) {
+      setRestLabel(exerciseName);
+      setRestSecondsLeft(REST_SECONDS);
+    }
     loadWorkouts();
   }
 
@@ -557,15 +602,27 @@ export default function ClientActivityCalendar({
               {[...workout.assigned_workout_exercises]
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((e) => {
-                  const draft = drafts[e.id] || { weight: "", reps: "", done: false };
+                  const draft = drafts[e.id] || { weight: "", reps: "", done: false, rpe: "" };
+                  const prev = previousResult(e.name, workout.id);
+                  const best = bestWeight(e.name, e.id);
+                  const isPR =
+                    draft.done && draft.weight.trim() && best != null && Number(draft.weight) > best;
                   return (
                     <div key={e.id} className="rounded-lg bg-surface p-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-ink">{e.name}</span>
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-ink">
+                          {e.name}
+                          {isPR && <span className="text-[11px]" title="Новий особистий рекорд">🏆</span>}
+                        </span>
                         <span className="text-[11px] text-muted">
                           {e.sets ? `план: ${e.sets}×${e.reps || "?"}` : e.reps ? `план: ${e.reps}` : ""}
                         </span>
                       </div>
+                      {prev && (
+                        <p className="mt-0.5 text-[10px] text-muted">
+                          Було: {prev.weight}кг{prev.reps ? `×${prev.reps}` : ""}
+                        </p>
+                      )}
                       {e.exercises?.photo_path && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -597,11 +654,26 @@ export default function ClientActivityCalendar({
                           placeholder="Повтори"
                           className="w-20 rounded-lg border border-line bg-paper px-2 py-1 text-[11px] outline-none disabled:opacity-60"
                         />
+                        <select
+                          value={draft.rpe}
+                          onChange={(ev) => setDrafts((prev) => ({ ...prev, [e.id]: { ...draft, rpe: ev.target.value } }))}
+                          onBlur={() => saveExercise(e.id, { rpe: draft.rpe })}
+                          disabled={!!workout.completed_at}
+                          title="RPE — наскільки важко було (1–10)"
+                          className="rounded-lg border border-line bg-paper px-1.5 py-1 text-[11px] outline-none disabled:opacity-60"
+                        >
+                          <option value="">RPE</option>
+                          {Array.from({ length: 10 }, (_, i) => i + 1).map((v) => (
+                            <option key={v} value={v}>
+                              RPE {v}
+                            </option>
+                          ))}
+                        </select>
                         <label className="flex items-center gap-1 text-[11px] text-muted">
                           <input
                             type="checkbox"
                             checked={draft.done}
-                            onChange={(ev) => saveExercise(e.id, { done: ev.target.checked })}
+                            onChange={(ev) => saveExercise(e.id, { done: ev.target.checked }, e.name)}
                             disabled={!!workout.completed_at}
                           />
                           Виконано
@@ -612,6 +684,17 @@ export default function ClientActivityCalendar({
                   );
                 })}
             </div>
+            {restSecondsLeft != null && restSecondsLeft > 0 && (
+              <div className="mt-1.5 flex items-center justify-between rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs">
+                <span className="text-ink">
+                  ⏱ Відпочинок після «{restLabel}»: {Math.floor(restSecondsLeft / 60)}:
+                  {String(restSecondsLeft % 60).padStart(2, "0")}
+                </span>
+                <button type="button" onClick={() => setRestSecondsLeft(null)} className="text-muted">
+                  Пропустити
+                </button>
+              </div>
+            )}
             {!workout.completed_at && (
               <button
                 type="button"
