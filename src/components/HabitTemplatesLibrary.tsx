@@ -109,17 +109,24 @@ export default function HabitTemplatesLibrary() {
             </button>
           </div>
         )}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {templates.map((t) => (
             <div
               key={t.id}
-              className="flex items-center gap-3 rounded-lg border-l-2 border-accent bg-paper p-3 text-sm"
+              className="relative flex flex-col items-center gap-2 rounded-xl border-l-2 border-accent bg-paper p-4 text-center shadow-sm transition hover:shadow-md"
             >
-              <span className="text-xl">{t.icon}</span>
-              <span className="flex-1 font-medium">{t.label}</span>
-              <button type="button" onClick={() => removeTemplate(t.id)} className="text-xs text-muted">
+              <button
+                type="button"
+                onClick={() => removeTemplate(t.id)}
+                title="Видалити з бібліотеки"
+                className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-xs text-muted/60 transition hover:text-red-400"
+              >
                 ✕
               </button>
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/15 text-2xl">
+                {t.icon}
+              </span>
+              <span className="font-display text-sm font-semibold text-ink">{t.label}</span>
             </div>
           ))}
         </div>
