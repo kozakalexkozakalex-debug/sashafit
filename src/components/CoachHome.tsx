@@ -285,11 +285,26 @@ export default function CoachHome({
     if (!lastCheckinByClient[ci.client_id]) lastCheckinByClient[ci.client_id] = ci.created_at;
   }
 
+  // ---- Пропущені тренування поспіль (з дня призначення, рахуючи до сьогодні) ----
+  // Беремо всі минулі призначені тренування клієнта, від найновішого до найстарішого,
+  // і рахуємо, скільки підряд не позначені виконаними — зупиняємось на першому виконаному.
+  function missedStreak(clientId: string): number {
+    const past = workouts
+      .filter((w) => w.client_id === clientId && w.date < todayKey)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    let n = 0;
+    for (const w of past) {
+      if (w.completed_at) break;
+      n++;
+    }
+    return n;
+  }
+
   // ---- Потребують уваги: ризик-статус кожного клієнта з причиною ----
   type RiskRow = { client: Client; level: RiskLevel; reason: string };
   const riskRows: RiskRow[] = clients
     .map((c) => {
-      const level = clientRisk(c, lastCheckinByClient[c.id]);
+      let level = clientRisk(c, lastCheckinByClient[c.id]);
       let reason = "";
       if (level === "risk") {
         reason = "прострочена підписка";
@@ -307,6 +322,20 @@ export default function CoachHome({
             : "ще жодного чек-іну";
         }
       }
+
+      if (c.profile_id) {
+        const streak = missedStreak(c.id);
+        if (streak >= 2) {
+          const streakReason = `${streak} тренувань поспіль пропущено`;
+          if (level === "ok") {
+            level = "watch";
+            reason = streakReason;
+          } else {
+            reason = `${reason} · ${streakReason}`;
+          }
+        }
+      }
+
       return { client: c, level, reason };
     })
     .filter((r) => r.level === "risk" || r.level === "watch" || r.level === "pending")
