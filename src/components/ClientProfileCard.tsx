@@ -30,6 +30,8 @@ type Checkin = {
   created_at: string;
 };
 
+type CheckinQuestion = { id: string; label: string; kind: "text" | "scale"; position: number };
+
 type Metric = "weight" | "waist" | "hips" | "chest";
 type Period = "7" | "30" | "90" | "all";
 
@@ -197,6 +199,20 @@ export default function ClientProfileCard({
   const [ciBusy, setCiBusy] = useState(false);
   const [ciErr, setCiErr] = useState("");
 
+  // Кастомні питання чек-іна, налаштовані тренером — показуємо під
+  // стандартними полями, відповіді зберігаємо окремо після створення чек-іна.
+  const [questions, setQuestions] = useState<CheckinQuestion[]>([]);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (readOnly) return;
+    supabase
+      .from("checkin_questions")
+      .select("*")
+      .order("position", { ascending: true })
+      .then(({ data }) => setQuestions((data as CheckinQuestion[]) || []));
+  }, [readOnly]);
+
   async function addCheckin() {
     if (!isSundayNow) {
       setCiErr("Чек-ін можна додати тільки в неділю");
@@ -221,26 +237,39 @@ export default function ClientProfileCard({
       photoPath = path;
     }
 
-    const { error } = await supabase.from("checkins").insert({
-      client_id: client.id,
-      weight: Number(ciWeight),
-      waist: ciWaist.trim() ? Number(ciWaist) : null,
-      hips: ciHips.trim() ? Number(ciHips) : null,
-      chest: ciChest.trim() ? Number(ciChest) : null,
-      photo_path: photoPath,
-      comment: ciComment.trim() || null,
-    });
+    const { data: inserted, error } = await supabase
+      .from("checkins")
+      .insert({
+        client_id: client.id,
+        weight: Number(ciWeight),
+        waist: ciWaist.trim() ? Number(ciWaist) : null,
+        hips: ciHips.trim() ? Number(ciHips) : null,
+        chest: ciChest.trim() ? Number(ciChest) : null,
+        photo_path: photoPath,
+        comment: ciComment.trim() || null,
+      })
+      .select("id")
+      .single();
     setCiBusy(false);
     if (error) {
       setCiErr(error.message);
       return;
     }
+
+    const answerRows = questions
+      .filter((q) => answers[q.id]?.trim())
+      .map((q) => ({ checkin_id: inserted.id, question_id: q.id, value: answers[q.id].trim() }));
+    if (answerRows.length > 0) {
+      await supabase.from("checkin_answers").insert(answerRows);
+    }
+
     setCiWeight("");
     setCiWaist("");
     setCiHips("");
     setCiChest("");
     setCiComment("");
     setCiFile(null);
+    setAnswers({});
     setCiOpen(false);
     onCheckinAdded?.();
   }
@@ -426,6 +455,35 @@ export default function ClientProfileCard({
               rows={2}
               className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
             />
+            {questions.map((q) => (
+              <div key={q.id}>
+                <p className="mb-1 text-xs text-muted">{q.label}</p>
+                {q.kind === "scale" ? (
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3, 4, 5].map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setAnswers((prev) => ({ ...prev, [q.id]: String(v) }))}
+                        className={`flex h-8 w-8 items-center justify-center rounded-full border text-sm ${
+                          answers[q.id] === String(v)
+                            ? "border-accent bg-accent text-paper"
+                            : "border-line text-muted"
+                        }`}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <input
+                    value={answers[q.id] || ""}
+                    onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                    className="w-full rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
+                  />
+                )}
+              </div>
+            ))}
             <button
               type="button"
               disabled={ciBusy}

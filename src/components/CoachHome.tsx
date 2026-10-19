@@ -33,6 +33,7 @@ type Payment = {
   clients: { name: string } | null;
 };
 type FeedItem = { key: string; text: string; at: string };
+type CheckinQuestion = { id: string; label: string; kind: "text" | "scale"; position: number };
 type Meeting = {
   id: string;
   title: string;
@@ -123,6 +124,36 @@ export default function CoachHome({
   const [aCopied, setACopied] = useState(false);
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
 
+  // Кастомні питання чек-іна — тренер сам налаштовує, що додатково питати
+  // в щотижневому чек-іні (сон/стрес/самопочуття/довільне).
+  const [checkinQuestions, setCheckinQuestions] = useState<CheckinQuestion[]>([]);
+  const [newQLabel, setNewQLabel] = useState("");
+  const [newQKind, setNewQKind] = useState<"text" | "scale">("text");
+  const [qBusy, setQBusy] = useState(false);
+
+  async function loadQuestions() {
+    const { data } = await supabase.from("checkin_questions").select("*").order("position", { ascending: true });
+    setCheckinQuestions((data as CheckinQuestion[]) || []);
+  }
+
+  async function addQuestion() {
+    if (!newQLabel.trim()) return;
+    setQBusy(true);
+    await supabase.from("checkin_questions").insert({
+      label: newQLabel.trim(),
+      kind: newQKind,
+      position: checkinQuestions.length,
+    });
+    setNewQLabel("");
+    setQBusy(false);
+    loadQuestions();
+  }
+
+  async function deleteQuestion(id: string) {
+    await supabase.from("checkin_questions").delete().eq("id", id);
+    loadQuestions();
+  }
+
   async function load() {
     setLoading(true);
     const monthStart = new Date();
@@ -168,6 +199,7 @@ export default function CoachHome({
 
   useEffect(() => {
     load();
+    loadQuestions();
     try {
       setFeedSeenAt(localStorage.getItem("sashafit_feed_seen_at"));
     } catch {
@@ -953,6 +985,51 @@ export default function CoachHome({
             <p className="text-xs text-muted">
               {activeCount} активних підписок{expiringSoon > 0 ? ` · ${expiringSoon} закінчуються протягом тижня` : ""}
             </p>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-1 text-sm font-semibold">Питання чек-іна</h2>
+            <p className="mb-2 text-xs text-muted">
+              Додаткові питання, які клієнт побачить і заповнить під час щотижневого чек-іна.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {checkinQuestions.map((q) => (
+                <div key={q.id} className="flex items-center justify-between rounded-lg border border-line px-2.5 py-1.5 text-xs">
+                  <span>
+                    {q.label}
+                    {q.kind === "scale" && <span className="text-muted"> (шкала 1–5)</span>}
+                  </span>
+                  <button type="button" onClick={() => deleteQuestion(q.id)} className="text-red-400">
+                    Видалити
+                  </button>
+                </div>
+              ))}
+              {checkinQuestions.length === 0 && <p className="text-xs text-muted">Питань ще немає.</p>}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <input
+                value={newQLabel}
+                onChange={(e) => setNewQLabel(e.target.value)}
+                placeholder="Напр. Як спалось?"
+                className="flex-1 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-xs outline-none"
+              />
+              <select
+                value={newQKind}
+                onChange={(e) => setNewQKind(e.target.value as "text" | "scale")}
+                className="rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
+              >
+                <option value="text">Текст</option>
+                <option value="scale">Шкала 1–5</option>
+              </select>
+              <button
+                type="button"
+                disabled={qBusy}
+                onClick={addQuestion}
+                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
+              >
+                Додати
+              </button>
+            </div>
           </div>
 
           <div className="rounded-xl border border-line bg-surface p-4">

@@ -379,6 +379,24 @@ export default function ClientActivityCalendar({
   const ringOffset = ringCirc - (ringPct / 100) * ringCirc;
 
   const selectedCheckin = selected ? checkinByDate[selected] : null;
+
+  // Відповіді на кастомні питання чек-іна — підтягуємо окремо, лише коли
+  // відкрили конкретний чек-ін (щоб не тягнути це на кожен рендер календаря).
+  const [checkinAnswers, setCheckinAnswers] = useState<{ label: string; value: string }[]>([]);
+  useEffect(() => {
+    if (!selectedCheckin) {
+      setCheckinAnswers([]);
+      return;
+    }
+    supabase
+      .from("checkin_answers")
+      .select("value, checkin_questions(label)")
+      .eq("checkin_id", selectedCheckin.id)
+      .then(({ data }) => {
+        const rows = (data as unknown as { value: string; checkin_questions: { label: string } | null }[]) || [];
+        setCheckinAnswers(rows.map((r) => ({ label: r.checkin_questions?.label || "", value: r.value })));
+      });
+  }, [selectedCheckin?.id]);
   const showWorkout = filter === "all" || filter === "workout";
   const showFood = filter === "all" || filter === "food";
   const showCheckin = filter === "all" || filter === "checkin";
@@ -912,6 +930,15 @@ export default function ClientActivityCalendar({
             </p>
           )}
           {selectedCheckin.comment && <p className="text-xs text-muted">{selectedCheckin.comment}</p>}
+          {checkinAnswers.length > 0 && (
+            <div className="mt-1.5 flex flex-col gap-0.5 border-t border-line pt-1.5">
+              {checkinAnswers.map((a, i) => (
+                <p key={i} className="text-xs text-muted">
+                  <span className="text-ink">{a.label}:</span> {a.value}
+                </p>
+              ))}
+            </div>
+          )}
           {selectedCheckin.photoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={selectedCheckin.photoUrl} alt="Фото чек-іну" className="mt-1.5 max-h-40 rounded-lg object-cover" />
