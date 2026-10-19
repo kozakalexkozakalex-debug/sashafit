@@ -279,6 +279,117 @@ export default function CoachDashboard({
     }
   }
 
+  // Розділяємо список клієнтів на "Заявки" (запросив, але ще не підключився)
+  // і "Клієнти" (вже підключені) — щоб не змішувались в одному списку.
+  const pendingClients = clients.filter((c) => !c.profile_id);
+  const connectedClients = clients.filter((c) => c.profile_id);
+
+  function ClientCard({ c }: { c: Client }) {
+    return (
+      <div className="flex flex-col gap-2 rounded-lg border-l-2 border-accent bg-paper p-3 text-sm">
+        <button type="button" onClick={() => selectClient(c.id)} className="flex items-start justify-between gap-2 text-left">
+          <span className="min-w-0">
+            <span className="block truncate font-medium text-ink">{clientLabel(c)}</span>
+            {c.goal && <span className="mt-0.5 block truncate text-xs text-muted">{c.goal}</span>}
+          </span>
+          <span className={`flex-none stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
+            {c.profile_id ? "Підключено" : "Очікує"}
+          </span>
+        </button>
+
+        <div className="flex items-center justify-between text-[11px] text-muted">
+          <span>
+            Приєднався{" "}
+            {new Date(c.created_at).toLocaleDateString("uk-UA", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            })}
+          </span>
+          {c.profile_id && <span>{RISK_LABEL[clientRisk(c, lastCheckinByClient[c.id])]}</span>}
+        </div>
+
+        {!c.profile_id && (
+          <div className="flex items-center gap-2">
+            <p className="flex-1 break-all rounded bg-surface px-2 py-1 text-xs text-muted">{inviteUrl(c.invite_code)}</p>
+            <button
+              type="button"
+              onClick={() => copy(inviteUrl(c.invite_code))}
+              className="whitespace-nowrap rounded bg-surface px-2 py-1 text-xs text-accent"
+            >
+              Копіювати
+            </button>
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => removeClient(c.id)}
+            className="rounded-lg border border-line px-2.5 py-1 text-xs text-muted"
+          >
+            Відключити
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function ClientRow({ c }: { c: Client }) {
+    return (
+      <div
+        onClick={() => selectClient(c.id)}
+        className="grid cursor-pointer grid-cols-[28px_1.6fr_1fr_1fr_1fr_160px] items-center gap-2 border-b border-line px-2 py-2.5 text-sm last:border-b-0 hover:bg-line/10"
+      >
+        <span onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            disabled={!c.profile_id}
+            checked={selectedClientIds.has(c.id)}
+            onChange={() => toggleClientSelected(c.id)}
+            title={c.profile_id ? "Вибрати для масової дії" : "Клієнт ще не підключений"}
+            className="h-4 w-4 accent-accent disabled:opacity-30"
+          />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate font-medium text-ink">{clientLabel(c)}</span>
+          {c.goal && <span className="block truncate text-xs text-muted">{c.goal}</span>}
+        </span>
+        <span className={`w-fit stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
+          {c.profile_id ? "Підключено" : "Очікує"}
+        </span>
+        <span className="text-xs text-muted">
+          {new Date(c.created_at).toLocaleDateString("uk-UA", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          })}
+        </span>
+        <span className="text-xs text-muted">
+          {c.profile_id ? RISK_LABEL[clientRisk(c, lastCheckinByClient[c.id])] : "—"}
+        </span>
+        <span className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {!c.profile_id && (
+            <button
+              type="button"
+              onClick={() => copy(inviteUrl(c.invite_code))}
+              className="whitespace-nowrap rounded border border-line px-2 py-1 text-[11px] text-accent"
+            >
+              Копіювати
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => removeClient(c.id)}
+            className="whitespace-nowrap rounded border border-line px-2 py-1 text-[11px] text-muted"
+          >
+            Відключити
+          </button>
+        </span>
+      </div>
+    );
+  }
+
   function TabButton({ t, onSelect }: { t: { id: TabId; label: string }; onSelect?: () => void }) {
     const active = tab === t.id;
     return (
@@ -499,61 +610,31 @@ export default function CoachDashboard({
             {clients.length === 0 ? (
               <p className="text-sm text-muted">Клієнтів ще немає.</p>
             ) : clientsView === "cards" ? (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {clients.map((c) => (
-                  <div key={c.id} className="flex flex-col gap-2 rounded-lg border-l-2 border-accent bg-paper p-3 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => selectClient(c.id)}
-                      className="flex items-start justify-between gap-2 text-left"
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium text-ink">{clientLabel(c)}</span>
-                        {c.goal && <span className="mt-0.5 block truncate text-xs text-muted">{c.goal}</span>}
-                      </span>
-                      <span className={`flex-none stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
-                        {c.profile_id ? "Підключено" : "Очікує"}
-                      </span>
-                    </button>
-
-                    <div className="flex items-center justify-between text-[11px] text-muted">
-                      <span>
-                        Приєднався{" "}
-                        {new Date(c.created_at).toLocaleDateString("uk-UA", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
-                      </span>
-                      {c.profile_id && <span>{RISK_LABEL[clientRisk(c, lastCheckinByClient[c.id])]}</span>}
-                    </div>
-
-                    {!c.profile_id && (
-                      <div className="flex items-center gap-2">
-                        <p className="flex-1 break-all rounded bg-surface px-2 py-1 text-xs text-muted">
-                          {inviteUrl(c.invite_code)}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => copy(inviteUrl(c.invite_code))}
-                          className="whitespace-nowrap rounded bg-surface px-2 py-1 text-xs text-accent"
-                        >
-                          Копіювати
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => removeClient(c.id)}
-                        className="rounded-lg border border-line px-2.5 py-1 text-xs text-muted"
-                      >
-                        Відключити
-                      </button>
+              <div className="flex flex-col gap-5">
+                {pendingClients.length > 0 && (
+                  <div>
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                      Заявки ({pendingClients.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {pendingClients.map((c) => (
+                        <ClientCard key={c.id} c={c} />
+                      ))}
                     </div>
                   </div>
-                ))}
+                )}
+                {connectedClients.length > 0 && (
+                  <div>
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                      Клієнти ({connectedClients.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {connectedClients.map((c) => (
+                        <ClientCard key={c.id} c={c} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div>
@@ -587,67 +668,42 @@ export default function CoachDashboard({
                 )}
                 <div className="overflow-x-auto">
                   <div className="min-w-[680px]">
-                    <div className="grid grid-cols-[28px_1.6fr_1fr_1fr_1fr_160px] gap-2 border-b border-line px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted">
-                      <span></span>
-                      <span>Клієнт</span>
-                      <span>Статус</span>
-                      <span>Приєднався</span>
-                      <span>Ризик</span>
-                      <span></span>
-                    </div>
-                    {clients.map((c) => (
-                      <div
-                        key={c.id}
-                        onClick={() => selectClient(c.id)}
-                        className="grid cursor-pointer grid-cols-[28px_1.6fr_1fr_1fr_1fr_160px] items-center gap-2 border-b border-line px-2 py-2.5 text-sm last:border-b-0 hover:bg-line/10"
-                      >
-                        <span onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            disabled={!c.profile_id}
-                            checked={selectedClientIds.has(c.id)}
-                            onChange={() => toggleClientSelected(c.id)}
-                            title={c.profile_id ? "Вибрати для масової дії" : "Клієнт ще не підключений"}
-                            className="h-4 w-4 accent-accent disabled:opacity-30"
-                          />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium text-ink">{clientLabel(c)}</span>
-                          {c.goal && <span className="block truncate text-xs text-muted">{c.goal}</span>}
-                        </span>
-                        <span className={`w-fit stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
-                          {c.profile_id ? "Підключено" : "Очікує"}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {new Date(c.created_at).toLocaleDateString("uk-UA", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                          })}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {c.profile_id ? RISK_LABEL[clientRisk(c, lastCheckinByClient[c.id])] : "—"}
-                        </span>
-                        <span className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                          {!c.profile_id && (
-                            <button
-                              type="button"
-                              onClick={() => copy(inviteUrl(c.invite_code))}
-                              className="whitespace-nowrap rounded border border-line px-2 py-1 text-[11px] text-accent"
-                            >
-                              Копіювати
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => removeClient(c.id)}
-                            className="whitespace-nowrap rounded border border-line px-2 py-1 text-[11px] text-muted"
-                          >
-                            Відключити
-                          </button>
-                        </span>
-                      </div>
-                    ))}
+                    {pendingClients.length > 0 && (
+                      <>
+                        <p className="px-2 pt-1 text-xs font-semibold uppercase tracking-wide text-muted">
+                          Заявки ({pendingClients.length})
+                        </p>
+                        <div className="grid grid-cols-[28px_1.6fr_1fr_1fr_1fr_160px] gap-2 border-b border-line px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted">
+                          <span></span>
+                          <span>Клієнт</span>
+                          <span>Статус</span>
+                          <span>Приєднався</span>
+                          <span>Ризик</span>
+                          <span></span>
+                        </div>
+                        {pendingClients.map((c) => (
+                          <ClientRow key={c.id} c={c} />
+                        ))}
+                      </>
+                    )}
+                    {connectedClients.length > 0 && (
+                      <>
+                        <p className="px-2 pt-4 text-xs font-semibold uppercase tracking-wide text-muted">
+                          Клієнти ({connectedClients.length})
+                        </p>
+                        <div className="grid grid-cols-[28px_1.6fr_1fr_1fr_1fr_160px] gap-2 border-b border-line px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted">
+                          <span></span>
+                          <span>Клієнт</span>
+                          <span>Статус</span>
+                          <span>Приєднався</span>
+                          <span>Ризик</span>
+                          <span></span>
+                        </div>
+                        {connectedClients.map((c) => (
+                          <ClientRow key={c.id} c={c} />
+                        ))}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
