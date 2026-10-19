@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { searchFood, FoodProduct } from "@/lib/foodApi";
 
@@ -117,6 +118,17 @@ export default function ClientActivityCalendar({
   // календарем — не займають місця, поки їх не відкрили.
   const [workoutModalOpen, setWorkoutModalOpen] = useState(false);
   const [foodModalOpen, setFoodModalOpen] = useState(false);
+
+  // Блокуємо скрол фону, поки відкрито будь-який з попапів-щоденників —
+  // інакше на мобільному сторінка під попапом «їде» і попап ніби пірнає вниз.
+  useEffect(() => {
+    if (!workoutModalOpen && !foodModalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [workoutModalOpen, foodModalOpen]);
 
   async function loadWorkouts() {
     const { data } = await supabase
@@ -611,8 +623,8 @@ export default function ClientActivityCalendar({
         </div>
       )}
 
-      {workoutModalOpen && selected && showWorkout && (
-        <div className="fixed inset-0 z-40" onClick={() => setWorkoutModalOpen(false)}>
+      {workoutModalOpen && selected && showWorkout && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-50" onClick={() => setWorkoutModalOpen(false)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
             onClick={(e) => e.stopPropagation()}
@@ -744,11 +756,12 @@ export default function ClientActivityCalendar({
             )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {foodModalOpen && selected && showFood && (
-        <div className="fixed inset-0 z-40" onClick={() => setFoodModalOpen(false)}>
+      {foodModalOpen && selected && showFood && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-50" onClick={() => setFoodModalOpen(false)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
             onClick={(e) => e.stopPropagation()}
@@ -924,7 +937,8 @@ export default function ClientActivityCalendar({
             </div>
           </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {selected && showCheckin && selectedCheckin && (
