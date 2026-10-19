@@ -120,6 +120,8 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
   // Вигляд списку клієнтів — картки (за замовчуванням) або список/таблиця.
   // Список рахуємо як основу для майбутнього масового вибору клієнтів.
   const [clientsView, setClientsView] = useState<"cards" | "list">("cards");
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+  const [showBulkAssign, setShowBulkAssign] = useState(false);
   useEffect(() => {
     try {
       const saved = localStorage.getItem("sf_clients_view");
@@ -167,6 +169,15 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
   useEffect(() => {
     load();
   }, []);
+
+  function toggleClientSelected(clientId: string) {
+    setSelectedClientIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(clientId)) next.delete(clientId);
+      else next.add(clientId);
+      return next;
+    });
+  }
 
   async function selectClient(clientId: string) {
     setShowBuilder(false);
@@ -460,62 +471,108 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                 ))}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <div className="min-w-[640px]">
-                  <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_auto] gap-2 border-b border-line px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted">
-                    <span>Клієнт</span>
-                    <span>Статус</span>
-                    <span>Приєднався</span>
-                    <span>Ризик</span>
-                    <span></span>
+              <div>
+                {selectedClientIds.size > 0 && (
+                  <div className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-accent/10 px-3 py-2 text-xs">
+                    <span className="font-medium text-accent">Вибрано: {selectedClientIds.size}</span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowBulkAssign(true)}
+                        className="rounded-full bg-accent px-3 py-1 font-semibold text-paper"
+                      >
+                        Призначити програму
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedClientIds(new Set())}
+                        className="rounded-full border border-line px-3 py-1 text-muted"
+                      >
+                        Скасувати
+                      </button>
+                    </div>
                   </div>
-                  {clients.map((c) => (
-                    <div
-                      key={c.id}
-                      onClick={() => selectClient(c.id)}
-                      className="grid cursor-pointer grid-cols-[1.6fr_1fr_1fr_1fr_auto] items-center gap-2 border-b border-line px-2 py-2.5 text-sm last:border-b-0 hover:bg-line/10"
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium text-ink">{clientLabel(c)}</span>
-                        {c.goal && <span className="block truncate text-xs text-muted">{c.goal}</span>}
-                      </span>
-                      <span className={`w-fit stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
-                        {c.profile_id ? "Підключено" : "Очікує"}
-                      </span>
-                      <span className="text-xs text-muted">
-                        {new Date(c.created_at).toLocaleDateString("uk-UA", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
-                      </span>
-                      <span className="text-xs text-muted">
-                        {c.profile_id ? RISK_LABEL[clientRisk(c, lastCheckinByClient[c.id])] : "—"}
-                      </span>
-                      <span className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                        {!c.profile_id && (
+                )}
+                <div className="overflow-x-auto">
+                  <div className="min-w-[680px]">
+                    <div className="grid grid-cols-[auto_1.6fr_1fr_1fr_1fr_auto] gap-2 border-b border-line px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted">
+                      <span></span>
+                      <span>Клієнт</span>
+                      <span>Статус</span>
+                      <span>Приєднався</span>
+                      <span>Ризик</span>
+                      <span></span>
+                    </div>
+                    {clients.map((c) => (
+                      <div
+                        key={c.id}
+                        onClick={() => selectClient(c.id)}
+                        className="grid cursor-pointer grid-cols-[auto_1.6fr_1fr_1fr_1fr_auto] items-center gap-2 border-b border-line px-2 py-2.5 text-sm last:border-b-0 hover:bg-line/10"
+                      >
+                        <span onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            disabled={!c.profile_id}
+                            checked={selectedClientIds.has(c.id)}
+                            onChange={() => toggleClientSelected(c.id)}
+                            title={c.profile_id ? "Вибрати для масової дії" : "Клієнт ще не підключений"}
+                            className="h-4 w-4 accent-accent disabled:opacity-30"
+                          />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium text-ink">{clientLabel(c)}</span>
+                          {c.goal && <span className="block truncate text-xs text-muted">{c.goal}</span>}
+                        </span>
+                        <span className={`w-fit stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
+                          {c.profile_id ? "Підключено" : "Очікує"}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {new Date(c.created_at).toLocaleDateString("uk-UA", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {c.profile_id ? RISK_LABEL[clientRisk(c, lastCheckinByClient[c.id])] : "—"}
+                        </span>
+                        <span className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          {!c.profile_id && (
+                            <button
+                              type="button"
+                              onClick={() => copy(inviteUrl(c.invite_code))}
+                              className="whitespace-nowrap rounded border border-line px-2 py-1 text-[11px] text-accent"
+                            >
+                              Копіювати
+                            </button>
+                          )}
                           <button
                             type="button"
-                            onClick={() => copy(inviteUrl(c.invite_code))}
-                            className="whitespace-nowrap rounded border border-line px-2 py-1 text-[11px] text-accent"
+                            onClick={() => removeClient(c.id)}
+                            className="whitespace-nowrap rounded border border-line px-2 py-1 text-[11px] text-muted"
                           >
-                            Копіювати
+                            Відключити
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => removeClient(c.id)}
-                          className="whitespace-nowrap rounded border border-line px-2 py-1 text-[11px] text-muted"
-                        >
-                          Відключити
-                        </button>
-                      </span>
-                    </div>
-                  ))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
           </div>
+
+          {showBulkAssign && (
+            <QuickActionSheet onClose={() => setShowBulkAssign(false)}>
+              <AssignProgram
+                clientIds={Array.from(selectedClientIds)}
+                onClose={() => setShowBulkAssign(false)}
+                onSaved={() => {
+                  setSelectedClientIds(new Set());
+                }}
+              />
+            </QuickActionSheet>
+          )}
 
           {selectedId &&
             (() => {
@@ -604,7 +661,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                   {showAssignProgram && (
                     <QuickActionSheet onClose={() => setShowAssignProgram(false)}>
                       <AssignProgram
-                        clientId={c.id}
+                        clientIds={[c.id]}
                         onClose={() => setShowAssignProgram(false)}
                         onSaved={() => setCalendarKey((k) => k + 1)}
                       />

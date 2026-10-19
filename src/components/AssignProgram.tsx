@@ -36,11 +36,11 @@ function mondayOfWeek(d: Date) {
 }
 
 export default function AssignProgram({
-  clientId,
+  clientIds,
   onClose,
   onSaved,
 }: {
-  clientId: string;
+  clientIds: string[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -91,48 +91,50 @@ export default function AssignProgram({
     let created = 0;
     let skipped = 0;
 
-    for (let w = 0; w < weeksNum; w++) {
-      for (const d of days) {
-        const idx = dayWeekday[d.id];
-        const weekMonday = new Date(monday);
-        weekMonday.setDate(monday.getDate() + w * 7);
-        const target = new Date(weekMonday);
-        target.setDate(weekMonday.getDate() + idx);
-        const key = toKey(target);
-        if (key < startKey) continue;
+    for (const clientId of clientIds) {
+      for (let w = 0; w < weeksNum; w++) {
+        for (const d of days) {
+          const idx = dayWeekday[d.id];
+          const weekMonday = new Date(monday);
+          weekMonday.setDate(monday.getDate() + w * 7);
+          const target = new Date(weekMonday);
+          target.setDate(weekMonday.getDate() + idx);
+          const key = toKey(target);
+          if (key < startKey) continue;
 
-        const { data: existing } = await supabase
-          .from("assigned_workouts")
-          .select("id")
-          .eq("client_id", clientId)
-          .eq("date", key)
-          .maybeSingle();
-        if (existing) {
-          skipped++;
-          continue;
+          const { data: existing } = await supabase
+            .from("assigned_workouts")
+            .select("id")
+            .eq("client_id", clientId)
+            .eq("date", key)
+            .maybeSingle();
+          if (existing) {
+            skipped++;
+            continue;
+          }
+
+          const { data: aw, error } = await supabase
+            .from("assigned_workouts")
+            .insert({ client_id: clientId, title: d.title, date: key })
+            .select()
+            .single();
+          if (error || !aw) continue;
+
+          const exercises = [...d.program_exercises].sort((a, b) => a.position - b.position);
+          if (exercises.length > 0) {
+            await supabase.from("assigned_workout_exercises").insert(
+              exercises.map((e, i) => ({
+                assigned_workout_id: aw.id,
+                exercise_id: e.exercise_id,
+                name: e.name,
+                sets: e.sets,
+                reps: e.reps,
+                position: i,
+              }))
+            );
+          }
+          created++;
         }
-
-        const { data: aw, error } = await supabase
-          .from("assigned_workouts")
-          .insert({ client_id: clientId, title: d.title, date: key })
-          .select()
-          .single();
-        if (error || !aw) continue;
-
-        const exercises = [...d.program_exercises].sort((a, b) => a.position - b.position);
-        if (exercises.length > 0) {
-          await supabase.from("assigned_workout_exercises").insert(
-            exercises.map((e, i) => ({
-              assigned_workout_id: aw.id,
-              exercise_id: e.exercise_id,
-              name: e.name,
-              sets: e.sets,
-              reps: e.reps,
-              position: i,
-            }))
-          );
-        }
-        created++;
       }
     }
 
@@ -144,7 +146,9 @@ export default function AssignProgram({
   return (
     <div className="rounded-xl border border-line bg-surface p-3">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Призначити програму</h3>
+        <h3 className="text-sm font-semibold">
+          Призначити програму{clientIds.length > 1 ? ` (${clientIds.length} клієнтам)` : ""}
+        </h3>
         <button type="button" onClick={onClose} className="text-xs text-muted">
           Закрити
         </button>
