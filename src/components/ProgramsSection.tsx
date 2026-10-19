@@ -11,12 +11,12 @@ export default function ProgramsSection() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-5">
+      <div className="flex gap-5 border-b border-line">
         <button
           type="button"
           onClick={() => setSub("exercises")}
-          className={`font-display text-sm font-medium ${
-            sub === "exercises" ? "text-accent" : "text-muted"
+          className={`-mb-px border-b-2 pb-2 font-display text-sm font-medium transition ${
+            sub === "exercises" ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"
           }`}
         >
           База вправ
@@ -24,8 +24,8 @@ export default function ProgramsSection() {
         <button
           type="button"
           onClick={() => setSub("programs")}
-          className={`font-display text-sm font-medium ${
-            sub === "programs" ? "text-accent" : "text-muted"
+          className={`-mb-px border-b-2 pb-2 font-display text-sm font-medium transition ${
+            sub === "programs" ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"
           }`}
         >
           Програми

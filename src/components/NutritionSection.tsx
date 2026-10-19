@@ -11,12 +11,12 @@ export default function NutritionSection() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-5">
+      <div className="flex gap-5 border-b border-line">
         <button
           type="button"
           onClick={() => setSub("products")}
-          className={`font-display text-sm font-medium ${
-            sub === "products" ? "text-accent" : "text-muted"
+          className={`-mb-px border-b-2 pb-2 font-display text-sm font-medium transition ${
+            sub === "products" ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"
           }`}
         >
           База продуктів
@@ -24,8 +24,8 @@ export default function NutritionSection() {
         <button
           type="button"
           onClick={() => setSub("rations")}
-          className={`font-display text-sm font-medium ${
-            sub === "rations" ? "text-accent" : "text-muted"
+          className={`-mb-px border-b-2 pb-2 font-display text-sm font-medium transition ${
+            sub === "rations" ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"
           }`}
         >
           Раціони

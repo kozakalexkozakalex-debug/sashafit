@@ -61,6 +61,14 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "payments", label: "Оплата" },
 ];
 
+// Розділи-кружки на вкладці «База». Щоб додати новий розділ у майбутньому
+// (наприклад, «Звички» чи щось інше) — достатньо додати ще один елемент сюди
+// і завести відповідний компонент.
+const LIBRARY_SECTIONS: { id: LibrarySubTab; label: string; icon: string }[] = [
+  { id: "workouts", label: "Тренування", icon: "🏋" },
+  { id: "food", label: "Харчування", icon: "🍽" },
+];
+
 // Знизу на мобільному — 4 найважливіші вкладки + кнопка «Ще» з рештою.
 // Чек-іни тепер всередині «Аналітики» (перша підвкладка), окремої кнопки нема.
 const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "library", "analytics"];
@@ -312,31 +320,33 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
         <CoachHome onOpenClients={() => setTab("clients")} onNavigate={(t) => setTab(t)} />
       ) : tab === "library" ? (
         <div>
-          <div className="mb-3 flex gap-1.5">
-            <button
-              type="button"
-              onClick={() => setLibrarySubTab("workouts")}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                librarySubTab === "workouts"
-                  ? "border-accent bg-accent text-paper"
-                  : "border-line bg-paper text-muted hover:text-ink"
-              }`}
-            >
-              🏋 Тренування
-            </button>
-            <button
-              type="button"
-              onClick={() => setLibrarySubTab("food")}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                librarySubTab === "food"
-                  ? "border-accent bg-accent text-paper"
-                  : "border-line bg-paper text-muted hover:text-ink"
-              }`}
-            >
-              🍽 Харчування
-            </button>
+          <div className="mb-5 flex gap-4">
+            {LIBRARY_SECTIONS.map((s) => {
+              const active = librarySubTab === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setLibrarySubTab(s.id)}
+                  className="flex flex-col items-center gap-1.5"
+                >
+                  <span
+                    className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-2xl transition ${
+                      active
+                        ? "border-accent bg-accent/15 shadow-sm shadow-accent/20"
+                        : "border-line bg-paper text-muted hover:border-accent/50"
+                    }`}
+                  >
+                    {s.icon}
+                  </span>
+                  <span className={`text-xs font-medium ${active ? "text-accent" : "text-muted"}`}>{s.label}</span>
+                </button>
+              );
+            })}
           </div>
-          {librarySubTab === "workouts" ? <ProgramsSection /> : <NutritionSection />}
+          <div className="rounded-xl border border-line bg-surface p-4">
+            {librarySubTab === "workouts" ? <ProgramsSection /> : <NutritionSection />}
+          </div>
         </div>
       ) : tab === "analytics" ? (
         <CoachAnalytics />
