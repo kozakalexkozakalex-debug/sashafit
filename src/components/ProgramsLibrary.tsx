@@ -147,23 +147,35 @@ export default function ProgramsLibrary() {
       <div className="rounded-xl border border-line bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">Програми ({programs.length})</h2>
         {loading && <p className="text-sm text-muted">Завантаження…</p>}
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {programs.map((p) => {
             const days = [...p.program_days].sort((a, b) => a.position - b.position);
             const isOpen = openId === p.id;
+            const totalExercises = days.reduce((sum, d) => sum + d.program_exercises.length, 0);
             return (
-              <div key={p.id} className="rounded-lg border border-line p-3 text-sm">
+              <div
+                key={p.id}
+                className={`flex flex-col rounded-xl border-l-2 bg-paper text-sm shadow-sm transition ${
+                  isOpen ? "border-accent" : "border-line"
+                }`}
+              >
                 <button
                   type="button"
                   onClick={() => setOpenId(isOpen ? null : p.id)}
-                  className="flex w-full items-center justify-between text-left"
+                  className="flex w-full items-center justify-between gap-3 p-4 text-left"
                 >
-                  <span className="font-medium">{p.title}</span>
-                  <span className="stamp text-muted">{days.length} дн.</span>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="font-display text-base font-semibold">{p.title}</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="stamp text-accent">{days.length} {days.length === 1 ? "день" : "дні"}</span>
+                      <span className="stamp text-muted">{totalExercises} вправ</span>
+                    </div>
+                  </div>
+                  <span className={`text-lg text-muted transition ${isOpen ? "rotate-180" : ""}`}>⌄</span>
                 </button>
 
                 {isOpen && (
-                  <div className="mt-3 flex flex-col gap-3 border-t border-line pt-3">
+                  <div className="flex flex-col gap-3 border-t border-line p-4 pt-3">
                     {days.map((d) => {
                       const exercises = [...d.program_exercises].sort(
                         (a, b) => a.position - b.position
