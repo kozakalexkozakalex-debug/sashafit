@@ -187,26 +187,35 @@ export default function RationsLibrary() {
       <div className="rounded-xl border border-line bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">Раціони ({rations.length})</h2>
         {loading && <p className="text-sm text-muted">Завантаження…</p>}
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {rations.map((r) => {
             const items = [...r.ration_items].sort((a, b) => a.position - b.position);
             const isOpen = openId === r.id;
             const totalCal = items.reduce((s, i) => s + (i.calories || 0), 0);
             return (
-              <div key={r.id} className="rounded-lg border border-line p-3 text-sm">
+              <div
+                key={r.id}
+                className={`flex flex-col rounded-xl border-l-2 bg-paper text-sm shadow-sm transition ${
+                  isOpen ? "border-accent" : "border-line"
+                }`}
+              >
                 <button
                   type="button"
                   onClick={() => setOpenId(isOpen ? null : r.id)}
-                  className="flex w-full items-center justify-between text-left"
+                  className="flex w-full items-center justify-between gap-3 p-4 text-left"
                 >
-                  <span className="font-medium">{r.title}</span>
-                  <span className="text-xs text-muted">
-                    {items.length} прод. · {Math.round(totalCal)} ккал
-                  </span>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="font-display text-base font-semibold">{r.title}</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="stamp text-accent">{items.length} прод.</span>
+                      <span className="stamp text-muted">{Math.round(totalCal)} ккал</span>
+                    </div>
+                  </div>
+                  <span className={`text-lg text-muted transition ${isOpen ? "rotate-180" : ""}`}>⌄</span>
                 </button>
 
                 {isOpen && (
-                  <div className="mt-3 flex flex-col gap-2 border-t border-line pt-3">
+                  <div className="flex flex-col gap-2 border-t border-line p-4 pt-3">
                     <ul className="flex flex-col gap-0.5 text-muted">
                       {items.map((i) => (
                         <li key={i.id} className="flex items-center justify-between">
