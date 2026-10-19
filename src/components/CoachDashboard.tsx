@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
 import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
 import ClientProfileCard from "@/components/ClientProfileCard";
@@ -300,54 +301,61 @@ export default function CoachDashboard({
 
   return (
     <div className="flex flex-col gap-6 pb-20 lg:flex-row lg:items-start lg:gap-8 lg:pb-0">
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden">
-        {MOBILE_MAIN_IDS.map((id) => {
-          const t = TABS.find((x) => x.id === id)!;
-          const active = tab === id;
-          return (
+      {typeof document !== "undefined" &&
+        createPortal(
+          <nav className="fixed inset-x-0 bottom-0 z-[60] flex items-stretch border-t border-line bg-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden">
+            {MOBILE_MAIN_IDS.map((id) => {
+              const t = TABS.find((x) => x.id === id)!;
+              const active = tab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setTab(id);
+                    setMobileMoreOpen(false);
+                  }}
+                  className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
+                    active ? "text-accent" : "text-muted"
+                  }`}
+                >
+                  <NavIcon name={TAB_ICON[id]} className="h-5 w-5" />
+                  {t.label}
+                </button>
+              );
+            })}
             <button
-              key={id}
               type="button"
-              onClick={() => {
-                setTab(id);
-                setMobileMoreOpen(false);
-              }}
+              onClick={() => setMobileMoreOpen((v) => !v)}
+              aria-expanded={mobileMoreOpen}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                active ? "text-accent" : "text-muted"
+                moreActive || mobileMoreOpen ? "text-accent" : "text-muted"
               }`}
             >
-              <NavIcon name={TAB_ICON[id]} className="h-5 w-5" />
-              {t.label}
+              <NavIcon name="more" className="h-5 w-5" />
+              Ще
             </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => setMobileMoreOpen((v) => !v)}
-          aria-expanded={mobileMoreOpen}
-          className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-            moreActive || mobileMoreOpen ? "text-accent" : "text-muted"
-          }`}
-        >
-          <NavIcon name="more" className="h-5 w-5" />
-          Ще
-        </button>
-      </nav>
+          </nav>,
+          document.body
+        )}
 
-      {mobileMoreOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setMobileMoreOpen(false)}>
-          <div className="absolute inset-0 bg-black/50" />
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-line bg-sidebar p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
-          >
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
-            {MOBILE_MORE_IDS.map((id) => (
-              <TabButton key={id} t={TABS.find((x) => x.id === id)!} onSelect={() => setMobileMoreOpen(false)} />
-            ))}
-          </div>
-        </div>
-      )}
+      {mobileMoreOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[60] lg:hidden" onClick={() => setMobileMoreOpen(false)}>
+            <div className="absolute inset-0 bg-black/50" />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-line bg-sidebar p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
+            >
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
+              {MOBILE_MORE_IDS.map((id) => (
+                <TabButton key={id} t={TABS.find((x) => x.id === id)!} onSelect={() => setMobileMoreOpen(false)} />
+              ))}
+            </div>
+          </div>,
+          document.body
+        )}
 
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
         <TabButton t={TABS.find((x) => x.id === "home")!} />
@@ -407,24 +415,58 @@ export default function CoachDashboard({
       ) : tab === "payments" ? (
         <CoachPayments />
       ) : tab === "newClient" ? (
-        <div className="rounded-xl border border-line bg-surface p-4">
-          <h2 className="mb-1 text-sm font-semibold">Новий клієнт</h2>
-          <p className="mb-3 text-xs text-muted">
-            Нічого вказувати не треба — просто створи посилання. Клієнт сам впише своє ім&apos;я, коли зайде за ним і
-            заповнить анкету.
-          </p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={addClient}
-            className="w-full rounded-lg bg-accent px-4 py-3 text-sm font-bold text-paper shadow-md shadow-accent/30 transition hover:brightness-110 disabled:opacity-50"
-          >
-            {busy ? "Створюю…" : "+ Створити посилання для нового клієнта"}
-          </button>
-          {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+        <div>
+          <div className="mb-4 flex gap-1 rounded-full border border-line bg-sidebar p-1">
+            <button
+              type="button"
+              onClick={() => setTab("clients")}
+              className="flex-1 rounded-full px-3 py-1.5 text-xs font-semibold text-muted transition hover:text-ink"
+            >
+              Клієнти
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("newClient")}
+              className="flex-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-paper"
+            >
+              Новий клієнт
+            </button>
+          </div>
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-1 text-sm font-semibold">Новий клієнт</h2>
+            <p className="mb-3 text-xs text-muted">
+              Нічого вказувати не треба — просто створи посилання. Клієнт сам впише своє ім&apos;я, коли зайде за ним
+              і заповнить анкету.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={addClient}
+              className="w-full rounded-lg bg-accent px-4 py-3 text-sm font-bold text-paper shadow-md shadow-accent/30 transition hover:brightness-110 disabled:opacity-50"
+            >
+              {busy ? "Створюю…" : "+ Створити посилання для нового клієнта"}
+            </button>
+            {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+          </div>
         </div>
       ) : (
         <>
+          <div className="mb-1 flex gap-1 rounded-full border border-line bg-sidebar p-1">
+            <button
+              type="button"
+              onClick={() => setTab("clients")}
+              className="flex-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-paper"
+            >
+              Клієнти
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("newClient")}
+              className="flex-1 rounded-full px-3 py-1.5 text-xs font-semibold text-muted transition hover:text-ink"
+            >
+              Новий клієнт
+            </button>
+          </div>
           <div className="rounded-xl border border-line bg-surface p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold">Клієнти ({clients.length})</h2>
