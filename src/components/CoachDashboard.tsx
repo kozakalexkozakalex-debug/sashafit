@@ -106,9 +106,11 @@ function QuickActionSheet({ onClose, children }: { onClose: () => void; children
 export default function CoachDashboard({
   goHomeSignal,
   meetingSignal,
+  newClientSignal,
 }: {
   goHomeSignal?: number;
   meetingSignal?: number;
+  newClientSignal?: number;
 }) {
   const [tab, setTab] = useState<TabId>("home");
   const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>("workouts");
@@ -130,6 +132,16 @@ export default function CoachDashboard({
       setHomeAction({ ts: Date.now() });
     }
   }, [meetingSignal]);
+
+  // Кнопка "Новий клієнт" у хедері — перемикає на вкладку "Клієнти" і
+  // одразу створює посилання (копіювати його можна з картки/рядка клієнта).
+  useEffect(() => {
+    if (newClientSignal) {
+      setTab("clients");
+      addClient();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newClientSignal]);
 
   // При переключенні вкладки прокручуємо сторінку наверх — інакше лишається
   // позиція скролу з попередньої вкладки (напр. знизу списку клієнтів).
