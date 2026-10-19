@@ -14,6 +14,91 @@ function daysAgoKey(n: number) {
   return d.toISOString().slice(0, 10);
 }
 
+const WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
+
+// Понеділок поточного тижня (локальна дата, без часової зони UTC-зсуву).
+function mondayOfThisWeek(): Date {
+  const d = new Date();
+  const day = d.getDay(); // 0 = неділя
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function dateKey(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Тижневий графік стовпчиками Пн–Нд поточного тижня — альтернативний вигляд
+// до лінійного графіка по днях, зручніше бачити конкретний день тижня.
+function WeekBarChart({
+  valuesByDate,
+  target,
+  unit,
+}: {
+  valuesByDate: Record<string, number>;
+  target?: number | null;
+  unit: string;
+}) {
+  const monday = mondayOfThisWeek();
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(d.getDate() + i);
+    const key = dateKey(d);
+    return { label: WEEKDAY_LABELS[i], value: valuesByDate[key] || 0, isToday: key === dateKey(new Date()) };
+  });
+
+  const max = Math.max(...week.map((d) => d.value), target ?? 0, 1);
+  const h = 90;
+  const barAreaH = 70;
+
+  return (
+    <svg viewBox={`0 0 280 ${h}`} className="w-full">
+      {target ? (
+        <line
+          x1={0}
+          x2={280}
+          y1={h - 18 - (target / max) * barAreaH}
+          y2={h - 18 - (target / max) * barAreaH}
+          stroke="currentColor"
+          className="text-muted"
+          strokeDasharray="3,3"
+          strokeWidth={1}
+        />
+      ) : null}
+      {week.map((d, i) => {
+        const barW = 24;
+        const gap = 280 / 7;
+        const x = i * gap + (gap - barW) / 2;
+        const barH = (d.value / max) * barAreaH;
+        const y = h - 18 - barH;
+        return (
+          <g key={i}>
+            <rect
+              x={x}
+              y={y}
+              width={barW}
+              height={Math.max(barH, d.value > 0 ? 2 : 0)}
+              rx={3}
+              className={d.isToday ? "fill-accent" : "fill-accent/40"}
+            />
+            <text x={x + barW / 2} y={h - 6} textAnchor="middle" className="fill-current text-[9px] text-muted">
+              {d.label}
+            </text>
+          </g>
+        );
+      })}
+      <text x={2} y={10} className="fill-current text-[8px] text-muted">
+        {Math.round(max)} {unit}
+      </text>
+    </svg>
+  );
+}
+
 function WeightChart({ points }: { points: { date: string; weight: number }[] }) {
   if (points.length < 2) {
     return <p className="text-sm text-muted">Потрібно щонайменше 2 чек-іни, щоб побудувати графік.</p>;
@@ -172,10 +257,12 @@ export default function AnalyticsPanel({ clientId }: { clientId: string }) {
 
   const caloriePoints = loggedDays.map((d) => ({ date: d, value: totalsByDate[d].calories }));
   const proteinPoints = loggedDays.map((d) => ({ date: d, value: totalsByDate[d].protein }));
+  const caloriesByDate: Record<string, number> = {};
+  for (const d of loggedDays) caloriesByDate[d] = totalsByDate[d].calories;
 
   const lastWeight = weightPoints.length > 0 ? weightPoints[weightPoints.length - 1].weight : null;
 
-  return <StatTiles weightPoints={weightPoints} lastWeight={lastWeight} pastWorkouts={pastWorkouts.length} doneCount={doneCount} completionRate={completionRate} loggedDays={loggedDays.length} avgCalories={avg("calories")} target={target} caloriePoints={caloriePoints} proteinPoints={proteinPoints} avgProtein={avg("protein")} avgFat={avg("fat")} avgCarbs={avg("carbs")} />;
+  return <StatTiles weightPoints={weightPoints} lastWeight={lastWeight} pastWorkouts={pastWorkouts.length} doneCount={doneCount} completionRate={completionRate} loggedDays={loggedDays.length} avgCalories={avg("calories")} target={target} caloriePoints={caloriePoints} proteinPoints={proteinPoints} caloriesByDate={caloriesByDate} avgProtein={avg("protein")} avgFat={avg("fat")} avgCarbs={avg("carbs")} />;
 }
 
 function StatTiles({
@@ -192,6 +279,7 @@ function StatTiles({
   target,
   caloriePoints,
   proteinPoints,
+  caloriesByDate,
 }: {
   weightPoints: { date: string; weight: number }[];
   lastWeight: number | null;
@@ -206,6 +294,7 @@ function StatTiles({
   target: NutritionTarget;
   caloriePoints: { date: string; value: number }[];
   proteinPoints: { date: string; value: number }[];
+  caloriesByDate: Record<string, number>;
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const toggle = (id: string) => setOpen((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -256,6 +345,12 @@ function StatTiles({
               ].join(", ")}
             </p>
             <div className="mt-3 flex flex-col gap-3">
+              <div>
+                <p className="mb-1 text-xs text-muted">
+                  Цей тиждень (Пн–Нд){target?.calories ? ` (пунктир — ціль ${target.calories} ккал)` : ""}
+                </p>
+                <WeekBarChart valuesByDate={caloriesByDate} target={target?.calories ?? null} unit="ккал" />
+              </div>
               <div>
                 <p className="mb-1 text-xs text-muted">
                   Калорії по днях{target?.calories ? ` (пунктир — ціль ${target.calories} ккал)` : ""}
