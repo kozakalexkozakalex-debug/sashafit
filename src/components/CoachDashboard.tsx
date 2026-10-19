@@ -103,19 +103,19 @@ function QuickActionSheet({ onClose, children }: { onClose: () => void; children
   );
 }
 
-export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number }) {
+export default function CoachDashboard({
+  goHomeSignal,
+  meetingSignal,
+}: {
+  goHomeSignal?: number;
+  meetingSignal?: number;
+}) {
   const [tab, setTab] = useState<TabId>("home");
   const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>("workouts");
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // Сигнал для CoachHome: відкрити форму "Нова зустріч"/"Новий клієнт" з
-  // бокового меню на мобільному, навіть якщо зараз відкрита інша вкладка.
-  const [homeAction, setHomeAction] = useState<{ type: "meeting" | "client"; ts: number } | null>(null);
-  function triggerHomeAction(type: "meeting" | "client") {
-    setTab("home");
-    setHomeAction({ type, ts: Date.now() });
-    setMobileMenuOpen(false);
-  }
+  // Сигнал для CoachHome: відкрити форму "Нова зустріч" (кнопка в хедері),
+  // навіть якщо зараз відкрита інша вкладка.
+  const [homeAction, setHomeAction] = useState<{ ts: number } | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -123,6 +123,13 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
   useEffect(() => {
     if (goHomeSignal) setTab("home");
   }, [goHomeSignal]);
+
+  useEffect(() => {
+    if (meetingSignal) {
+      setTab("home");
+      setHomeAction({ ts: Date.now() });
+    }
+  }, [meetingSignal]);
 
   // При переключенні вкладки прокручуємо сторінку наверх — інакше лишається
   // позиція скролу з попередньої вкладки (напр. знизу списку клієнтів).
@@ -282,59 +289,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
   const moreActive = MOBILE_MORE_IDS.includes(tab);
 
   return (
-    <div className="flex flex-col gap-6 pb-20 pt-12 lg:flex-row lg:items-start lg:gap-8 lg:pb-0 lg:pt-0">
-      <div className="fixed inset-x-0 top-0 z-30 flex items-center gap-2 border-b border-line bg-sidebar px-3 py-2.5 lg:hidden">
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(true)}
-          aria-label="Меню"
-          className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:text-ink"
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M3 5.5h14M3 10h14M3 14.5h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-        </button>
-        <span className="font-display text-sm font-semibold text-ink">SashaFit</span>
-      </div>
-
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setMobileMenuOpen(false)}>
-          <div className="absolute inset-0 bg-black/50" />
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col gap-4 border-r border-line bg-sidebar p-4 pt-[calc(env(safe-area-inset-top)+1rem)]"
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-display text-sm font-semibold text-ink">Швидкі дії</span>
-              <button type="button" onClick={() => setMobileMenuOpen(false)} className="text-xs text-muted">
-                Закрити
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => triggerHomeAction("meeting")}
-              className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-paper shadow-md shadow-accent/30"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <rect x="1.5" y="3" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M1.5 6.5H14.5" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M5 1.5V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                <path d="M11 1.5V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                <path d="M8 8.5V12.5M6 10.5H10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
-              Нова зустріч
-            </button>
-            <button
-              type="button"
-              onClick={() => triggerHomeAction("client")}
-              className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-paper"
-            >
-              <span className="text-base leading-none">+</span> Новий клієнт
-            </button>
-          </div>
-        </div>
-      )}
-
+    <div className="flex flex-col gap-6 pb-20 lg:flex-row lg:items-start lg:gap-8 lg:pb-0">
       <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden">
         {MOBILE_MAIN_IDS.map((id) => {
           const t = TABS.find((x) => x.id === id)!;

@@ -91,9 +91,9 @@ export default function CoachHome({
 }: {
   onOpenClients?: () => void;
   onNavigate?: (tab: NavTab) => void;
-  // Дозволяє відкрити форму "Нова зустріч"/"Новий клієнт" ззовні — з бокового
-  // меню на мобільному (CoachDashboard), а не тільки з кнопок на цій сторінці.
-  actionSignal?: { type: "meeting" | "client"; ts: number } | null;
+  // Дозволяє відкрити форму "Нова зустріч" ззовні — з кнопки в хедері
+  // (сторінка dashboard), а не тільки з кнопки на цій сторінці.
+  actionSignal?: { ts: number } | null;
 }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
@@ -121,18 +121,12 @@ export default function CoachHome({
   const [mErr, setMErr] = useState("");
   const [meetingModalOpen, setMeetingModalOpen] = useState(false);
 
-  const [addOpen, setAddOpen] = useState(false);
-  const [aBusy, setABusy] = useState(false);
-  const [aErr, setAErr] = useState("");
-  const [aInviteCode, setAInviteCode] = useState<string | null>(null);
-  const [aCopied, setACopied] = useState(false);
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
 
-  // Відкриття форми за сигналом ззовні (з бокового меню на мобільному).
+  // Відкриття форми "Нова зустріч" за сигналом ззовні (кнопка в хедері).
   useEffect(() => {
     if (!actionSignal) return;
-    if (actionSignal.type === "meeting") setMeetingModalOpen(true);
-    if (actionSignal.type === "client") setAddOpen(true);
+    setMeetingModalOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionSignal?.ts]);
 
@@ -266,39 +260,12 @@ export default function CoachHome({
     return `${origin}/login?invite=${code}`;
   }
 
-  async function addClientQuick() {
-    setAErr("");
-    setABusy(true);
-    const { data, error } = await supabase
-      .from("clients")
-      .insert({ name: null, goal: null })
-      .select("invite_code")
-      .single();
-    setABusy(false);
-    if (error) {
-      setAErr(error.message);
-      return;
-    }
-    setAInviteCode(data?.invite_code || null);
-    load();
-  }
-
   async function cancelClient(id: string) {
     if (!window.confirm("Відключити цього клієнта? Усі його дані (чек-іни, тренування, харчування) будуть видалені.")) {
       return;
     }
     await supabase.from("clients").delete().eq("id", id);
     load();
-  }
-
-  async function copyInvite(code: string) {
-    try {
-      await navigator.clipboard.writeText(inviteUrl(code));
-      setACopied(true);
-      setTimeout(() => setACopied(false), 1500);
-    } catch {
-      /* ігноруємо — просто немає буфера обміну */
-    }
   }
 
   async function copyRowInvite(id: string, code: string) {
@@ -309,12 +276,6 @@ export default function CoachHome({
     } catch {
       /* ігноруємо — просто немає буфера обміну */
     }
-  }
-
-  function closeAdd() {
-    setAddOpen(false);
-    setAInviteCode(null);
-    setAErr("");
   }
 
   if (loading) {
@@ -728,97 +689,10 @@ export default function CoachHome({
             )}
           </div>
 
-          {/* Дві головні дії поруч під календарем: зустріч зліва, клієнт справа —
-              так логічніше, бо обидві відкривають свою форму нижче/в модалці.
-              На мобільному ці кнопки сховані — там вони в бічному меню (іконка
-              зліва у верхній панелі), щоб не займати місце на головній. */}
-          <div className="hidden items-center justify-end gap-2 lg:flex">
-            <button
-              type="button"
-              onClick={() => setMeetingModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-md shadow-accent/30 transition hover:brightness-110 active:scale-[0.98]"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <rect x="1.5" y="3" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M1.5 6.5H14.5" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M5 1.5V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                <path d="M11 1.5V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                <path d="M8 8.5V12.5M6 10.5H10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
-              Нова зустріч
-            </button>
-            <button
-              type="button"
-              onClick={() => (addOpen ? closeAdd() : setAddOpen(true))}
-              className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-paper"
-            >
-              <span className="text-base leading-none">+</span> Додати клієнта
-            </button>
-          </div>
-
-          {addOpen && (
-            <div className="rounded-xl border border-line bg-surface p-4">
-              {aInviteCode ? (
-                <div className="text-sm">
-                  <p className="mb-2 font-medium text-green-400">Клієнта додано!</p>
-                  <p className="mb-2 text-muted">Надішли цю посилання клієнту — за нею він зайде і підключиться:</p>
-                  <div className="flex items-center gap-2">
-                    <p className="flex-1 break-all rounded bg-paper px-2 py-1 text-xs text-muted">
-                      {inviteUrl(aInviteCode)}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => copyInvite(aInviteCode)}
-                      className="whitespace-nowrap rounded bg-paper px-2 py-1 text-xs text-accent"
-                    >
-                      {aCopied ? "Скопійовано" : "Копіювати"}
-                    </button>
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAInviteCode(null)}
-                      className="rounded-lg border border-line px-3 py-1.5 text-xs"
-                    >
-                      Додати ще одного
-                    </button>
-                    <button
-                      type="button"
-                      onClick={closeAdd}
-                      className="rounded-lg border border-line px-3 py-1.5 text-xs"
-                    >
-                      Закрити
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <p className="text-xs text-muted">
-                    Нічого вказувати не треба — просто створи посилання. Клієнт сам впише своє ім&apos;я, коли зайде за
-                    ним і заповнить анкету.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={aBusy}
-                      onClick={addClientQuick}
-                      className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
-                    >
-                      {aBusy ? "Створюю…" : "Створити посилання"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={closeAdd}
-                      className="rounded-lg border border-line px-3 py-2 text-sm"
-                    >
-                      Скасувати
-                    </button>
-                  </div>
-                  {aErr && <p className="text-sm text-red-400">{aErr}</p>}
-                </div>
-              )}
-            </div>
-          )}
+          {/* Кнопку "Нова зустріч" прибрано звідси — тепер вона в хедері
+              (сторінка dashboard), доступна з будь-якої вкладки. Створення
+              клієнта — тільки через вкладку "Клієнти", щоб не дублювати
+              цю дію в двох місцях. */}
 
           {meetingModalOpen && (
             <div className="fixed inset-0 z-40" onClick={() => setMeetingModalOpen(false)}>
