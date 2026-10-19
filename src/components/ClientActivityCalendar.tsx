@@ -89,9 +89,11 @@ const FILTERS: { id: Filter; label: string }[] = [
 export default function ClientActivityCalendar({
   clientId,
   checkins,
+  onOpenHabits,
 }: {
   clientId: string;
   checkins: CheckinMarker[];
+  onOpenHabits?: () => void;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [cursor, setCursor] = useState(() => {
@@ -594,6 +596,16 @@ export default function ClientActivityCalendar({
               }`}
             >
               🍽
+            </button>
+          )}
+          {onOpenHabits && (
+            <button
+              type="button"
+              onClick={onOpenHabits}
+              aria-label="Звички"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-line/30 text-lg text-muted transition"
+            >
+              💧
             </button>
           )}
         </div>

@@ -516,9 +516,20 @@ export default function ClientDashboard() {
                 foodToday={foodToday}
                 targetCalories={targetCalories}
               />
-              <HabitsChecklist clientId={client.id} />
+              <h2 className="mt-1 font-display text-sm font-semibold uppercase tracking-wide text-muted">
+                📔 Щоденник
+              </h2>
+              <ClientActivityCalendar
+                clientId={client.id}
+                checkins={checkinMarkers}
+                onOpenHabits={() =>
+                  document.getElementById("habits-block")?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              />
+              <div id="habits-block">
+                <HabitsChecklist clientId={client.id} />
+              </div>
               <NotificationsToggle clientId={client.id} />
-              <ClientActivityCalendar clientId={client.id} checkins={checkinMarkers} />
             </>
           ) : (
             <ClientProfileCard
