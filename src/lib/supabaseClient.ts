@@ -9,4 +9,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // Явно вмикаємо (це й так дефолт, але фіксуємо, щоб не залежати від
+    // змін дефолтів бібліотеки): сесія зберігається в localStorage браузера
+    // і виживає закриття вкладки/застосунку — вихід тільки по кнопці "Вийти".
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});

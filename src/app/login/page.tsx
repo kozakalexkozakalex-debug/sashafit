@@ -23,10 +23,18 @@ function LoginForm() {
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  // Поки перевіряємо, чи є вже активна сесія (наприклад, після закриття
+  // браузера на мобілці) — не показуємо форму входу. Інакше людина, яка
+  // насправді ще залогінена, на мить бачить кнопку "Увійти" і думає, що
+  // треба заново логінитись.
+  const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
+      if (!session) {
+        setCheckingSession(false);
+        return;
+      }
       // Якщо людина прийшла за запрошенням і щойно повернулась від Google —
       // прив'язуємо інвайт тут (для email/пароль це вже робить afterAuth).
       if (invite) {
@@ -39,6 +47,10 @@ function LoginForm() {
       router.replace("/dashboard");
     });
   }, [router, invite]);
+
+  if (checkingSession) {
+    return <main className="p-8 text-center text-sm text-muted">Завантаження…</main>;
+  }
 
   async function afterAuth() {
     if (invite) {
