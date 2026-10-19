@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { openPrintWindow, escapeHtml } from "@/lib/printDoc";
 
 type ProgramExercise = {
   id: string;
@@ -122,6 +123,32 @@ export default function ProgramsLibrary() {
     load();
   }
 
+  function printProgram(p: Program) {
+    const days = [...p.program_days].sort((a, b) => a.position - b.position);
+    const body = `
+      <h1>${escapeHtml(p.title)}</h1>
+      <p class="muted">Програма тренувань · SashaFit</p>
+      ${days
+        .map((d) => {
+          const exercises = [...d.program_exercises].sort((a, b) => a.position - b.position);
+          return `<h2>${escapeHtml(d.title)}</h2>
+            <table>
+              <tr><th>#</th><th>Вправа</th><th>Підходи × повтори</th></tr>
+              ${exercises
+                .map(
+                  (e, i) =>
+                    `<tr><td>${i + 1}</td><td>${escapeHtml(e.name)}</td><td>${
+                      e.sets ? `${e.sets}×${escapeHtml(e.reps || "?")}` : escapeHtml(e.reps || "")
+                    }</td></tr>`
+                )
+                .join("")}
+            </table>`;
+        })
+        .join("")}
+    `;
+    openPrintWindow(p.title, body);
+  }
+
   async function duplicateProgram(p: Program) {
     setCopyingId(p.id);
     const { data: newProgram } = await supabase
@@ -210,6 +237,17 @@ export default function ProgramsLibrary() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        printProgram(p);
+                      }}
+                      title="Друк / PDF"
+                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-accent"
+                    >
+                      🖨
+                    </button>
                     <button
                       type="button"
                       disabled={copyingId === p.id}

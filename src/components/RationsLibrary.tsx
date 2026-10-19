@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { searchFood, FoodProduct } from "@/lib/foodApi";
+import { openPrintWindow, escapeHtml } from "@/lib/printDoc";
 
 type RationItem = {
   id: string;
@@ -95,6 +96,38 @@ export default function RationsLibrary() {
   async function deleteRation(id: string) {
     await supabase.from("rations").delete().eq("id", id);
     load();
+  }
+
+  function printRation(r: Ration) {
+    const items = [...r.ration_items].sort((a, b) => a.position - b.position);
+    const totals = items.reduce(
+      (acc, i) => ({
+        calories: acc.calories + (i.calories || 0),
+        protein: acc.protein + (i.protein || 0),
+        fat: acc.fat + (i.fat || 0),
+        carbs: acc.carbs + (i.carbs || 0),
+      }),
+      { calories: 0, protein: 0, fat: 0, carbs: 0 }
+    );
+    const body = `
+      <h1>${escapeHtml(r.title)}</h1>
+      <p class="muted">План харчування · SashaFit</p>
+      <table>
+        <tr><th>Продукт</th><th>Грам</th><th>Ккал</th><th>Б</th><th>Ж</th><th>В</th></tr>
+        ${items
+          .map(
+            (i) =>
+              `<tr><td>${escapeHtml(i.name)}</td><td>${i.grams ?? ""}</td><td>${Math.round(i.calories)}</td><td>${Math.round(
+                i.protein
+              )}</td><td>${Math.round(i.fat)}</td><td>${Math.round(i.carbs)}</td></tr>`
+          )
+          .join("")}
+        <tr class="total"><td>Разом</td><td></td><td>${Math.round(totals.calories)}</td><td>${Math.round(
+          totals.protein
+        )}</td><td>${Math.round(totals.fat)}</td><td>${Math.round(totals.carbs)}</td></tr>
+      </table>
+    `;
+    openPrintWindow(r.title, body);
   }
 
   async function duplicateRation(r: Ration) {
@@ -243,6 +276,17 @@ export default function RationsLibrary() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        printRation(r);
+                      }}
+                      title="Друк / PDF"
+                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-accent"
+                    >
+                      🖨
+                    </button>
                     <button
                       type="button"
                       disabled={copyingId === r.id}
