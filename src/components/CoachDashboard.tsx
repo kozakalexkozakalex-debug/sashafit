@@ -628,27 +628,27 @@ export default function CoachDashboard({
             ) : (
               <div>
                 {selectedClientIds.size > 0 && (
-                  <div className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-accent/10 px-3 py-2 text-xs">
+                  <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg bg-accent/10 px-3 py-2 text-xs">
                     <span className="font-medium text-accent">Вибрано: {selectedClientIds.size}</span>
-                    <div className="flex gap-2">
+                    <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
                       <button
                         type="button"
                         onClick={() => setShowBulkAssign(true)}
-                        className="rounded-full bg-accent px-3 py-1 font-semibold text-paper"
+                        className="whitespace-nowrap rounded-full bg-accent px-3 py-1 font-semibold text-paper"
                       >
                         Призначити програму
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowBulkAssignHabits(true)}
-                        className="rounded-full border border-accent px-3 py-1 font-semibold text-accent"
+                        className="whitespace-nowrap rounded-full border border-accent px-3 py-1 font-semibold text-accent"
                       >
                         Призначити звички
                       </button>
                       <button
                         type="button"
                         onClick={() => setSelectedClientIds(new Set())}
-                        className="rounded-full border border-line px-3 py-1 text-muted"
+                        className="whitespace-nowrap rounded-full border border-line px-3 py-1 text-muted"
                       >
                         Скасувати
                       </button>
