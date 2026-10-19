@@ -53,12 +53,13 @@ type Checkin = {
   created_at: string;
 };
 
-type TabId = "home" | "clients" | "library" | "analytics" | "payments";
+type TabId = "home" | "clients" | "newClient" | "library" | "analytics" | "payments";
 type LibrarySubTab = "workouts" | "food" | "habits";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "home", label: "Головна" },
   { id: "clients", label: "Клієнти" },
+  { id: "newClient", label: "Новий клієнт" },
   { id: "library", label: "База" },
   { id: "analytics", label: "Аналітика" },
   { id: "payments", label: "Оплата" },
@@ -76,10 +77,11 @@ const LIBRARY_SECTIONS: { id: LibrarySubTab; label: string; icon: string }[] = [
 // Знизу на мобільному — 4 найважливіші вкладки + кнопка «Ще» з рештою.
 // Чек-іни тепер всередині «Аналітики» (перша підвкладка), окремої кнопки нема.
 const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "library", "analytics"];
-const MOBILE_MORE_IDS: TabId[] = ["payments"];
+const MOBILE_MORE_IDS: TabId[] = ["payments", "newClient"];
 const TAB_ICON: Record<TabId, NavIconName> = {
   home: "home",
   clients: "clients",
+  newClient: "clients",
   library: "library",
   analytics: "analytics",
   payments: "payments",
@@ -133,14 +135,10 @@ export default function CoachDashboard({
     }
   }, [meetingSignal]);
 
-  // Кнопка "Новий клієнт" у хедері — перемикає на вкладку "Клієнти" і
-  // одразу створює посилання (копіювати його можна з картки/рядка клієнта).
+  // Кнопка "Новий клієнт" у хедері — перемикає на окрему вкладку "Новий
+  // клієнт" (яка одразу створює посилання).
   useEffect(() => {
-    if (newClientSignal) {
-      setTab("clients");
-      addClient();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (newClientSignal) setTab("newClient");
   }, [newClientSignal]);
 
   // При переключенні вкладки прокручуємо сторінку наверх — інакше лишається
@@ -352,13 +350,13 @@ export default function CoachDashboard({
       )}
 
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
-        <TabButton t={TABS[0]} />
+        <TabButton t={TABS.find((x) => x.id === "home")!} />
         <div className="my-2 h-px bg-line" />
-        {TABS.slice(1, 4).map((t) => (
-          <TabButton key={t.id} t={t} />
+        {(["clients", "newClient", "library", "analytics"] as TabId[]).map((id) => (
+          <TabButton key={id} t={TABS.find((x) => x.id === id)!} />
         ))}
         <div className="my-2 h-px bg-line" />
-        <TabButton t={TABS[4]} />
+        <TabButton t={TABS.find((x) => x.id === "payments")!} />
       </nav>
 
       <div className="min-w-0 flex-1">
@@ -408,25 +406,25 @@ export default function CoachDashboard({
         <CoachAnalytics />
       ) : tab === "payments" ? (
         <CoachPayments />
+      ) : tab === "newClient" ? (
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <h2 className="mb-1 text-sm font-semibold">Новий клієнт</h2>
+          <p className="mb-3 text-xs text-muted">
+            Нічого вказувати не треба — просто створи посилання. Клієнт сам впише своє ім&apos;я, коли зайде за ним і
+            заповнить анкету.
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={addClient}
+            className="w-full rounded-lg bg-accent px-4 py-3 text-sm font-bold text-paper shadow-md shadow-accent/30 transition hover:brightness-110 disabled:opacity-50"
+          >
+            {busy ? "Створюю…" : "+ Створити посилання для нового клієнта"}
+          </button>
+          {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+        </div>
       ) : (
         <>
-          <div className="rounded-xl border border-line bg-surface p-4">
-            <h2 className="mb-1 text-sm font-semibold">Новий клієнт</h2>
-            <p className="mb-3 text-xs text-muted">
-              Нічого вказувати не треба — просто створи посилання. Клієнт сам впише своє ім&apos;я, коли зайде за ним
-              і заповнить анкету.
-            </p>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={addClient}
-              className="w-full rounded-lg bg-accent px-4 py-3 text-sm font-bold text-paper shadow-md shadow-accent/30 transition hover:brightness-110 disabled:opacity-50"
-            >
-              {busy ? "Створюю…" : "+ Створити посилання для нового клієнта"}
-            </button>
-            {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
-          </div>
-
           <div className="rounded-xl border border-line bg-surface p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold">Клієнти ({clients.length})</h2>

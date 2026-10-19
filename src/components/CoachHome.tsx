@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { clientRisk, RiskLevel } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
@@ -129,6 +130,18 @@ export default function CoachHome({
     setMeetingModalOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionSignal?.ts]);
+
+  // Поки попап зустрічі відкритий — блокуємо скрол фону, щоб палець/колесо
+  // не "йшов" по сторінці позаду замість форми в попапі (саме через це
+  // раніше здавалось, що треба листати вниз, щоб дістатись до форми).
+  useEffect(() => {
+    if (!meetingModalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [meetingModalOpen]);
 
   // Кастомні питання чек-іна — тренер сам налаштовує, що додатково питати
   // в щотижневому чек-іні (сон/стрес/самопочуття/довільне).
@@ -694,12 +707,14 @@ export default function CoachHome({
               клієнта — тільки через вкладку "Клієнти", щоб не дублювати
               цю дію в двох місцях. */}
 
-          {meetingModalOpen && (
-            <div className="fixed inset-0 z-40" onClick={() => setMeetingModalOpen(false)}>
+          {meetingModalOpen &&
+            typeof document !== "undefined" &&
+            createPortal(
+              <div className="fixed inset-0 z-50" onClick={() => setMeetingModalOpen(false)}>
               <div className="absolute inset-0 bg-black/50" />
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-line bg-sidebar p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:inset-0 lg:m-auto lg:h-fit lg:w-[460px] lg:rounded-xl lg:border"
+                className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-line bg-sidebar p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:inset-0 lg:m-auto lg:h-fit lg:w-[460px] lg:rounded-xl lg:border"
               >
                 <div className="mb-3 flex items-center justify-between">
                   <h2 className="text-sm font-semibold">+ Нова зустріч</h2>
@@ -759,8 +774,9 @@ export default function CoachHome({
                   {mErr && <p className="text-sm text-red-400">{mErr}</p>}
                 </div>
               </div>
-            </div>
-          )}
+              </div>,
+              document.body
+            )}
 
           <div className="rounded-xl border border-line bg-surface p-4">
             <h2 className="mb-3 text-sm font-semibold">Усі зустрічі ({meetings.length})</h2>
