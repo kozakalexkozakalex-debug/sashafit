@@ -324,63 +324,70 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
         <CoachPayments />
       ) : (
         <>
-          <div className="border border-dashed border-line/80 p-4">
-            <h2 className="mb-3 text-sm font-semibold">+ Новий клієнт</h2>
-            <p className="mb-2 text-xs text-muted">
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-1 text-sm font-semibold">Новий клієнт</h2>
+            <p className="mb-3 text-xs text-muted">
               Нічого вказувати не треба — просто створи посилання. Клієнт сам впише своє ім&apos;я, коли зайде за ним
               і заповнить анкету.
             </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={addClient}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
-              >
-                {busy ? "Створюю…" : "Створити посилання"}
-              </button>
-            </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={addClient}
+              className="w-full rounded-lg bg-accent px-4 py-3 text-sm font-bold text-paper shadow-md shadow-accent/30 transition hover:brightness-110 disabled:opacity-50"
+            >
+              {busy ? "Створюю…" : "+ Створити посилання для нового клієнта"}
+            </button>
             {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
           </div>
 
           <div className="rounded-xl border border-line bg-surface p-4">
             <h2 className="mb-3 text-sm font-semibold">Клієнти ({clients.length})</h2>
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {clients.map((c) => (
-                <div key={c.id} className="rounded-lg border border-line p-3 text-sm">
+                <div key={c.id} className="flex flex-col gap-2 rounded-lg border-l-2 border-accent bg-paper p-3 text-sm">
                   <button
                     type="button"
                     onClick={() => selectClient(c.id)}
-                    className="flex w-full items-center justify-between text-left"
+                    className="flex items-start justify-between gap-2 text-left"
                   >
-                    <span className="font-medium">{clientLabel(c)}</span>
-                    <span className="flex items-center gap-2">
-                      {c.profile_id && (
-                        <span className="text-xs">
-                          {RISK_LABEL[clientRisk(c, lastCheckinByClient[c.id])]}
-                        </span>
-                      )}
-                      <span className={`stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
-                        {c.profile_id ? "Підключено" : "Очікує"}
-                      </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-ink">{clientLabel(c)}</span>
+                      {c.goal && <span className="mt-0.5 block truncate text-xs text-muted">{c.goal}</span>}
+                    </span>
+                    <span className={`flex-none stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
+                      {c.profile_id ? "Підключено" : "Очікує"}
                     </span>
                   </button>
-                  {c.goal && <p className="mt-1 text-muted">{c.goal}</p>}
+
+                  <div className="flex items-center justify-between text-[11px] text-muted">
+                    <span>
+                      Приєднався{" "}
+                      {new Date(c.created_at).toLocaleDateString("uk-UA", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                    </span>
+                    {c.profile_id && <span>{RISK_LABEL[clientRisk(c, lastCheckinByClient[c.id])]}</span>}
+                  </div>
+
                   {!c.profile_id && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <p className="flex-1 break-all rounded bg-paper px-2 py-1 text-xs text-muted">
+                    <div className="flex items-center gap-2">
+                      <p className="flex-1 break-all rounded bg-surface px-2 py-1 text-xs text-muted">
                         {inviteUrl(c.invite_code)}
                       </p>
                       <button
                         type="button"
                         onClick={() => copy(inviteUrl(c.invite_code))}
-                        className="rounded bg-paper px-2 py-1 text-xs text-accent"
+                        className="whitespace-nowrap rounded bg-surface px-2 py-1 text-xs text-accent"
                       >
                         Копіювати
                       </button>
                     </div>
                   )}
-                  <div className="mt-2 flex justify-end">
+
+                  <div className="flex justify-end">
                     <button
                       type="button"
                       onClick={() => removeClient(c.id)}
