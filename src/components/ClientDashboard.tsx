@@ -6,6 +6,7 @@ import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivi
 import ClientProfileCard from "@/components/ClientProfileCard";
 import ChatLauncher from "@/components/ChatLauncher";
 import HabitsChecklist from "@/components/HabitsChecklist";
+import NotificationsToggle from "@/components/NotificationsToggle";
 
 type ClientRow = {
   id: string;
@@ -516,6 +517,7 @@ export default function ClientDashboard() {
                 targetCalories={targetCalories}
               />
               <HabitsChecklist clientId={client.id} />
+              <NotificationsToggle clientId={client.id} />
               <ClientActivityCalendar clientId={client.id} checkins={checkinMarkers} />
             </>
           ) : (
