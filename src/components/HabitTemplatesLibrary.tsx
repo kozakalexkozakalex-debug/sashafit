@@ -61,14 +61,14 @@ export default function HabitTemplatesLibrary() {
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-line bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">+ Нова звичка в бібліотеку</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-1.5">
             {QUICK_ICONS.map((ic) => (
               <button
                 key={ic}
                 type="button"
                 onClick={() => setIcon(ic)}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border text-base transition ${
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-base transition ${
                   icon === ic ? "border-accent bg-accent/15" : "border-line bg-paper"
                 }`}
               >
@@ -76,20 +76,22 @@ export default function HabitTemplatesLibrary() {
               </button>
             ))}
           </div>
-          <input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="Назва (напр. Розтяжка)"
-            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-          />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={addTemplate}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
-          >
-            Додати
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="Назва (напр. Розтяжка)"
+              className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+            />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={addTemplate}
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
+            >
+              Додати
+            </button>
+          </div>
         </div>
       </div>
 
