@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
 import ClientProfileCard from "@/components/ClientProfileCard";
 import ChatLauncher from "@/components/ChatLauncher";
+import HabitsChecklist from "@/components/HabitsChecklist";
 
 type ClientRow = {
   id: string;
@@ -514,6 +515,7 @@ export default function ClientDashboard() {
                 foodToday={foodToday}
                 targetCalories={targetCalories}
               />
+              <HabitsChecklist clientId={client.id} />
               <ClientActivityCalendar clientId={client.id} checkins={checkinMarkers} />
             </>
           ) : (
