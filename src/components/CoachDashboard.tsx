@@ -6,6 +6,8 @@ import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivi
 import ClientProfileCard from "@/components/ClientProfileCard";
 import WorkoutBuilder from "@/components/WorkoutBuilder";
 import AssignProgram from "@/components/AssignProgram";
+import AssignHabits from "@/components/AssignHabits";
+import HabitTemplatesLibrary from "@/components/HabitTemplatesLibrary";
 import AssignRation from "@/components/AssignRation";
 import ProgramsSection from "@/components/ProgramsSection";
 import NutritionSection from "@/components/NutritionSection";
@@ -51,7 +53,7 @@ type Checkin = {
 };
 
 type TabId = "home" | "clients" | "library" | "analytics" | "payments";
-type LibrarySubTab = "workouts" | "food";
+type LibrarySubTab = "workouts" | "food" | "habits";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "home", label: "Головна" },
@@ -67,6 +69,7 @@ const TABS: { id: TabId; label: string }[] = [
 const LIBRARY_SECTIONS: { id: LibrarySubTab; label: string; icon: string }[] = [
   { id: "workouts", label: "Тренування", icon: "🏋" },
   { id: "food", label: "Харчування", icon: "🍽" },
+  { id: "habits", label: "Звички", icon: "💧" },
 ];
 
 // Знизу на мобільному — 4 найважливіші вкладки + кнопка «Ще» з рештою.
@@ -122,6 +125,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
   const [clientsView, setClientsView] = useState<"cards" | "list">("cards");
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [showBulkAssign, setShowBulkAssign] = useState(false);
+  const [showBulkAssignHabits, setShowBulkAssignHabits] = useState(false);
   useEffect(() => {
     try {
       const saved = localStorage.getItem("sf_clients_view");
@@ -143,6 +147,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
   const [showBuilder, setShowBuilder] = useState(false);
   const [showAssignProgram, setShowAssignProgram] = useState(false);
   const [showAssignRation, setShowAssignRation] = useState(false);
+  const [showAssignHabits, setShowAssignHabits] = useState(false);
   const [calendarKey, setCalendarKey] = useState(0);
   const [checkinsByClient, setCheckinsByClient] = useState<Record<string, Checkin[]>>({});
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
@@ -183,6 +188,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
     setShowBuilder(false);
     setShowAssignProgram(false);
     setShowAssignRation(false);
+    setShowAssignHabits(false);
     if (selectedId === clientId) {
       setSelectedId(null);
       return;
@@ -356,7 +362,13 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
             })}
           </div>
           <div className="rounded-xl border border-line bg-surface p-4">
-            {librarySubTab === "workouts" ? <ProgramsSection /> : <NutritionSection />}
+            {librarySubTab === "workouts" ? (
+              <ProgramsSection />
+            ) : librarySubTab === "food" ? (
+              <NutritionSection />
+            ) : (
+              <HabitTemplatesLibrary />
+            )}
           </div>
         </div>
       ) : tab === "analytics" ? (
@@ -485,6 +497,13 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                       </button>
                       <button
                         type="button"
+                        onClick={() => setShowBulkAssignHabits(true)}
+                        className="rounded-full border border-accent px-3 py-1 font-semibold text-accent"
+                      >
+                        Призначити звички
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setSelectedClientIds(new Set())}
                         className="rounded-full border border-line px-3 py-1 text-muted"
                       >
@@ -574,6 +593,18 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
             </QuickActionSheet>
           )}
 
+          {showBulkAssignHabits && (
+            <QuickActionSheet onClose={() => setShowBulkAssignHabits(false)}>
+              <AssignHabits
+                clientIds={Array.from(selectedClientIds)}
+                onClose={() => setShowBulkAssignHabits(false)}
+                onSaved={() => {
+                  setSelectedClientIds(new Set());
+                }}
+              />
+            </QuickActionSheet>
+          )}
+
           {selectedId &&
             (() => {
               const c = clients.find((x) => x.id === selectedId);
@@ -614,6 +645,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                             setShowBuilder((v) => !v);
                             setShowAssignProgram(false);
                             setShowAssignRation(false);
+                            setShowAssignHabits(false);
                           }}
                           className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-accent"
                         >
@@ -625,6 +657,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                             setShowAssignProgram((v) => !v);
                             setShowBuilder(false);
                             setShowAssignRation(false);
+                            setShowAssignHabits(false);
                           }}
                           className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-accent"
                         >
@@ -636,10 +669,23 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                             setShowAssignRation((v) => !v);
                             setShowBuilder(false);
                             setShowAssignProgram(false);
+                            setShowAssignHabits(false);
                           }}
                           className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-accent"
                         >
                           {showAssignRation ? "Сховати" : "Призначити раціон"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAssignHabits((v) => !v);
+                            setShowBuilder(false);
+                            setShowAssignProgram(false);
+                            setShowAssignRation(false);
+                          }}
+                          className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-accent"
+                        >
+                          {showAssignHabits ? "Сховати" : "Призначити звички"}
                         </button>
                       </div>
                     </div>
@@ -674,6 +720,16 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                         clientId={c.id}
                         onClose={() => setShowAssignRation(false)}
                         onSaved={() => setCalendarKey((k) => k + 1)}
+                      />
+                    </QuickActionSheet>
+                  )}
+
+                  {showAssignHabits && (
+                    <QuickActionSheet onClose={() => setShowAssignHabits(false)}>
+                      <AssignHabits
+                        clientIds={[c.id]}
+                        onClose={() => setShowAssignHabits(false)}
+                        onSaved={() => setShowAssignHabits(false)}
                       />
                     </QuickActionSheet>
                   )}
