@@ -32,6 +32,7 @@ export default function ProgramsLibrary() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [copyingId, setCopyingId] = useState<string | null>(null);
 
   const [newProgramTitle, setNewProgramTitle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -121,6 +122,41 @@ export default function ProgramsLibrary() {
     load();
   }
 
+  async function duplicateProgram(p: Program) {
+    setCopyingId(p.id);
+    const { data: newProgram } = await supabase
+      .from("programs")
+      .insert({ title: `${p.title} (копія)` })
+      .select("id")
+      .single();
+    if (newProgram) {
+      const days = [...p.program_days].sort((a, b) => a.position - b.position);
+      for (const d of days) {
+        const { data: newDay } = await supabase
+          .from("program_days")
+          .insert({ program_id: newProgram.id, title: d.title, position: d.position })
+          .select("id")
+          .single();
+        if (!newDay) continue;
+        const exercises = [...d.program_exercises].sort((a, b) => a.position - b.position);
+        if (exercises.length > 0) {
+          await supabase.from("program_exercises").insert(
+            exercises.map((e) => ({
+              program_day_id: newDay.id,
+              exercise_id: e.exercise_id,
+              name: e.name,
+              sets: e.sets,
+              reps: e.reps,
+              position: e.position,
+            }))
+          );
+        }
+      }
+    }
+    setCopyingId(null);
+    load();
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="border border-dashed border-line/80 p-4">
@@ -159,10 +195,12 @@ export default function ProgramsLibrary() {
                   isOpen ? "border-accent" : "border-line"
                 }`}
               >
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setOpenId(isOpen ? null : p.id)}
-                  className="flex w-full items-center justify-between gap-3 p-4 text-left"
+                  onKeyDown={(e) => e.key === "Enter" && setOpenId(isOpen ? null : p.id)}
+                  className="flex w-full cursor-pointer items-center justify-between gap-3 p-4 text-left"
                 >
                   <div className="flex flex-col gap-1.5">
                     <span className="font-display text-base font-semibold">{p.title}</span>
@@ -171,8 +209,22 @@ export default function ProgramsLibrary() {
                       <span className="stamp text-muted">{totalExercises} вправ</span>
                     </div>
                   </div>
-                  <span className={`text-lg text-muted transition ${isOpen ? "rotate-180" : ""}`}>⌄</span>
-                </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={copyingId === p.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        duplicateProgram(p);
+                      }}
+                      title="Дублювати програму"
+                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-accent disabled:opacity-50"
+                    >
+                      {copyingId === p.id ? "…" : "⧉"}
+                    </button>
+                    <span className={`text-lg text-muted transition ${isOpen ? "rotate-180" : ""}`}>⌄</span>
+                  </div>
+                </div>
 
                 {isOpen && (
                   <div className="flex flex-col gap-3 border-t border-line p-4 pt-3">

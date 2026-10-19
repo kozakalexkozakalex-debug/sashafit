@@ -35,6 +35,7 @@ export default function RationsLibrary() {
   const [rations, setRations] = useState<Ration[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [copyingId, setCopyingId] = useState<string | null>(null);
 
   const [newTitle, setNewTitle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -93,6 +94,34 @@ export default function RationsLibrary() {
 
   async function deleteRation(id: string) {
     await supabase.from("rations").delete().eq("id", id);
+    load();
+  }
+
+  async function duplicateRation(r: Ration) {
+    setCopyingId(r.id);
+    const { data: newRation } = await supabase
+      .from("rations")
+      .insert({ title: `${r.title} (копія)` })
+      .select("id")
+      .single();
+    if (newRation) {
+      const items = [...r.ration_items].sort((a, b) => a.position - b.position);
+      if (items.length > 0) {
+        await supabase.from("ration_items").insert(
+          items.map((i) => ({
+            ration_id: newRation.id,
+            name: i.name,
+            grams: i.grams,
+            calories: i.calories,
+            protein: i.protein,
+            fat: i.fat,
+            carbs: i.carbs,
+            position: i.position,
+          }))
+        );
+      }
+    }
+    setCopyingId(null);
     load();
   }
 
@@ -199,10 +228,12 @@ export default function RationsLibrary() {
                   isOpen ? "border-accent" : "border-line"
                 }`}
               >
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setOpenId(isOpen ? null : r.id)}
-                  className="flex w-full items-center justify-between gap-3 p-4 text-left"
+                  onKeyDown={(e) => e.key === "Enter" && setOpenId(isOpen ? null : r.id)}
+                  className="flex w-full cursor-pointer items-center justify-between gap-3 p-4 text-left"
                 >
                   <div className="flex flex-col gap-1.5">
                     <span className="font-display text-base font-semibold">{r.title}</span>
@@ -211,8 +242,22 @@ export default function RationsLibrary() {
                       <span className="stamp text-muted">{Math.round(totalCal)} ккал</span>
                     </div>
                   </div>
-                  <span className={`text-lg text-muted transition ${isOpen ? "rotate-180" : ""}`}>⌄</span>
-                </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={copyingId === r.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        duplicateRation(r);
+                      }}
+                      title="Дублювати раціон"
+                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-accent disabled:opacity-50"
+                    >
+                      {copyingId === r.id ? "…" : "⧉"}
+                    </button>
+                    <span className={`text-lg text-muted transition ${isOpen ? "rotate-180" : ""}`}>⌄</span>
+                  </div>
+                </div>
 
                 {isOpen && (
                   <div className="flex flex-col gap-2 border-t border-line p-4 pt-3">
