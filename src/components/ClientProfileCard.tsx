@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import PhotoCompare from "@/components/PhotoCompare";
 
 type ClientRow = {
   id: string;
@@ -385,6 +386,7 @@ export default function ClientProfileCard({
           </div>
         </div>
         <TrendChart points={points} unit={metricMeta.unit} />
+        <PhotoCompare clientId={client.id} />
       </div>
 
       <div className="mt-3 border-t border-line pt-3">
