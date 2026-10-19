@@ -555,36 +555,38 @@ export default function CoachHome({
                 {riskRows.map((r) => (
                   <div
                     key={r.client.id}
-                    className="flex items-center gap-3 border-t border-line py-2.5 first:border-t-0"
+                    className="flex flex-wrap items-center gap-2 border-t border-line py-2.5 first:border-t-0"
                   >
                     <span className={`h-2 w-2 flex-shrink-0 rounded-full ${RISK_DOT[r.level]}`} />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{clientLabel(r.client)}</span>
                     <span className="whitespace-nowrap text-xs text-muted">{r.reason}</span>
-                    {!r.client.profile_id && (
+                    <div className="ml-auto flex w-full flex-wrap justify-end gap-1.5 sm:w-auto">
+                      {!r.client.profile_id && (
+                        <button
+                          type="button"
+                          onClick={() => copyRowInvite(r.client.id, r.client.invite_code)}
+                          className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
+                        >
+                          {copiedRowId === r.client.id ? "Скопійовано" : "Копіювати посилання"}
+                        </button>
+                      )}
+                      {onOpenClients && (
+                        <button
+                          type="button"
+                          onClick={onOpenClients}
+                          className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
+                        >
+                          Відкрити
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => copyRowInvite(r.client.id, r.client.invite_code)}
-                        className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
+                        onClick={() => cancelClient(r.client.id)}
+                        className="whitespace-nowrap rounded-full border border-line px-2.5 py-1 text-xs text-muted"
                       >
-                        {copiedRowId === r.client.id ? "Скопійовано" : "Копіювати посилання"}
+                        Відключити
                       </button>
-                    )}
-                    {onOpenClients && (
-                      <button
-                        type="button"
-                        onClick={onOpenClients}
-                        className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
-                      >
-                        Відкрити
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => cancelClient(r.client.id)}
-                      className="whitespace-nowrap rounded-full border border-line px-2.5 py-1 text-xs text-muted"
-                    >
-                      Відключити
-                    </button>
+                    </div>
                   </div>
                 ))}
               </div>
