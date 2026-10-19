@@ -78,7 +78,7 @@ const LIBRARY_SECTIONS: { id: LibrarySubTab; label: string; icon: string }[] = [
 // Знизу на мобільному — 4 найважливіші вкладки + кнопка «Ще» з рештою.
 // Чек-іни тепер всередині «Аналітики» (перша підвкладка), окремої кнопки нема.
 const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "library", "analytics"];
-const MOBILE_MORE_IDS: TabId[] = ["payments", "newClient"];
+const MOBILE_MORE_IDS: TabId[] = ["payments"];
 const TAB_ICON: Record<TabId, NavIconName> = {
   home: "home",
   clients: "clients",
