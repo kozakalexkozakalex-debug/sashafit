@@ -515,7 +515,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                 )}
                 <div className="overflow-x-auto">
                   <div className="min-w-[680px]">
-                    <div className="grid grid-cols-[auto_1.6fr_1fr_1fr_1fr_auto] gap-2 border-b border-line px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted">
+                    <div className="grid grid-cols-[28px_1.6fr_1fr_1fr_1fr_160px] gap-2 border-b border-line px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted">
                       <span></span>
                       <span>Клієнт</span>
                       <span>Статус</span>
@@ -527,7 +527,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                       <div
                         key={c.id}
                         onClick={() => selectClient(c.id)}
-                        className="grid cursor-pointer grid-cols-[auto_1.6fr_1fr_1fr_1fr_auto] items-center gap-2 border-b border-line px-2 py-2.5 text-sm last:border-b-0 hover:bg-line/10"
+                        className="grid cursor-pointer grid-cols-[28px_1.6fr_1fr_1fr_1fr_160px] items-center gap-2 border-b border-line px-2 py-2.5 text-sm last:border-b-0 hover:bg-line/10"
                       >
                         <span onClick={(e) => e.stopPropagation()}>
                           <input
@@ -556,7 +556,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                         <span className="text-xs text-muted">
                           {c.profile_id ? RISK_LABEL[clientRisk(c, lastCheckinByClient[c.id])] : "—"}
                         </span>
-                        <span className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <span className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                           {!c.profile_id && (
                             <button
                               type="button"
