@@ -60,7 +60,7 @@ type LibrarySubTab = "workouts" | "food" | "habits";
 const TABS: { id: TabId; label: string }[] = [
   { id: "home", label: "Головна" },
   { id: "clients", label: "Клієнти" },
-  { id: "newClient", label: "Новий клієнт" },
+  { id: "newClient", label: "Заявки" },
   { id: "library", label: "База" },
   { id: "analytics", label: "Аналітика" },
   { id: "payments", label: "Оплата" },
@@ -136,8 +136,8 @@ export default function CoachDashboard({
     }
   }, [meetingSignal]);
 
-  // Кнопка "Новий клієнт" у хедері — перемикає на окрему вкладку "Новий
-  // клієнт" (яка одразу створює посилання).
+  // Кнопка "Заявки" у хедері — перемикає на окрему вкладку "Заявки"
+  // (створення посилання для нового клієнта).
   useEffect(() => {
     if (newClientSignal) setTab("newClient");
   }, [newClientSignal]);
@@ -540,7 +540,7 @@ export default function CoachDashboard({
               onClick={() => setTab("newClient")}
               className="flex-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-paper"
             >
-              Новий клієнт
+              Заявки
             </button>
           </div>
           <div className="rounded-xl border border-line bg-surface p-4">
@@ -575,7 +575,7 @@ export default function CoachDashboard({
               onClick={() => setTab("newClient")}
               className="flex-1 rounded-full px-3 py-1.5 text-xs font-semibold text-muted transition hover:text-ink"
             >
-              Новий клієнт
+              Заявки
             </button>
           </div>
           <div className="rounded-xl border border-line bg-surface p-4">

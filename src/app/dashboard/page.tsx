@@ -78,8 +78,8 @@ export default function DashboardPage() {
                 className="flex items-center gap-1.5 rounded-full border border-accent px-3 py-1.5 text-xs font-semibold text-accent transition hover:bg-accent/10 sm:text-sm"
               >
                 <span className="text-sm leading-none">+</span>
-                <span className="hidden sm:inline">Новий клієнт</span>
-                <span className="sm:hidden">Клієнт</span>
+                <span className="hidden sm:inline">Заявки</span>
+                <span className="sm:hidden">Заявки</span>
               </button>
             </>
           )}
