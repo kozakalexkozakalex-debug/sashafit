@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
 import ClientProfileCard from "@/components/ClientProfileCard";
 import ChatLauncher from "@/components/ChatLauncher";
+import NavIcon, { NavIconName } from "@/components/NavIcon";
 import HabitsChecklist from "@/components/HabitsChecklist";
 import NotificationsToggle from "@/components/NotificationsToggle";
 
@@ -149,9 +150,9 @@ function ClientHomeSummary({
 }
 
 type TabId = "home" | "profile";
-const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "home", label: "Головна", icon: "🏠" },
-  { id: "profile", label: "Профіль", icon: "👤" },
+const TABS: { id: TabId; label: string; icon: NavIconName }[] = [
+  { id: "home", label: "Головна", icon: "home" },
+  { id: "profile", label: "Профіль", icon: "profile" },
 ];
 
 export default function ClientDashboard() {
@@ -480,7 +481,7 @@ export default function ClientDashboard() {
                 active ? "text-accent" : "text-muted"
               }`}
             >
-              <span className="text-base leading-none">{t.icon}</span>
+              <NavIcon name={t.icon} className="h-5 w-5" />
               {t.label}
             </button>
           );

@@ -17,6 +17,7 @@ import CoachHome from "@/components/CoachHome";
 import ChatLauncher from "@/components/ChatLauncher";
 import { clientRisk, RISK_LABEL } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
+import NavIcon, { NavIconName } from "@/components/NavIcon";
 
 type Client = {
   id: string;
@@ -76,12 +77,12 @@ const LIBRARY_SECTIONS: { id: LibrarySubTab; label: string; icon: string }[] = [
 // Чек-іни тепер всередині «Аналітики» (перша підвкладка), окремої кнопки нема.
 const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "library", "analytics"];
 const MOBILE_MORE_IDS: TabId[] = ["payments"];
-const TAB_ICON: Record<TabId, string> = {
-  home: "🏠",
-  clients: "👥",
-  library: "🗂",
-  analytics: "📊",
-  payments: "💳",
+const TAB_ICON: Record<TabId, NavIconName> = {
+  home: "home",
+  clients: "clients",
+  library: "library",
+  analytics: "analytics",
+  payments: "payments",
 };
 
 // Поп-ап для дій над клієнтом (призначити тренування/програму/раціон) —
@@ -289,7 +290,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
                 active ? "text-accent" : "text-muted"
               }`}
             >
-              <span className="text-base leading-none">{TAB_ICON[id]}</span>
+              <NavIcon name={TAB_ICON[id]} className="h-5 w-5" />
               {t.label}
             </button>
           );
@@ -302,7 +303,7 @@ export default function CoachDashboard({ goHomeSignal }: { goHomeSignal?: number
             moreActive || mobileMoreOpen ? "text-accent" : "text-muted"
           }`}
         >
-          <span className="text-base leading-none">⋯</span>
+          <NavIcon name="more" className="h-5 w-5" />
           Ще
         </button>
       </nav>
