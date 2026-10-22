@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { searchFood, FoodProduct } from "@/lib/foodApi";
@@ -97,6 +97,9 @@ export default function ClientActivityCalendar({
   onOpenHabits?: () => void;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
+  // За замовчуванням показуємо тонку стрічку днів (як щоденник) замість
+  // повного місяця — місяць розгортається тільки за запитом (іконка 📅).
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -424,6 +427,35 @@ export default function ClientActivityCalendar({
     setSelected(toKey(base));
   }
 
+  // ---- стрічка днів тижня (щоденник-режим) ----
+  // 7 днів тижня, що містить вибраний день, понеділок першим.
+  function weekDates(dateKey: string): Date[] {
+    const d = new Date(dateKey + "T00:00:00");
+    const dow = (d.getDay() + 6) % 7; // 0 = понеділок
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - dow);
+    return Array.from({ length: 7 }, (_, i) => {
+      const nd = new Date(monday);
+      nd.setDate(monday.getDate() + i);
+      return nd;
+    });
+  }
+  const stripDates = weekDates(selected || todayKey);
+
+  // Свайп вліво/вправо по контенту дня гортає дні — без тапів по стрічці.
+  const touchStartX = useRef<number | null>(null);
+  function onDayTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+  function onDayTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current == null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    const SWIPE_THRESHOLD = 50;
+    if (dx > SWIPE_THRESHOLD) shiftSelectedDay(-1);
+    else if (dx < -SWIPE_THRESHOLD) shiftSelectedDay(1);
+  }
+
   useEffect(() => {
     if (!selected) return;
     const d = new Date(selected + "T00:00:00");
@@ -486,75 +518,151 @@ export default function ClientActivityCalendar({
         <p className="mb-2 text-[11px] text-muted">Чек-ін вноситься лише в неділю — інші дні неактивні.</p>
       )}
 
-      {/* Компактний календар — завжди зверху, не частина каруселі. Вибір дня тапом
-          по клітинці або стрілками "день назад/вперед" нижче. */}
-      <div className="mx-auto mb-3 w-full max-w-[220px]">
-        <div className="mb-1.5 flex items-center justify-between">
-          <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
-            ‹
+      {/* Стрічка днів тижня — щоденник-режим за замовчуванням. Повний місяць
+          розгортається за запитом (іконка 📅), коли треба стрибнути далеко. */}
+      {!calendarExpanded ? (
+        <div className="mb-3">
+          <div className="mb-1.5 flex items-center justify-between">
+            <button type="button" onClick={() => shiftSelectedDay(-7)} aria-label="Попередній тиждень" className="rounded bg-paper px-2 py-1 text-xs text-muted">
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={() => setCalendarExpanded(true)}
+              className="flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-[11px] text-muted"
+            >
+              📅 {MONTHS[month]} {year}
+            </button>
+            <button type="button" onClick={() => shiftSelectedDay(7)} aria-label="Наступний тиждень" className="rounded bg-paper px-2 py-1 text-xs text-muted">
+              ›
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {stripDates.map((d) => {
+              const key = toKey(d);
+              const isToday = key === todayKey;
+              const isSelected = key === selected;
+              const wStatus = showWorkout ? workoutStatus(key) : null;
+              const hasFood = showFood && foodDates.has(key);
+              const hasCheckin = showCheckin && !!checkinByDate[key];
+              const isSunday = d.getDay() === 0;
+              const checkinOnlyMode = filter === "checkin";
+              const disabledForCheckin = checkinOnlyMode && !isSunday;
+              const wColor =
+                wStatus === "done"
+                  ? "bg-green-500/20"
+                  : wStatus === "missed"
+                  ? "bg-red-500/15"
+                  : wStatus === "planned"
+                  ? "bg-yellow-500/15"
+                  : "";
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={disabledForCheckin}
+                  onClick={() => setSelected(key)}
+                  className={`flex flex-col items-center gap-0.5 rounded-lg border py-1.5 text-[11px] ${
+                    wColor || "border-line bg-paper text-muted"
+                  } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-accent" : ""} ${
+                    isSelected ? "outline outline-2 outline-accent" : ""
+                  } ${disabledForCheckin ? "cursor-not-allowed opacity-25" : ""} ${
+                    checkinOnlyMode && isSunday ? "border-blue-400/50" : ""
+                  }`}
+                >
+                  <span className="text-[9px] uppercase text-muted">{WEEKDAYS[(d.getDay() + 6) % 7]}</span>
+                  <span className="flex items-center gap-0.5 font-medium text-ink">
+                    {d.getDate()}
+                    {wStatus && <span className="text-[8px] leading-none">🏋</span>}
+                  </span>
+                  <span className="flex gap-0.5">
+                    {hasFood && <span className="h-1 w-1 rounded-full bg-accent" />}
+                    {hasCheckin && <span className="h-1 w-1 rounded-full bg-blue-400" />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="mx-auto mb-3 w-full max-w-[220px]">
+          <div className="mb-1.5 flex items-center justify-between">
+            <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
+              ‹
+            </button>
+            <span className="text-xs font-medium">
+              {MONTHS[month]} {year}
+            </span>
+            <button type="button" onClick={() => setCursor(new Date(year, month + 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
+              ›
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted">
+            {WEEKDAYS.map((w) => (
+              <div key={w} className="py-0.5">
+                {w}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-0.5">
+            {cells.map((d, i) => {
+              if (!d) return <div key={i} />;
+              const key = toKey(d);
+              const isToday = key === todayKey;
+              const isSelected = key === selected;
+              const wStatus = showWorkout ? workoutStatus(key) : null;
+              const hasFood = showFood && foodDates.has(key);
+              const hasCheckin = showCheckin && !!checkinByDate[key];
+              const isSunday = d.getDay() === 0;
+              const checkinOnlyMode = filter === "checkin";
+              const disabledForCheckin = checkinOnlyMode && !isSunday;
+              const wColor =
+                wStatus === "done"
+                  ? "bg-green-500/20"
+                  : wStatus === "missed"
+                  ? "bg-red-500/15"
+                  : wStatus === "planned"
+                  ? "bg-yellow-500/15"
+                  : "";
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={disabledForCheckin}
+                  onClick={() => setSelected(key)}
+                  className={`flex aspect-square flex-col items-center justify-center rounded-md border text-[11px] ${
+                    wColor || "border-line bg-paper text-muted"
+                  } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-accent" : ""} ${
+                    isSelected ? "outline outline-2 outline-accent" : ""
+                  } ${disabledForCheckin ? "cursor-not-allowed opacity-25" : ""} ${
+                    checkinOnlyMode && isSunday ? "border-blue-400/50" : ""
+                  }`}
+                >
+                  <span className="flex items-center gap-0.5">
+                    {d.getDate()}
+                    {wStatus && <span className="text-[9px] leading-none">🏋</span>}
+                  </span>
+                  <span className="flex gap-0.5">
+                    {hasFood && <span className="h-1 w-1 rounded-full bg-accent" />}
+                    {hasCheckin && <span className="h-1 w-1 rounded-full bg-blue-400" />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => setCalendarExpanded(false)}
+            className="mt-2 w-full rounded-lg border border-line py-1 text-[11px] text-muted"
+          >
+            Згорнути ↑
           </button>
-          <span className="text-xs font-medium">
-            {MONTHS[month]} {year}
-          </span>
-          <button type="button" onClick={() => setCursor(new Date(year, month + 1, 1))} className="rounded bg-paper px-2 py-1 text-xs">
-            ›
-          </button>
         </div>
-        <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted">
-          {WEEKDAYS.map((w) => (
-            <div key={w} className="py-0.5">
-              {w}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-0.5">
-          {cells.map((d, i) => {
-            if (!d) return <div key={i} />;
-            const key = toKey(d);
-            const isToday = key === todayKey;
-            const isSelected = key === selected;
-            const wStatus = showWorkout ? workoutStatus(key) : null;
-            const hasFood = showFood && foodDates.has(key);
-            const hasCheckin = showCheckin && !!checkinByDate[key];
-            const isSunday = d.getDay() === 0;
-            const checkinOnlyMode = filter === "checkin";
-            const disabledForCheckin = checkinOnlyMode && !isSunday;
-            const wColor =
-              wStatus === "done"
-                ? "bg-green-500/20"
-                : wStatus === "missed"
-                ? "bg-red-500/15"
-                : wStatus === "planned"
-                ? "bg-yellow-500/15"
-                : "";
-            return (
-              <button
-                key={key}
-                type="button"
-                disabled={disabledForCheckin}
-                onClick={() => setSelected(key)}
-                className={`flex aspect-square flex-col items-center justify-center rounded-md border text-[11px] ${
-                  wColor || "border-line bg-paper text-muted"
-                } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-accent" : ""} ${
-                  isSelected ? "outline outline-2 outline-accent" : ""
-                } ${disabledForCheckin ? "cursor-not-allowed opacity-25" : ""} ${
-                  checkinOnlyMode && isSunday ? "border-blue-400/50" : ""
-                }`}
-              >
-                <span className="flex items-center gap-0.5">
-                  {d.getDate()}
-                  {wStatus && <span className="text-[9px] leading-none">🏋</span>}
-                </span>
-                <span className="flex gap-0.5">
-                  {hasFood && <span className="h-1 w-1 rounded-full bg-accent" />}
-                  {hasCheckin && <span className="h-1 w-1 rounded-full bg-blue-400" />}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      )}
 
+      {/* Свайп вліво/вправо по цій ділянці гортає дні — ту саму дію робить
+          тап по стрічці або стрілки нижче. */}
+      <div onTouchStart={onDayTouchStart} onTouchEnd={onDayTouchEnd}>
       {selected && (
         <div className="mb-3 flex items-center justify-center gap-3">
           <button
@@ -622,6 +730,7 @@ export default function ClientActivityCalendar({
           )}
         </div>
       )}
+      </div>
 
       {workoutModalOpen && selected && showWorkout && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[70]" onClick={() => setWorkoutModalOpen(false)}>
