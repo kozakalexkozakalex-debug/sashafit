@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { clientRisk, RiskLevel } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
+import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
 
 type Client = {
   id: string;
@@ -13,6 +14,7 @@ type Client = {
   profile_id: string | null;
   subscription_until: string | null;
   created_at: string;
+  checkin_weekday: number | null;
 };
 type AssignedWorkout = {
   id: string;
@@ -22,7 +24,18 @@ type AssignedWorkout = {
   completed_at: string | null;
   clients: { name: string } | null;
 };
-type Checkin = { client_id: string; created_at: string; clients?: { name: string } | null };
+type Checkin = {
+  id: string;
+  client_id: string;
+  created_at: string;
+  weight: number | null;
+  waist: number | null;
+  hips: number | null;
+  chest: number | null;
+  photo_path: string | null;
+  comment: string | null;
+  clients?: { name: string } | null;
+};
 type Message = {
   sender: "coach" | "client";
   created_at: string;
@@ -53,6 +66,19 @@ function toKey(d: Date) {
 }
 function daysBetween(a: Date, b: Date) {
   return Math.floor((a.getTime() - b.getTime()) / 86400000);
+}
+// Тиждень (пн-нд), що містить дату dateKey — для стрічки днів зведеного
+// щоденника (режим "Усі клієнти"), як у ClientActivityCalendar.
+function weekDates(dateKey: string) {
+  const d = new Date(`${dateKey}T00:00:00`);
+  const dow = (d.getDay() + 6) % 7;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - dow);
+  return Array.from({ length: 7 }, (_, i) => {
+    const dd = new Date(monday);
+    dd.setDate(monday.getDate() + i);
+    return dd;
+  });
 }
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
@@ -112,6 +138,14 @@ export default function CoachHome({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+  // Щоденник на головній: дропдаун "Усі клієнти" / конкретний клієнт.
+  const [selectedClientId, setSelectedClientId] = useState("");
+  // Розгортання повного місяця у зведеному вигляді ("Усі клієнти").
+  const [aggExpanded, setAggExpanded] = useState(false);
+  // Підписані URL фото чек-інів — підвантажуються лише для вибраного клієнта.
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const aggTouchStartX = useRef<number | null>(null);
 
   const [mTitle, setMTitle] = useState("");
   const [mClientId, setMClientId] = useState("");
@@ -181,11 +215,13 @@ export default function CoachHome({
 
     const [{ data: cl }, { data: wo }, { data: ci }, { data: mt }, { data: ms }, { data: pm }, { data: mp }, { data: fo }] =
       await Promise.all([
-        supabase.from("clients").select("id, name, invite_code, profile_id, subscription_until, created_at"),
+        supabase
+          .from("clients")
+          .select("id, name, invite_code, profile_id, subscription_until, created_at, checkin_weekday"),
         supabase.from("assigned_workouts").select("id, date, title, client_id, completed_at, clients(name)"),
         supabase
           .from("checkins")
-          .select("client_id, created_at, clients(name)")
+          .select("id, client_id, created_at, weight, waist, hips, chest, photo_path, comment, clients(name)")
           .order("created_at", { ascending: false }),
         supabase.from("meetings").select("*, clients(name)").order("scheduled_at", { ascending: true }),
         supabase
@@ -234,6 +270,48 @@ export default function CoachHome({
       /* ігноруємо — немає доступу до localStorage */
     }
   }, [loading]);
+
+  // Коли тренер вибирає конкретного клієнта в дропдауні щоденника —
+  // підвантажуємо підписані URL фото його чек-інів (лише раз на фото).
+  useEffect(() => {
+    if (!selectedClientId) return;
+    const withPhotos = checkins.filter(
+      (c) => c.client_id === selectedClientId && c.photo_path && !photoUrls[c.id]
+    );
+    if (withPhotos.length === 0) return;
+    (async () => {
+      const urls: Record<string, string> = {};
+      await Promise.all(
+        withPhotos.map(async (c) => {
+          const { data } = await supabase.storage
+            .from("checkins")
+            .createSignedUrl(c.photo_path as string, 3600);
+          if (data?.signedUrl) urls[c.id] = data.signedUrl;
+        })
+      );
+      if (Object.keys(urls).length > 0) setPhotoUrls((prev) => ({ ...prev, ...urls }));
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClientId, checkins]);
+
+  // ---- Свайп між днями у зведеній стрічці ("Усі клієнти") ----
+  function shiftAggWeek(delta: number) {
+    const base = selectedDay ? new Date(`${selectedDay}T00:00:00`) : new Date();
+    base.setDate(base.getDate() + delta * 7);
+    setSelectedDay(toKey(base));
+  }
+  function onAggTouchStart(e: React.TouchEvent) {
+    aggTouchStartX.current = e.touches[0].clientX;
+  }
+  function onAggTouchEnd(e: React.TouchEvent) {
+    if (aggTouchStartX.current == null) return;
+    const dx = e.changedTouches[0].clientX - aggTouchStartX.current;
+    aggTouchStartX.current = null;
+    if (Math.abs(dx) < 50) return;
+    const base = selectedDay ? new Date(`${selectedDay}T00:00:00`) : new Date();
+    base.setDate(base.getDate() + (dx < 0 ? 1 : -1));
+    setSelectedDay(toKey(base));
+  }
 
   async function addMeeting() {
     if (!mTitle.trim() || !mDateTime) {
@@ -387,6 +465,29 @@ export default function CoachHome({
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
 
   const dayWorkouts = selectedDay ? workoutsByDate[selectedDay] || [] : [];
+  const clientById: Record<string, Client> = {};
+  for (const c of clients) clientById[c.id] = c;
+  const dayFoodClients = selectedDay
+    ? Array.from(new Set((foodByDate[selectedDay] || []).map((f) => f.client_id))).map((id) =>
+        clientById[id] ? clientLabel(clientById[id]) : "Клієнт"
+      )
+    : [];
+  const dayCheckins = selectedDay ? checkins.filter((c) => c.created_at.slice(0, 10) === selectedDay) : [];
+  const stripDates = weekDates(selectedDay || todayKey);
+
+  const selectedClient = clients.find((c) => c.id === selectedClientId) || null;
+  const selectedClientMarkers: CheckinMarker[] = checkins
+    .filter((c) => c.client_id === selectedClientId)
+    .map((c) => ({
+      id: c.id,
+      date: c.created_at.slice(0, 10),
+      weight: c.weight,
+      waist: c.waist,
+      hips: c.hips,
+      chest: c.chest,
+      comment: c.comment,
+      photoUrl: c.photo_path ? photoUrls[c.id] || null : null,
+    }));
 
   function relTime(iso: string) {
     const diffMs = Date.now() - new Date(iso).getTime();
@@ -617,90 +718,215 @@ export default function CoachHome({
           )}
 
           <div className="rounded-xl border border-line bg-surface p-4">
-            <div className="mx-auto w-full max-w-[280px]">
-              <div className="mb-2 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setCursor(new Date(year, month - 1, 1))}
-                  className="rounded bg-paper px-2 py-1 text-xs"
-                >
-                  ‹
-                </button>
-                <span className="font-display text-xs font-medium">
-                  {MONTHS[month]} {year}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setCursor(new Date(year, month + 1, 1))}
-                  className="rounded bg-paper px-2 py-1 text-xs"
-                >
-                  ›
-                </button>
-              </div>
-              <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted">
-                {WEEKDAYS.map((w) => (
-                  <div key={w} className="py-0.5">
-                    {w}
-                  </div>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold">Щоденник</h2>
+              <select
+                value={selectedClientId}
+                onChange={(e) => {
+                  setSelectedClientId(e.target.value);
+                  setSelectedDay(todayKey);
+                }}
+                className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-xs outline-none"
+              >
+                <option value="">Усі клієнти</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {clientLabel(c)}
+                  </option>
                 ))}
-              </div>
-              <div className="grid grid-cols-7 gap-0.5">
-                {cells.map((d, i) => {
-                  if (!d) return <div key={i} />;
-                  const key = toKey(d);
-                  const workoutCount = workoutsByDate[key]?.length || 0;
-                  const foodCount = new Set((foodByDate[key] || []).map((f) => f.client_id)).size;
-                  const hasAny = workoutCount > 0 || foodCount > 0;
-                  const isToday = key === todayKey;
-                  const isSelected = key === selectedDay;
-                  return (
-                    <div key={key} className="group relative">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDay(key)}
-                        className={`flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md border text-[11px] ${
-                          hasAny ? "border-accent/40 bg-accent/10" : "border-line bg-paper text-muted"
-                        } ${isToday ? "ring-1 ring-accent" : ""} ${isSelected ? "outline outline-2 outline-accent" : ""}`}
-                      >
-                        <span>{d.getDate()}</span>
-                        {hasAny && (
-                          <span className="flex items-center gap-1 text-[7px] leading-none">
-                            {workoutCount > 0 && <span className="text-accent">🏋{workoutCount}</span>}
-                            {foodCount > 0 && <span className="text-blue-400">🍽{foodCount}</span>}
-                          </span>
-                        )}
-                      </button>
-                      {hasAny && (
-                        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[11px] text-white opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100">
-                          <p className="font-medium">
-                            {d.getDate()} {MONTHS[month].toLowerCase()} {year}
-                          </p>
-                          {workoutCount > 0 && <p className="text-neutral-300">🏋 Тренувань: {workoutCount}</p>}
-                          {foodCount > 0 && <p className="text-neutral-300">🍽 Залогували їжу: {foodCount}</p>}
-                          <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-neutral-900" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              </select>
             </div>
 
-            {selectedDay && (
-              <div className="mt-3 rounded-lg bg-paper p-3 text-sm">
-                <p className="mb-2 font-medium">{selectedDay}</p>
-                {dayWorkouts.length === 0 ? (
-                  <p className="text-muted">Тренувань не призначено.</p>
+            {selectedClientId && selectedClient ? (
+              <ClientActivityCalendar
+                key={selectedClientId}
+                clientId={selectedClientId}
+                checkins={selectedClientMarkers}
+                showHabits
+                habitsReadOnly
+                checkinWeekday={selectedClient.checkin_weekday ?? 0}
+              />
+            ) : (
+              <>
+                {!aggExpanded ? (
+                  <div onTouchStart={onAggTouchStart} onTouchEnd={onAggTouchEnd}>
+                    <div className="mb-2 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => shiftAggWeek(-1)}
+                        className="rounded bg-paper px-2 py-1 text-xs"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAggExpanded(true)}
+                        className="font-display text-xs font-medium"
+                      >
+                        📅 {MONTHS[month]} {year}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => shiftAggWeek(1)}
+                        className="rounded bg-paper px-2 py-1 text-xs"
+                      >
+                        ›
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {stripDates.map((d) => {
+                        const key = toKey(d);
+                        const workoutCount = workoutsByDate[key]?.length || 0;
+                        const foodCount = new Set((foodByDate[key] || []).map((f) => f.client_id)).size;
+                        const checkinCount = checkins.filter((c) => c.created_at.slice(0, 10) === key).length;
+                        const isToday = key === todayKey;
+                        const isSelected = key === selectedDay;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setSelectedDay(key)}
+                            className={`flex flex-col items-center gap-0.5 rounded-lg border p-1.5 text-[11px] ${
+                              isSelected ? "border-accent bg-accent/10" : "border-line bg-paper"
+                            } ${isToday ? "ring-1 ring-accent" : ""}`}
+                          >
+                            <span className="text-muted">{WEEKDAYS[(d.getDay() + 6) % 7]}</span>
+                            <span className="font-medium">{d.getDate()}</span>
+                            <span className="flex gap-0.5 text-[9px] leading-none">
+                              {workoutCount > 0 && <span className="text-accent">🏋{workoutCount}</span>}
+                              {foodCount > 0 && <span className="text-blue-400">🍽{foodCount}</span>}
+                              {checkinCount > 0 && <span>⚖{checkinCount}</span>}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ) : (
-                  <ul className="flex flex-col gap-1 text-muted">
-                    {dayWorkouts.map((w) => (
-                      <li key={w.id}>
-                        {w.clients?.name || "—"} — {w.title}
-                      </li>
-                    ))}
-                  </ul>
+                  <div>
+                    <div className="mx-auto w-full max-w-[280px]">
+                      <div className="mb-2 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => setCursor(new Date(year, month - 1, 1))}
+                          className="rounded bg-paper px-2 py-1 text-xs"
+                        >
+                          ‹
+                        </button>
+                        <span className="font-display text-xs font-medium">
+                          {MONTHS[month]} {year}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCursor(new Date(year, month + 1, 1))}
+                          className="rounded bg-paper px-2 py-1 text-xs"
+                        >
+                          ›
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted">
+                        {WEEKDAYS.map((w) => (
+                          <div key={w} className="py-0.5">
+                            {w}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-7 gap-0.5">
+                        {cells.map((d, i) => {
+                          if (!d) return <div key={i} />;
+                          const key = toKey(d);
+                          const workoutCount = workoutsByDate[key]?.length || 0;
+                          const foodCount = new Set((foodByDate[key] || []).map((f) => f.client_id)).size;
+                          const hasAny = workoutCount > 0 || foodCount > 0;
+                          const isToday = key === todayKey;
+                          const isSelected = key === selectedDay;
+                          return (
+                            <div key={key} className="group relative">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedDay(key)}
+                                className={`flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md border text-[11px] ${
+                                  hasAny ? "border-accent/40 bg-accent/10" : "border-line bg-paper text-muted"
+                                } ${isToday ? "ring-1 ring-accent" : ""} ${isSelected ? "outline outline-2 outline-accent" : ""}`}
+                              >
+                                <span>{d.getDate()}</span>
+                                {hasAny && (
+                                  <span className="flex items-center gap-1 text-[7px] leading-none">
+                                    {workoutCount > 0 && <span className="text-accent">🏋{workoutCount}</span>}
+                                    {foodCount > 0 && <span className="text-blue-400">🍽{foodCount}</span>}
+                                  </span>
+                                )}
+                              </button>
+                              {hasAny && (
+                                <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[11px] text-white opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100">
+                                  <p className="font-medium">
+                                    {d.getDate()} {MONTHS[month].toLowerCase()} {year}
+                                  </p>
+                                  {workoutCount > 0 && <p className="text-neutral-300">🏋 Тренувань: {workoutCount}</p>}
+                                  {foodCount > 0 && <p className="text-neutral-300">🍽 Залогували їжу: {foodCount}</p>}
+                                  <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-neutral-900" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAggExpanded(false)}
+                      className="mx-auto mt-2 block text-xs text-muted"
+                    >
+                      Згорнути ↑
+                    </button>
+                  </div>
                 )}
-              </div>
+
+                {selectedDay && (
+                  <div className="mt-3 rounded-lg bg-paper p-3 text-sm">
+                    <p className="mb-2 font-medium">{selectedDay}</p>
+                    {dayWorkouts.length === 0 && dayFoodClients.length === 0 && dayCheckins.length === 0 ? (
+                      <p className="text-muted">Нічого не відбувалось.</p>
+                    ) : (
+                      <div className="flex flex-col gap-2 text-muted">
+                        {dayWorkouts.length > 0 && (
+                          <div>
+                            <p className="mb-1 text-xs font-medium text-ink">🏋 Тренування</p>
+                            <ul className="flex flex-col gap-0.5">
+                              {dayWorkouts.map((w) => (
+                                <li key={w.id}>
+                                  {w.clients?.name || "—"} — {w.title}
+                                  {w.completed_at ? " · виконано" : ""}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {dayFoodClients.length > 0 && (
+                          <div>
+                            <p className="mb-1 text-xs font-medium text-ink">🍽 Залогували їжу</p>
+                            <ul className="flex flex-col gap-0.5">
+                              {dayFoodClients.map((name, i) => (
+                                <li key={i}>{name}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {dayCheckins.length > 0 && (
+                          <div>
+                            <p className="mb-1 text-xs font-medium text-ink">⚖ Чек-іни</p>
+                            <ul className="flex flex-col gap-0.5">
+                              {dayCheckins.map((c, i) => (
+                                <li key={i}>{c.clients?.name || "Клієнт"}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
