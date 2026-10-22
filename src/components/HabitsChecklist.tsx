@@ -4,16 +4,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 // Звички клієнта (вода/кроки/сон/довільні) — простий чекліст на день
-// зі стріком. Клієнт керує списком сам, тренер лише бачить (RLS).
+// зі стріком. Список звичок призначає тренер (вкладка "Призначити звички"),
+// клієнт тут лише відмічає виконання — не додає й не видаляє звички сам.
 
 type Habit = { id: string; label: string; icon: string | null; position: number };
 type HabitLog = { habit_id: string; date: string; done: boolean };
-
-const DEFAULT_HABITS = [
-  { label: "Вода", icon: "💧" },
-  { label: "Кроки", icon: "🚶" },
-  { label: "Сон", icon: "😴" },
-];
 
 function toKey(d: Date) {
   const y = d.getFullYear();
@@ -42,9 +37,6 @@ export default function HabitsChecklist({ clientId }: { clientId: string }) {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [logs, setLogs] = useState<HabitLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addOpen, setAddOpen] = useState(false);
-  const [newLabel, setNewLabel] = useState("");
-  const [busy, setBusy] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -72,27 +64,6 @@ export default function HabitsChecklist({ clientId }: { clientId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
-  async function addDefaults() {
-    setBusy(true);
-    await supabase
-      .from("habits")
-      .insert(DEFAULT_HABITS.map((d, i) => ({ client_id: clientId, label: d.label, icon: d.icon, position: i })));
-    setBusy(false);
-    load();
-  }
-
-  async function addHabit() {
-    if (!newLabel.trim()) return;
-    setBusy(true);
-    await supabase
-      .from("habits")
-      .insert({ client_id: clientId, label: newLabel.trim(), icon: "✅", position: habits.length });
-    setNewLabel("");
-    setAddOpen(false);
-    setBusy(false);
-    load();
-  }
-
   async function toggleToday(habitId: string) {
     const todayKey = toKey(new Date());
     const existing = logs.find((l) => l.habit_id === habitId && l.date === todayKey);
@@ -104,36 +75,16 @@ export default function HabitsChecklist({ clientId }: { clientId: string }) {
     load();
   }
 
-  async function removeHabit(id: string) {
-    await supabase.from("habits").delete().eq("id", id);
-    load();
-  }
-
   if (loading) return null;
 
   const todayKey = toKey(new Date());
 
   return (
     <div className="rounded-xl border border-line bg-surface p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Звички</h2>
-        <button type="button" onClick={() => setAddOpen((v) => !v)} className="text-xs text-accent">
-          {addOpen ? "Закрити" : "+ Додати"}
-        </button>
-      </div>
+      <h2 className="mb-2 text-sm font-semibold">Звички</h2>
 
       {habits.length === 0 ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs text-muted">Звичок ще немає.</p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={addDefaults}
-            className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
-          >
-            Додати базові (вода, кроки, сон)
-          </button>
-        </div>
+        <p className="text-xs text-muted">Тренер ще не призначив тобі звичок.</p>
       ) : (
         <div className="flex flex-col gap-1.5">
           {habits.map((h) => {
@@ -152,31 +103,9 @@ export default function HabitsChecklist({ clientId }: { clientId: string }) {
                 </button>
                 <span className="flex-1 text-sm text-ink">{h.label}</span>
                 {streak > 0 && <span className="text-[11px] text-muted">🔥{streak}</span>}
-                <button type="button" onClick={() => removeHabit(h.id)} className="text-xs text-muted">
-                  ✕
-                </button>
               </div>
             );
           })}
-        </div>
-      )}
-
-      {addOpen && (
-        <div className="mt-2 flex gap-2">
-          <input
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            placeholder="Назва звички"
-            className="flex-1 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm outline-none"
-          />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={addHabit}
-            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-paper disabled:opacity-50"
-          >
-            Додати
-          </button>
         </div>
       )}
     </div>
