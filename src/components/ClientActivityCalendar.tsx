@@ -88,11 +88,14 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "checkin", label: "⚖ Чек-іни" },
 ];
 
+const WEEKDAY_ACCUSATIVE = ["неділю", "понеділок", "вівторок", "середу", "четвер", "п'ятницю", "суботу"];
+
 export default function ClientActivityCalendar({
   clientId,
   checkins,
   showHabits,
   habitsReadOnly,
+  checkinWeekday = 0,
 }: {
   clientId: string;
   checkins: CheckinMarker[];
@@ -100,6 +103,8 @@ export default function ClientActivityCalendar({
   // тренеру (лише перегляд, без можливості відмітити за клієнта).
   showHabits?: boolean;
   habitsReadOnly?: boolean;
+  // День тижня чек-іна цього клієнта (0 = неділя), задає тренер у профілі.
+  checkinWeekday?: number;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   // За замовчуванням показуємо тонку стрічку днів (як щоденник) замість
@@ -523,7 +528,9 @@ export default function ClientActivityCalendar({
         ))}
       </div>
       {filter === "checkin" && (
-        <p className="mb-2 text-[11px] text-muted">Чек-ін вноситься лише в неділю — інші дні неактивні.</p>
+        <p className="mb-2 text-[11px] text-muted">
+          Чек-ін вноситься лише в {WEEKDAY_ACCUSATIVE[checkinWeekday]} — інші дні неактивні.
+        </p>
       )}
 
       {/* Стрічка днів тижня — щоденник-режим за замовчуванням. Повний місяць
@@ -553,7 +560,7 @@ export default function ClientActivityCalendar({
               const wStatus = showWorkout ? workoutStatus(key) : null;
               const hasFood = showFood && foodDates.has(key);
               const hasCheckin = showCheckin && !!checkinByDate[key];
-              const isSunday = d.getDay() === 0;
+              const isSunday = d.getDay() === checkinWeekday;
               const checkinOnlyMode = filter === "checkin";
               const disabledForCheckin = checkinOnlyMode && !isSunday;
               const wColor =
@@ -621,7 +628,7 @@ export default function ClientActivityCalendar({
               const wStatus = showWorkout ? workoutStatus(key) : null;
               const hasFood = showFood && foodDates.has(key);
               const hasCheckin = showCheckin && !!checkinByDate[key];
-              const isSunday = d.getDay() === 0;
+              const isSunday = d.getDay() === checkinWeekday;
               const checkinOnlyMode = filter === "checkin";
               const disabledForCheckin = checkinOnlyMode && !isSunday;
               const wColor =
@@ -1087,7 +1094,7 @@ export default function ClientActivityCalendar({
               {!selectedCheckin && (
                 <p className="text-muted">
                   На цей день чек-іна немає. Заповнити його можна у вкладці «Профіль» — чек-ін вноситься раз на
-                  тиждень, у неділю.
+                  тиждень, у {WEEKDAY_ACCUSATIVE[checkinWeekday]}.
                 </p>
               )}
               {selectedCheckin && (

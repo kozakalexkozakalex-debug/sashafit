@@ -20,6 +20,7 @@ type ClientRow = {
   training_days_per_week: number | null;
   food_restrictions: string | null;
   lifestyle: string | null;
+  checkin_weekday: number | null;
 };
 
 type Checkin = {
@@ -53,6 +54,10 @@ const PERIODS: { id: Period; label: string }[] = [
 function toKey(d: Date) {
   return d.toISOString().slice(0, 10);
 }
+
+// Дні тижня для чек-іна — індекс співпадає з Date.getDay() (0 = неділя).
+const WEEKDAY_LABELS = ["Неділя", "Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота"];
+const WEEKDAY_ACCUSATIVE = ["неділю", "понеділок", "вівторок", "середу", "четвер", "п'ятницю", "суботу"];
 
 function TrendChart({ points, unit }: { points: { date: string; value: number }[]; unit: string }) {
   if (points.length < 2) {
@@ -141,15 +146,29 @@ export default function ClientProfileCard({
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((c) => ({ date: c.created_at.slice(0, 10), value: c[metric] as number }));
 
-  // ---- наступний чек-ін (щонеділі) ----
+  // ---- наступний чек-ін (день тижня задає тренер, за замовчуванням неділя) ----
+  const [checkinWeekday, setCheckinWeekday] = useState(client.checkin_weekday ?? 0);
+  const [weekdaySaving, setWeekdaySaving] = useState(false);
+  useEffect(() => {
+    setCheckinWeekday(client.checkin_weekday ?? 0);
+  }, [client.checkin_weekday]);
+
+  async function changeCheckinWeekday(value: number) {
+    setCheckinWeekday(value);
+    setWeekdaySaving(true);
+    await supabase.from("clients").update({ checkin_weekday: value }).eq("id", client.id);
+    setWeekdaySaving(false);
+  }
+
   const todayKey = toKey(now);
-  const dow = now.getDay(); // 0 = неділя
+  const dow = now.getDay();
   const didCheckinToday = checkins.some((c) => c.created_at.slice(0, 10) === todayKey);
-  const isSundayNow = dow === 0;
-  const daysToNextSunday = isSundayNow ? 7 : 7 - dow;
+  const isSundayNow = dow === checkinWeekday; // назва змінної стара, сенс — "сьогодні день чек-іна"
+  const daysToNextSunday = isSundayNow ? 7 : (checkinWeekday - dow + 7) % 7;
   const nextSunday = new Date(now);
   nextSunday.setDate(now.getDate() + (isSundayNow ? 7 : daysToNextSunday));
   const nextSundayLabel = nextSunday.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit" });
+  const checkinDayAccusative = WEEKDAY_ACCUSATIVE[checkinWeekday];
 
   // ---- макроси (ціль по харчуванню) — задає тільки тренер ----
   const [tCalories, setTCalories] = useState("");
@@ -216,7 +235,7 @@ export default function ClientProfileCard({
 
   async function addCheckin() {
     if (!isSundayNow) {
-      setCiErr("Чек-ін можна додати тільки в неділю");
+      setCiErr(`Чек-ін можна додати тільки в ${checkinDayAccusative}`);
       return;
     }
     if (!ciWeight.trim()) {
@@ -391,11 +410,28 @@ export default function ClientProfileCard({
 
       <div className="mt-3 border-t border-line pt-3">
         {readOnly ? (
-          <p className="text-xs text-muted">
-            {didCheckinToday
-              ? `Чек-ін на цьому тижні вже зроблено. Наступний через ${daysToNextSunday === 0 ? 7 : daysToNextSunday} днів (${nextSundayLabel}).`
-              : `Наступний чек-ін через ${daysToNextSunday} ${daysToNextSunday === 1 ? "день" : "днів"} (${nextSundayLabel}).`}
-          </p>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted">День чек-іна:</label>
+              <select
+                value={checkinWeekday}
+                onChange={(e) => changeCheckinWeekday(Number(e.target.value))}
+                disabled={weekdaySaving}
+                className="rounded-lg border border-line bg-paper px-2 py-1 text-xs outline-none disabled:opacity-50"
+              >
+                {WEEKDAY_LABELS.map((label, i) => (
+                  <option key={i} value={i}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs text-muted">
+              {didCheckinToday
+                ? `Чек-ін на цьому тижні вже зроблено. Наступний через ${daysToNextSunday === 0 ? 7 : daysToNextSunday} днів (${nextSundayLabel}).`
+                : `Наступний чек-ін через ${daysToNextSunday} ${daysToNextSunday === 1 ? "день" : "днів"} (${nextSundayLabel}).`}
+            </p>
+          </div>
         ) : isSundayNow && !didCheckinToday ? (
           <button
             type="button"

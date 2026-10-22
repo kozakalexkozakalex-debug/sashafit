@@ -41,6 +41,7 @@ type Client = {
   training_days_per_week: number | null;
   food_restrictions: string | null;
   lifestyle: string | null;
+  checkin_weekday: number | null;
 };
 
 type Checkin = {
@@ -787,7 +788,14 @@ export default function CoachDashboard({
                       </div>
                     </div>
                     <div className="lg:flex-1">
-                      <ClientActivityCalendar key={calendarKey} clientId={c.id} checkins={markers} showHabits habitsReadOnly />
+                      <ClientActivityCalendar
+                        key={calendarKey}
+                        clientId={c.id}
+                        checkins={markers}
+                        showHabits
+                        habitsReadOnly
+                        checkinWeekday={c.checkin_weekday ?? 0}
+                      />
                     </div>
                   </div>
 

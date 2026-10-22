@@ -3,8 +3,9 @@ import webpush from "web-push";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 // Раз на день (Vercel Cron) перевіряє: у кого тренування сьогодні ще не
-// відмічено виконаним, і у кого сьогодні неділя й чек-іну ще немає — і шле
-// їм push-нагадування. Захищено CRON_SECRET, щоб маршрут не смикали ззовні.
+// відмічено виконаним, і у кого сьогодні їхній особистий день чек-іна
+// (checkin_weekday, задає тренер) й чек-іну ще немає — і шле їм
+// push-нагадування. Захищено CRON_SECRET, щоб маршрут не смикали ззовні.
 
 function toKey(d: Date) {
   const y = d.getFullYear();
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseAdmin();
   const today = new Date();
   const todayKey = toKey(today);
-  const isSunday = today.getDay() === 0;
+  const todayWeekday = today.getDay();
 
   // Кому тренування сьогодні ще не відмічено виконаним.
   const { data: workouts } = await supabase
@@ -44,10 +45,14 @@ export async function GET(req: NextRequest) {
     .is("completed_at", null);
   const workoutClientIds = new Set((workouts || []).map((w) => w.client_id as string));
 
-  // У неділю — кому ще нема чек-іну сьогодні.
+  // У свій день тижня (checkin_weekday, за замовчуванням неділя) — кому ще
+  // нема чек-іну сьогодні.
   const checkinClientIds = new Set<string>();
-  if (isSunday) {
-    const { data: allClients } = await supabase.from("clients").select("id").not("profile_id", "is", null);
+  {
+    const { data: allClients } = await supabase
+      .from("clients")
+      .select("id, checkin_weekday")
+      .not("profile_id", "is", null);
     const { data: todaysCheckins } = await supabase
       .from("checkins")
       .select("client_id")
@@ -55,7 +60,8 @@ export async function GET(req: NextRequest) {
       .lte("created_at", `${todayKey}T23:59:59`);
     const doneToday = new Set((todaysCheckins || []).map((c) => c.client_id as string));
     for (const c of allClients || []) {
-      if (!doneToday.has(c.id as string)) checkinClientIds.add(c.id as string);
+      const weekday = (c.checkin_weekday as number | null) ?? 0;
+      if (weekday === todayWeekday && !doneToday.has(c.id as string)) checkinClientIds.add(c.id as string);
     }
   }
 
@@ -65,7 +71,7 @@ export async function GET(req: NextRequest) {
   }
   for (const id of checkinClientIds) {
     if (!messagesByClient.has(id)) {
-      messagesByClient.set(id, { title: "Час для чек-іну ⚖", body: "Сьогодні неділя — зроби щотижневий чек-ін." });
+      messagesByClient.set(id, { title: "Час для чек-іну ⚖", body: "Сьогодні день твого щотижневого чек-іну." });
     }
   }
 

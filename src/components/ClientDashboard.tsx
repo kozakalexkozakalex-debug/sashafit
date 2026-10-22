@@ -24,6 +24,7 @@ type ClientRow = {
   training_days_per_week: number | null;
   food_restrictions: string | null;
   lifestyle: string | null;
+  checkin_weekday: number | null;
 };
 
 const EXPERIENCE_LEVELS = ["Новачок", "Є досвід", "Просунутий"];
@@ -523,6 +524,7 @@ export default function ClientDashboard() {
                 clientId={client.id}
                 checkins={checkinMarkers}
                 showHabits
+                checkinWeekday={client.checkin_weekday ?? 0}
               />
               <NotificationsToggle clientId={client.id} />
             </>
