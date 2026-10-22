@@ -787,7 +787,7 @@ export default function CoachDashboard({
                       </div>
                     </div>
                     <div className="lg:flex-1">
-                      <ClientActivityCalendar key={calendarKey} clientId={c.id} checkins={markers} />
+                      <ClientActivityCalendar key={calendarKey} clientId={c.id} checkins={markers} showHabits habitsReadOnly />
                     </div>
                   </div>
 

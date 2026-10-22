@@ -92,13 +92,14 @@ export default function ClientActivityCalendar({
   clientId,
   checkins,
   showHabits,
+  habitsReadOnly,
 }: {
   clientId: string;
   checkins: CheckinMarker[];
-  // Іконка звичок у щоденнику — потрібна лише в клієнтському кабінеті
-  // (сам клієнт відмічає виконання); тренер звички лише призначає, тому
-  // в його кабінеті ця іконка не показується.
+  // Іконка звичок у щоденнику — показуємо і клієнту (відмічає сам), і
+  // тренеру (лише перегляд, без можливості відмітити за клієнта).
   showHabits?: boolean;
+  habitsReadOnly?: boolean;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   // За замовчуванням показуємо тонку стрічку днів (як щоденник) замість
@@ -1137,7 +1138,7 @@ export default function ClientActivityCalendar({
                 Закрити
               </button>
             </div>
-            <HabitsChecklist clientId={clientId} />
+            <HabitsChecklist clientId={clientId} readOnly={habitsReadOnly} />
           </div>
         </div>,
         document.body

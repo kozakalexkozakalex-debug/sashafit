@@ -33,7 +33,14 @@ function computeHabitStreak(logs: HabitLog[]): number {
   return streak;
 }
 
-export default function HabitsChecklist({ clientId }: { clientId: string }) {
+export default function HabitsChecklist({
+  clientId,
+  readOnly,
+}: {
+  clientId: string;
+  // Тренер лише бачить виконання звичок клієнта — не відмічає за нього.
+  readOnly?: boolean;
+}) {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [logs, setLogs] = useState<HabitLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,23 +91,32 @@ export default function HabitsChecklist({ clientId }: { clientId: string }) {
       <h2 className="mb-2 text-sm font-semibold">Звички</h2>
 
       {habits.length === 0 ? (
-        <p className="text-xs text-muted">Тренер ще не призначив тобі звичок.</p>
+        <p className="text-xs text-muted">
+          {readOnly ? "У клієнта ще немає призначених звичок." : "Тренер ще не призначив тобі звичок."}
+        </p>
       ) : (
         <div className="flex flex-col gap-1.5">
           {habits.map((h) => {
             const doneToday = logs.some((l) => l.habit_id === h.id && l.date === todayKey && l.done);
             const streak = computeHabitStreak(logs.filter((l) => l.habit_id === h.id));
+            const dot = (
+              <span
+                className={`flex h-6 w-6 flex-none items-center justify-center rounded-full border text-sm ${
+                  doneToday ? "border-accent bg-accent text-paper" : "border-line text-muted"
+                }`}
+              >
+                {doneToday ? "✓" : h.icon || ""}
+              </span>
+            );
             return (
               <div key={h.id} className="flex items-center gap-2 rounded-lg bg-paper px-2.5 py-1.5">
-                <button
-                  type="button"
-                  onClick={() => toggleToday(h.id)}
-                  className={`flex h-6 w-6 flex-none items-center justify-center rounded-full border text-sm ${
-                    doneToday ? "border-accent bg-accent text-paper" : "border-line text-muted"
-                  }`}
-                >
-                  {doneToday ? "✓" : h.icon || ""}
-                </button>
+                {readOnly ? (
+                  dot
+                ) : (
+                  <button type="button" onClick={() => toggleToday(h.id)} className="flex-none">
+                    {dot}
+                  </button>
+                )}
                 <span className="flex-1 text-sm text-ink">{h.label}</span>
                 {streak > 0 && <span className="text-[11px] text-muted">🔥{streak}</span>}
               </div>
