@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { searchFood, FoodProduct } from "@/lib/foodApi";
+import HabitsChecklist from "@/components/HabitsChecklist";
 
 // Один календар для тренувань, харчування і чек-інів клієнта.
 // Фільтр зверху перемикає, що саме показувати в клітинках і в деталях дня.
@@ -90,11 +91,14 @@ const FILTERS: { id: Filter; label: string }[] = [
 export default function ClientActivityCalendar({
   clientId,
   checkins,
-  onOpenHabits,
+  showHabits,
 }: {
   clientId: string;
   checkins: CheckinMarker[];
-  onOpenHabits?: () => void;
+  // Іконка звичок у щоденнику — потрібна лише в клієнтському кабінеті
+  // (сам клієнт відмічає виконання); тренер звички лише призначає, тому
+  // в його кабінеті ця іконка не показується.
+  showHabits?: boolean;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   // За замовчуванням показуємо тонку стрічку днів (як щоденник) замість
@@ -122,17 +126,18 @@ export default function ClientActivityCalendar({
   const [workoutModalOpen, setWorkoutModalOpen] = useState(false);
   const [foodModalOpen, setFoodModalOpen] = useState(false);
   const [checkinModalOpen, setCheckinModalOpen] = useState(false);
+  const [habitsModalOpen, setHabitsModalOpen] = useState(false);
 
   // Блокуємо скрол фону, поки відкрито будь-який з попапів-щоденників —
   // інакше на мобільному сторінка під попапом «їде» і попап ніби пірнає вниз.
   useEffect(() => {
-    if (!workoutModalOpen && !foodModalOpen && !checkinModalOpen) return;
+    if (!workoutModalOpen && !foodModalOpen && !checkinModalOpen && !habitsModalOpen) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prevOverflow;
     };
-  }, [workoutModalOpen, foodModalOpen, checkinModalOpen]);
+  }, [workoutModalOpen, foodModalOpen, checkinModalOpen, habitsModalOpen]);
 
   async function loadWorkouts() {
     const { data } = await supabase
@@ -732,10 +737,10 @@ export default function ClientActivityCalendar({
               ⚖
             </button>
           )}
-          {onOpenHabits && (
+          {showHabits && (
             <button
               type="button"
-              onClick={onOpenHabits}
+              onClick={() => setHabitsModalOpen(true)}
               aria-label="Звички"
               className="flex h-11 w-11 items-center justify-center rounded-full bg-line/30 text-lg text-muted transition"
             >
@@ -1115,6 +1120,24 @@ export default function ClientActivityCalendar({
                 </>
               )}
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {habitsModalOpen && showHabits && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[70]" onClick={() => setHabitsModalOpen(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-line bg-sidebar p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:inset-0 lg:m-auto lg:h-fit lg:w-[460px] lg:rounded-xl lg:border"
+          >
+            <div className="mb-1.5 flex items-center justify-end">
+              <button type="button" onClick={() => setHabitsModalOpen(false)} className="text-xs text-muted">
+                Закрити
+              </button>
+            </div>
+            <HabitsChecklist clientId={clientId} />
           </div>
         </div>,
         document.body

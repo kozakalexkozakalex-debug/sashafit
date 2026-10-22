@@ -6,7 +6,6 @@ import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivi
 import ClientProfileCard from "@/components/ClientProfileCard";
 import ChatLauncher from "@/components/ChatLauncher";
 import NavIcon, { NavIconName } from "@/components/NavIcon";
-import HabitsChecklist from "@/components/HabitsChecklist";
 import NotificationsToggle from "@/components/NotificationsToggle";
 
 type ClientRow = {
@@ -523,13 +522,8 @@ export default function ClientDashboard() {
               <ClientActivityCalendar
                 clientId={client.id}
                 checkins={checkinMarkers}
-                onOpenHabits={() =>
-                  document.getElementById("habits-block")?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
+                showHabits
               />
-              <div id="habits-block">
-                <HabitsChecklist clientId={client.id} />
-              </div>
               <NotificationsToggle clientId={client.id} />
             </>
           ) : (
