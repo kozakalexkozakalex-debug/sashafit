@@ -66,7 +66,7 @@ export type CheckinMarker = {
   photoUrl: string | null;
 };
 
-type Filter = "all" | "workout" | "food" | "checkin";
+type Filter = "all" | "workout" | "food" | "checkin" | "habits";
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
 const MONTHS = [
@@ -86,6 +86,7 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "workout", label: "🏋 Тренування" },
   { id: "food", label: "🍽 Харчування" },
   { id: "checkin", label: "⚖ Чек-іни" },
+  { id: "habits", label: "💧 Звички" },
 ];
 
 const WEEKDAY_ACCUSATIVE = ["неділю", "понеділок", "вівторок", "середу", "четвер", "п'ятницю", "суботу"];
@@ -430,6 +431,7 @@ export default function ClientActivityCalendar({
   const showWorkout = filter === "all" || filter === "workout";
   const showFood = filter === "all" || filter === "food";
   const showCheckin = filter === "all" || filter === "checkin";
+  const showHabitsIcon = !!showHabits && (filter === "all" || filter === "habits");
 
   // ---- перемикання вибраного дня стрілками ----
   // Дозволяє "перелистувати" день вперед/назад без тапу по календарю.
@@ -514,7 +516,7 @@ export default function ClientActivityCalendar({
       </div>
 
       <div className="mb-2 flex flex-wrap gap-1.5">
-        {FILTERS.map((f) => (
+        {FILTERS.filter((f) => f.id !== "habits" || showHabits).map((f) => (
           <button
             key={f.id}
             type="button"
@@ -745,7 +747,7 @@ export default function ClientActivityCalendar({
               ⚖
             </button>
           )}
-          {showHabits && (
+          {showHabitsIcon && (
             <button
               type="button"
               onClick={() => setHabitsModalOpen(true)}
@@ -1133,7 +1135,7 @@ export default function ClientActivityCalendar({
         document.body
       )}
 
-      {habitsModalOpen && showHabits && typeof document !== "undefined" && createPortal(
+      {habitsModalOpen && showHabitsIcon && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[70]" onClick={() => setHabitsModalOpen(false)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
