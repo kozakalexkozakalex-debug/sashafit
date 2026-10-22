@@ -121,17 +121,18 @@ export default function ClientActivityCalendar({
   // календарем — не займають місця, поки їх не відкрили.
   const [workoutModalOpen, setWorkoutModalOpen] = useState(false);
   const [foodModalOpen, setFoodModalOpen] = useState(false);
+  const [checkinModalOpen, setCheckinModalOpen] = useState(false);
 
   // Блокуємо скрол фону, поки відкрито будь-який з попапів-щоденників —
   // інакше на мобільному сторінка під попапом «їде» і попап ніби пірнає вниз.
   useEffect(() => {
-    if (!workoutModalOpen && !foodModalOpen) return;
+    if (!workoutModalOpen && !foodModalOpen && !checkinModalOpen) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prevOverflow;
     };
-  }, [workoutModalOpen, foodModalOpen]);
+  }, [workoutModalOpen, foodModalOpen, checkinModalOpen]);
 
   async function loadWorkouts() {
     const { data } = await supabase
@@ -230,6 +231,7 @@ export default function ClientActivityCalendar({
   useEffect(() => {
     setWorkoutModalOpen(false);
     setFoodModalOpen(false);
+    setCheckinModalOpen(false);
   }, [selected]);
 
   useEffect(() => {
@@ -718,6 +720,18 @@ export default function ClientActivityCalendar({
               🍽
             </button>
           )}
+          {showCheckin && (
+            <button
+              type="button"
+              onClick={() => setCheckinModalOpen(true)}
+              aria-label="Чек-ін"
+              className={`flex h-11 w-11 items-center justify-center rounded-full text-lg transition ${
+                selectedCheckin ? "bg-accent/15 text-accent" : "bg-line/30 text-muted"
+              }`}
+            >
+              ⚖
+            </button>
+          )}
           {onOpenHabits && (
             <button
               type="button"
@@ -1050,35 +1064,60 @@ export default function ClientActivityCalendar({
         document.body
       )}
 
-      {selected && showCheckin && selectedCheckin && (
-        <div className="mt-3 rounded-lg bg-paper p-3 text-sm">
-          <p className="font-medium text-ink">⚖ Чек-ін: {selectedCheckin.weight} кг</p>
-          {(selectedCheckin.waist != null || selectedCheckin.hips != null || selectedCheckin.chest != null) && (
-            <p className="text-xs text-muted">
-              {[
-                selectedCheckin.waist != null ? `Талія ${selectedCheckin.waist} см` : null,
-                selectedCheckin.hips != null ? `Стегна ${selectedCheckin.hips} см` : null,
-                selectedCheckin.chest != null ? `Груди ${selectedCheckin.chest} см` : null,
-              ]
-                .filter(Boolean)
-                .join(", ")}
-            </p>
-          )}
-          {selectedCheckin.comment && <p className="text-xs text-muted">{selectedCheckin.comment}</p>}
-          {checkinAnswers.length > 0 && (
-            <div className="mt-1.5 flex flex-col gap-0.5 border-t border-line pt-1.5">
-              {checkinAnswers.map((a, i) => (
-                <p key={i} className="text-xs text-muted">
-                  <span className="text-ink">{a.label}:</span> {a.value}
+      {checkinModalOpen && selected && showCheckin && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[70]" onClick={() => setCheckinModalOpen(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-line bg-sidebar p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:inset-0 lg:m-auto lg:h-fit lg:w-[460px] lg:rounded-xl lg:border"
+          >
+            <div className="rounded-lg bg-paper p-3 text-sm">
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="font-medium text-ink">⚖ Чек-ін</p>
+                <button type="button" onClick={() => setCheckinModalOpen(false)} className="text-xs text-muted">
+                  Закрити
+                </button>
+              </div>
+              {!selectedCheckin && (
+                <p className="text-muted">
+                  На цей день чек-іна немає. Заповнити його можна у вкладці «Профіль» — чек-ін вноситься раз на
+                  тиждень, у неділю.
                 </p>
-              ))}
+              )}
+              {selectedCheckin && (
+                <>
+                  <p className="font-medium text-ink">Вага: {selectedCheckin.weight} кг</p>
+                  {(selectedCheckin.waist != null || selectedCheckin.hips != null || selectedCheckin.chest != null) && (
+                    <p className="mt-0.5 text-xs text-muted">
+                      {[
+                        selectedCheckin.waist != null ? `Талія ${selectedCheckin.waist} см` : null,
+                        selectedCheckin.hips != null ? `Стегна ${selectedCheckin.hips} см` : null,
+                        selectedCheckin.chest != null ? `Груди ${selectedCheckin.chest} см` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  )}
+                  {selectedCheckin.comment && <p className="mt-0.5 text-xs text-muted">{selectedCheckin.comment}</p>}
+                  {checkinAnswers.length > 0 && (
+                    <div className="mt-1.5 flex flex-col gap-0.5 border-t border-line pt-1.5">
+                      {checkinAnswers.map((a, i) => (
+                        <p key={i} className="text-xs text-muted">
+                          <span className="text-ink">{a.label}:</span> {a.value}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {selectedCheckin.photoUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={selectedCheckin.photoUrl} alt="Фото чек-іну" className="mt-1.5 max-h-40 rounded-lg object-cover" />
+                  )}
+                </>
+              )}
             </div>
-          )}
-          {selectedCheckin.photoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={selectedCheckin.photoUrl} alt="Фото чек-іну" className="mt-1.5 max-h-40 rounded-lg object-cover" />
-          )}
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
