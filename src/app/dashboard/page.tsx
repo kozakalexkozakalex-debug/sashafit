@@ -51,7 +51,7 @@ export default function DashboardPage() {
           className="flex items-center gap-2 text-lg font-bold"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icon-192.png" alt="" className="h-8 w-8 rounded-full" />
+          <img src="/icon-192.png" alt="" className="h-8 w-8 rounded-md" />
           <span className="hidden sm:inline">SashaFit</span>
         </button>
         <div className="flex items-center gap-2">
