@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Unbounded, Golos_Text } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const display = Unbounded({
@@ -43,6 +44,8 @@ export default function RootLayout({
   return (
     <html lang="uk" className={`${display.variable} ${body.variable}`}>
       <body className="min-h-screen bg-paper font-sans text-ink antialiased">
+        {/* Офіційний скрипт Telegram Mini App: дає застосунку знати, хто його відкрив. */}
+        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         {children}
       </body>
     </html>
