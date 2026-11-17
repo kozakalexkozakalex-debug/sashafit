@@ -212,13 +212,24 @@ export default function CoachHome({
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
+    // Тренування та їжу для зведеного календаря тягнемо лише за останні 90 днів
+    // (і майбутні тренування) — інакше з ростом кількості клієнтів головна
+    // вантажила б усю історію.
+    const sinceDate = new Date();
+    sinceDate.setDate(sinceDate.getDate() - 90);
+    const sinceKey = `${sinceDate.getFullYear()}-${String(sinceDate.getMonth() + 1).padStart(2, "0")}-${String(
+      sinceDate.getDate()
+    ).padStart(2, "0")}`;
 
     const [{ data: cl }, { data: wo }, { data: ci }, { data: mt }, { data: ms }, { data: pm }, { data: mp }, { data: fo }] =
       await Promise.all([
         supabase
           .from("clients")
           .select("id, name, invite_code, profile_id, subscription_until, created_at, checkin_weekday"),
-        supabase.from("assigned_workouts").select("id, date, title, client_id, completed_at, clients(name)"),
+        supabase
+          .from("assigned_workouts")
+          .select("id, date, title, client_id, completed_at, clients(name)")
+          .gte("date", sinceKey),
         supabase
           .from("checkins")
           .select("id, client_id, created_at, weight, waist, hips, chest, photo_path, comment, clients(name)")
@@ -239,7 +250,7 @@ export default function CoachHome({
           .from("payments")
           .select("amount, created_at")
           .gte("created_at", monthStart.toISOString()),
-        supabase.from("food_entries").select("client_id, date"),
+        supabase.from("food_entries").select("client_id, date").gte("date", sinceKey),
       ]);
     setClients((cl as Client[]) || []);
     setWorkouts((wo as unknown as AssignedWorkout[]) || []);

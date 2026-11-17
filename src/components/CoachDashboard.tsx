@@ -2,23 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabaseClient";
 import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
 import ClientProfileCard from "@/components/ClientProfileCard";
-import WorkoutBuilder from "@/components/WorkoutBuilder";
-import AssignProgram from "@/components/AssignProgram";
-import AssignHabits from "@/components/AssignHabits";
-import HabitTemplatesLibrary from "@/components/HabitTemplatesLibrary";
-import AssignRation from "@/components/AssignRation";
-import ProgramsSection from "@/components/ProgramsSection";
-import NutritionSection from "@/components/NutritionSection";
-import CoachAnalytics from "@/components/CoachAnalytics";
-import CoachPayments from "@/components/CoachPayments";
 import CoachHome from "@/components/CoachHome";
 import ChatLauncher from "@/components/ChatLauncher";
 import { clientRisk, RISK_LABEL } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
 import NavIcon, { NavIconName } from "@/components/NavIcon";
+
+// Важкі екрани вантажимо лише коли вони справді відкриваються — так перший
+// вхід тренера швидший.
+const WorkoutBuilder = dynamic(() => import("@/components/WorkoutBuilder"), { ssr: false });
+const AssignProgram = dynamic(() => import("@/components/AssignProgram"), { ssr: false });
+const AssignHabits = dynamic(() => import("@/components/AssignHabits"), { ssr: false });
+const HabitTemplatesLibrary = dynamic(() => import("@/components/HabitTemplatesLibrary"), { ssr: false });
+const AssignRation = dynamic(() => import("@/components/AssignRation"), { ssr: false });
+const ProgramsSection = dynamic(() => import("@/components/ProgramsSection"), { ssr: false });
+const NutritionSection = dynamic(() => import("@/components/NutritionSection"), { ssr: false });
+const CoachAnalytics = dynamic(() => import("@/components/CoachAnalytics"), { ssr: false });
+const CoachPayments = dynamic(() => import("@/components/CoachPayments"), { ssr: false });
 
 type Client = {
   id: string;
