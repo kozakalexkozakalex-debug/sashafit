@@ -114,7 +114,7 @@ function LoginForm() {
       <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6">
         <div className="mb-1 flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icon-192.png" alt="" className="h-8 w-8 rounded-md" />
+          <img src="/logo-96.png" alt="" className="h-8 w-8 rounded-md" />
           <h1 className="text-xl font-bold">SashaFit</h1>
         </div>
         {invite && (

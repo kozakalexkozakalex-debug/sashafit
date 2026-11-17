@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { compressImage } from "@/lib/compressImage";
 
 type Exercise = {
   id: string;
@@ -69,8 +70,9 @@ export default function ExerciseLibrary() {
 
     let photoPath: string | null = null;
     if (photoFile) {
-      const path = `${Date.now()}-${photoFile.name}`;
-      const { error: upErr } = await supabase.storage.from("exercises").upload(path, photoFile);
+      const photo = await compressImage(photoFile);
+      const path = `${Date.now()}-${photo.name}`;
+      const { error: upErr } = await supabase.storage.from("exercises").upload(path, photo);
       if (upErr) {
         setBusy(false);
         setErr("Не вдалось завантажити фото: " + upErr.message);
@@ -109,8 +111,9 @@ export default function ExerciseLibrary() {
 
   // Додати/замінити картинку вже існуючій вправі — не треба видаляти й
   // створювати заново. Можна завантажити хоч схематичну картинку, якщо нема фото.
-  async function uploadPhotoForExisting(id: string, file: File) {
+  async function uploadPhotoForExisting(id: string, rawFile: File) {
     setPhotoUploadingId(id);
+    const file = await compressImage(rawFile);
     const path = `${Date.now()}-${file.name}`;
     const { error: upErr } = await supabase.storage.from("exercises").upload(path, file);
     if (!upErr) {

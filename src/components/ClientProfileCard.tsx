@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { compressImage } from "@/lib/compressImage";
 import PhotoCompare from "@/components/PhotoCompare";
 
 type ClientRow = {
@@ -122,8 +123,9 @@ export default function ClientProfileCard({
       .then(({ data }) => setAvatarUrl(data?.signedUrl || null));
   }, [client.avatar_path]);
 
-  async function uploadAvatar(file: File) {
+  async function uploadAvatar(rawFile: File) {
     setAvatarBusy(true);
+    const file = await compressImage(rawFile);
     const path = `${client.id}/${Date.now()}-${file.name}`;
     const { error: upErr } = await supabase.storage.from("avatars").upload(path, file);
     if (!upErr) {
@@ -247,8 +249,9 @@ export default function ClientProfileCard({
 
     let photoPath: string | null = null;
     if (ciFile) {
-      const path = `${client.id}/${Date.now()}-${ciFile.name}`;
-      const { error: upErr } = await supabase.storage.from("checkins").upload(path, ciFile);
+      const photo = await compressImage(ciFile);
+      const path = `${client.id}/${Date.now()}-${photo.name}`;
+      const { error: upErr } = await supabase.storage.from("checkins").upload(path, photo);
       if (upErr) {
         setCiBusy(false);
         setCiErr("Не вдалось завантажити фото: " + upErr.message);
