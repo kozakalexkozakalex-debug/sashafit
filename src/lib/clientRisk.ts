@@ -3,18 +3,13 @@
 export type RiskLevel = "ok" | "watch" | "risk" | "pending";
 
 export function clientRisk(
-  client: { profile_id: string | null; subscription_until: string | null; created_at: string },
+  client: { profile_id: string | null; created_at: string },
   lastCheckinAt: string | undefined,
   now: Date = new Date()
 ): RiskLevel {
   if (!client.profile_id) {
     const daysSinceInvite = (now.getTime() - new Date(client.created_at).getTime()) / 86400000;
     return daysSinceInvite > 3 ? "watch" : "pending";
-  }
-
-  const todayKey = now.toISOString().slice(0, 10);
-  if (client.subscription_until && client.subscription_until < todayKey) {
-    return "risk";
   }
 
   if (!lastCheckinAt) return "watch";

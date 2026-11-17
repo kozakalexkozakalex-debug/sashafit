@@ -22,7 +22,6 @@ const AssignRation = dynamic(() => import("@/components/AssignRation"), { ssr: f
 const ProgramsSection = dynamic(() => import("@/components/ProgramsSection"), { ssr: false });
 const NutritionSection = dynamic(() => import("@/components/NutritionSection"), { ssr: false });
 const CoachAnalytics = dynamic(() => import("@/components/CoachAnalytics"), { ssr: false });
-const CoachPayments = dynamic(() => import("@/components/CoachPayments"), { ssr: false });
 
 type Client = {
   id: string;
@@ -59,7 +58,7 @@ type Checkin = {
   created_at: string;
 };
 
-type TabId = "home" | "clients" | "newClient" | "library" | "analytics" | "payments";
+type TabId = "home" | "clients" | "newClient" | "library" | "analytics";
 type LibrarySubTab = "workouts" | "food" | "habits";
 
 const TABS: { id: TabId; label: string }[] = [
@@ -68,7 +67,6 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "newClient", label: "Заявки" },
   { id: "library", label: "База" },
   { id: "analytics", label: "Аналітика" },
-  { id: "payments", label: "Оплата" },
 ];
 
 // Розділи-кружки на вкладці «База». Щоб додати новий розділ у майбутньому
@@ -83,14 +81,12 @@ const LIBRARY_SECTIONS: { id: LibrarySubTab; label: string; icon: string }[] = [
 // Знизу на мобільному — 4 найважливіші вкладки + кнопка «Ще» з рештою.
 // Чек-іни тепер всередині «Аналітики» (перша підвкладка), окремої кнопки нема.
 const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "library", "analytics"];
-const MOBILE_MORE_IDS: TabId[] = ["payments"];
 const TAB_ICON: Record<TabId, NavIconName> = {
   home: "home",
   clients: "clients",
   newClient: "clients",
   library: "library",
   analytics: "analytics",
-  payments: "payments",
 };
 
 // Поп-ап для дій над клієнтом (призначити тренування/програму/раціон) —
@@ -122,7 +118,6 @@ export default function CoachDashboard({
 }) {
   const [tab, setTab] = useState<TabId>("home");
   const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>("workouts");
-  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   // Сигнал для CoachHome: відкрити форму "Нова зустріч" (кнопка в хедері),
   // навіть якщо зараз відкрита інша вкладка.
   const [homeAction, setHomeAction] = useState<{ ts: number } | null>(null);
@@ -413,8 +408,6 @@ export default function CoachDashboard({
     );
   }
 
-  const moreActive = MOBILE_MORE_IDS.includes(tab);
-
   return (
     <div className="flex flex-col gap-6 pb-20 lg:flex-row lg:items-start lg:gap-8 lg:pb-0">
       {typeof document !== "undefined" &&
@@ -429,7 +422,6 @@ export default function CoachDashboard({
                   type="button"
                   onClick={() => {
                     setTab(id);
-                    setMobileMoreOpen(false);
                   }}
                   className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
                     active ? "text-accent" : "text-muted"
@@ -440,36 +432,7 @@ export default function CoachDashboard({
                 </button>
               );
             })}
-            <button
-              type="button"
-              onClick={() => setMobileMoreOpen((v) => !v)}
-              aria-expanded={mobileMoreOpen}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                moreActive || mobileMoreOpen ? "text-accent" : "text-muted"
-              }`}
-            >
-              <NavIcon name="more" className="h-5 w-5" />
-              Ще
-            </button>
           </nav>,
-          document.body
-        )}
-
-      {mobileMoreOpen &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div className="fixed inset-0 z-[60] lg:hidden" onClick={() => setMobileMoreOpen(false)}>
-            <div className="absolute inset-0 bg-black/50" />
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-line bg-sidebar p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
-            >
-              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
-              {MOBILE_MORE_IDS.map((id) => (
-                <TabButton key={id} t={TABS.find((x) => x.id === id)!} onSelect={() => setMobileMoreOpen(false)} />
-              ))}
-            </div>
-          </div>,
           document.body
         )}
 
@@ -479,8 +442,6 @@ export default function CoachDashboard({
         {(["clients", "newClient", "library", "analytics"] as TabId[]).map((id) => (
           <TabButton key={id} t={TABS.find((x) => x.id === id)!} />
         ))}
-        <div className="my-2 h-px bg-line" />
-        <TabButton t={TABS.find((x) => x.id === "payments")!} />
       </nav>
 
       <div className="min-w-0 flex-1">
@@ -531,8 +492,6 @@ export default function CoachDashboard({
         </div>
       ) : tab === "analytics" ? (
         <CoachAnalytics />
-      ) : tab === "payments" ? (
-        <CoachPayments />
       ) : tab === "newClient" ? (
         <div>
           <div className="mb-4 flex gap-1 rounded-full border border-line bg-sidebar p-1">

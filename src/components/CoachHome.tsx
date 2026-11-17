@@ -11,7 +11,6 @@ type Client = {
   name: string | null;
   invite_code: string;
   profile_id: string | null;
-  subscription_until: string | null;
   created_at: string;
 };
 type AssignedWorkout = {
@@ -60,7 +59,7 @@ const RISK_DOT: Record<RiskLevel, string> = {
   ok: "bg-green-400",
 };
 
-type NavTab = "clients" | "library" | "analytics" | "payments";
+type NavTab = "clients" | "library" | "analytics";
 
 export default function CoachHome({
   onOpenClient,
@@ -149,7 +148,7 @@ export default function CoachHome({
     const sinceKey = toKey(sinceDate);
 
     const [{ data: cl }, { data: wo }, { data: ci }, { data: mt }, { data: fo }] = await Promise.all([
-      supabase.from("clients").select("id, name, invite_code, profile_id, subscription_until, created_at"),
+      supabase.from("clients").select("id, name, invite_code, profile_id, created_at"),
       supabase
         .from("assigned_workouts")
         .select("id, date, title, client_id, completed_at, clients(name)")
@@ -589,16 +588,6 @@ export default function CoachHome({
               </div>
             )}
           </div>
-
-          {onNavigate && (
-            <button
-              type="button"
-              onClick={() => onNavigate("payments")}
-              className="rounded-xl border border-line bg-surface p-3 text-left text-sm text-muted transition hover:text-ink"
-            >
-              💳 Оплата та підписки ›
-            </button>
-          )}
         </div>
       </div>
 
