@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { clientRisk, RiskLevel } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
-import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
 
 type Client = {
   id: string;
@@ -14,7 +13,6 @@ type Client = {
   profile_id: string | null;
   subscription_until: string | null;
   created_at: string;
-  checkin_weekday: number | null;
 };
 type AssignedWorkout = {
   id: string;
@@ -25,28 +23,10 @@ type AssignedWorkout = {
   clients: { name: string } | null;
 };
 type Checkin = {
-  id: string;
   client_id: string;
   created_at: string;
   weight: number | null;
-  waist: number | null;
-  hips: number | null;
-  chest: number | null;
-  photo_path: string | null;
-  comment: string | null;
-  clients?: { name: string } | null;
 };
-type Message = {
-  sender: "coach" | "client";
-  created_at: string;
-  clients: { name: string } | null;
-};
-type Payment = {
-  amount: number | null;
-  created_at: string;
-  clients: { name: string } | null;
-};
-type FeedItem = { key: string; text: string; at: string };
 type CheckinQuestion = { id: string; label: string; kind: "text" | "scale"; position: number };
 type Meeting = {
   id: string;
@@ -67,39 +47,10 @@ function toKey(d: Date) {
 function daysBetween(a: Date, b: Date) {
   return Math.floor((a.getTime() - b.getTime()) / 86400000);
 }
-// Тиждень (пн-нд), що містить дату dateKey — для стрічки днів зведеного
-// щоденника (режим "Усі клієнти"), як у ClientActivityCalendar.
-function weekDates(dateKey: string) {
-  const d = new Date(`${dateKey}T00:00:00`);
-  const dow = (d.getDay() + 6) % 7;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - dow);
-  return Array.from({ length: 7 }, (_, i) => {
-    const dd = new Date(monday);
-    dd.setDate(monday.getDate() + i);
-    return dd;
-  });
-}
-
-const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
-const MONTHS = [
-  "Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень",
-  "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень",
-];
-
-function Sparkline({ values, color }: { values: number[]; color: string }) {
-  const max = Math.max(1, ...values);
-  return (
-    <div className="mt-2 flex h-6 items-end gap-0.5">
-      {values.map((v, i) => (
-        <div
-          key={i}
-          className="flex-1 rounded-sm"
-          style={{ height: `${Math.max(8, (v / max) * 100)}%`, background: color }}
-        />
-      ))}
-    </div>
-  );
+function agoText(days: number) {
+  if (days <= 0) return "сьогодні";
+  if (days === 1) return "вчора";
+  return `${days} дн тому`;
 }
 
 const RISK_DOT: Record<RiskLevel, string> = {
@@ -112,11 +63,12 @@ const RISK_DOT: Record<RiskLevel, string> = {
 type NavTab = "clients" | "library" | "analytics" | "payments";
 
 export default function CoachHome({
-  onOpenClients,
+  onOpenClient,
   onNavigate,
   actionSignal,
 }: {
-  onOpenClients?: () => void;
+  // Відкриває вкладку "Клієнти" одразу з карткою цього клієнта.
+  onOpenClient?: (clientId: string) => void;
   onNavigate?: (tab: NavTab) => void;
   // Дозволяє відкрити форму "Нова зустріч" ззовні — з кнопки в хедері
   // (сторінка dashboard), а не тільки з кнопки на цій сторінці.
@@ -126,26 +78,9 @@ export default function CoachHome({
   const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [monthPayments, setMonthPayments] = useState<{ amount: number | null; created_at: string }[]>([]);
   const [foodEntries, setFoodEntries] = useState<{ client_id: string; date: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [feedSeenAt, setFeedSeenAt] = useState<string | null>(null);
-
-  const [cursor, setCursor] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-
-  // Щоденник на головній: дропдаун "Усі клієнти" / конкретний клієнт.
-  const [selectedClientId, setSelectedClientId] = useState("");
-  // Розгортання повного місяця у зведеному вигляді ("Усі клієнти").
-  const [aggExpanded, setAggExpanded] = useState(false);
-  // Підписані URL фото чек-інів — підвантажуються лише для вибраного клієнта.
-  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
-  const aggTouchStartX = useRef<number | null>(null);
+  const [search, setSearch] = useState("");
 
   const [mTitle, setMTitle] = useState("");
   const [mClientId, setMClientId] = useState("");
@@ -165,9 +100,7 @@ export default function CoachHome({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionSignal?.ts]);
 
-  // Поки попап зустрічі відкритий — блокуємо скрол фону, щоб палець/колесо
-  // не "йшов" по сторінці позаду замість форми в попапі (саме через це
-  // раніше здавалось, що треба листати вниз, щоб дістатись до форми).
+  // Поки попап зустрічі відкритий — блокуємо скрол фону.
   useEffect(() => {
     if (!meetingModalOpen) return;
     const prevOverflow = document.body.style.overflow;
@@ -209,56 +142,29 @@ export default function CoachHome({
 
   async function load() {
     setLoading(true);
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    // Тренування та їжу для зведеного календаря тягнемо лише за останні 90 днів
-    // (і майбутні тренування) — інакше з ростом кількості клієнтів головна
-    // вантажила б усю історію.
+    // Тренування та їжу тягнемо лише за останні 30 днів (і майбутні
+    // тренування) — для головної цього достатньо, і вона лишається швидкою.
     const sinceDate = new Date();
-    sinceDate.setDate(sinceDate.getDate() - 90);
-    const sinceKey = `${sinceDate.getFullYear()}-${String(sinceDate.getMonth() + 1).padStart(2, "0")}-${String(
-      sinceDate.getDate()
-    ).padStart(2, "0")}`;
+    sinceDate.setDate(sinceDate.getDate() - 30);
+    const sinceKey = toKey(sinceDate);
 
-    const [{ data: cl }, { data: wo }, { data: ci }, { data: mt }, { data: ms }, { data: pm }, { data: mp }, { data: fo }] =
-      await Promise.all([
-        supabase
-          .from("clients")
-          .select("id, name, invite_code, profile_id, subscription_until, created_at, checkin_weekday"),
-        supabase
-          .from("assigned_workouts")
-          .select("id, date, title, client_id, completed_at, clients(name)")
-          .gte("date", sinceKey),
-        supabase
-          .from("checkins")
-          .select("id, client_id, created_at, weight, waist, hips, chest, photo_path, comment, clients(name)")
-          .order("created_at", { ascending: false }),
-        supabase.from("meetings").select("*, clients(name)").order("scheduled_at", { ascending: true }),
-        supabase
-          .from("messages")
-          .select("sender, created_at, clients(name)")
-          .eq("sender", "client")
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase
-          .from("payments")
-          .select("amount, created_at, clients(name)")
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase
-          .from("payments")
-          .select("amount, created_at")
-          .gte("created_at", monthStart.toISOString()),
-        supabase.from("food_entries").select("client_id, date").gte("date", sinceKey),
-      ]);
+    const [{ data: cl }, { data: wo }, { data: ci }, { data: mt }, { data: fo }] = await Promise.all([
+      supabase.from("clients").select("id, name, invite_code, profile_id, subscription_until, created_at"),
+      supabase
+        .from("assigned_workouts")
+        .select("id, date, title, client_id, completed_at, clients(name)")
+        .gte("date", sinceKey),
+      supabase
+        .from("checkins")
+        .select("client_id, created_at, weight")
+        .order("created_at", { ascending: false }),
+      supabase.from("meetings").select("*, clients(name)").order("scheduled_at", { ascending: true }),
+      supabase.from("food_entries").select("client_id, date").gte("date", sinceKey),
+    ]);
     setClients((cl as Client[]) || []);
     setWorkouts((wo as unknown as AssignedWorkout[]) || []);
-    setCheckins((ci as unknown as Checkin[]) || []);
+    setCheckins((ci as Checkin[]) || []);
     setMeetings((mt as unknown as Meeting[]) || []);
-    setMessages((ms as unknown as Message[]) || []);
-    setPayments((pm as unknown as Payment[]) || []);
-    setMonthPayments(mp || []);
     setFoodEntries((fo as { client_id: string; date: string }[]) || []);
     setLoading(false);
   }
@@ -266,63 +172,7 @@ export default function CoachHome({
   useEffect(() => {
     load();
     loadQuestions();
-    try {
-      setFeedSeenAt(localStorage.getItem("sashafit_feed_seen_at"));
-    } catch {
-      /* ігноруємо — немає доступу до localStorage */
-    }
   }, []);
-
-  useEffect(() => {
-    if (loading) return;
-    try {
-      localStorage.setItem("sashafit_feed_seen_at", new Date().toISOString());
-    } catch {
-      /* ігноруємо — немає доступу до localStorage */
-    }
-  }, [loading]);
-
-  // Коли тренер вибирає конкретного клієнта в дропдауні щоденника —
-  // підвантажуємо підписані URL фото його чек-інів (лише раз на фото).
-  useEffect(() => {
-    if (!selectedClientId) return;
-    const withPhotos = checkins.filter(
-      (c) => c.client_id === selectedClientId && c.photo_path && !photoUrls[c.id]
-    );
-    if (withPhotos.length === 0) return;
-    (async () => {
-      const urls: Record<string, string> = {};
-      await Promise.all(
-        withPhotos.map(async (c) => {
-          const { data } = await supabase.storage
-            .from("checkins")
-            .createSignedUrl(c.photo_path as string, 3600);
-          if (data?.signedUrl) urls[c.id] = data.signedUrl;
-        })
-      );
-      if (Object.keys(urls).length > 0) setPhotoUrls((prev) => ({ ...prev, ...urls }));
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClientId, checkins]);
-
-  // ---- Свайп між днями у зведеній стрічці ("Усі клієнти") ----
-  function shiftAggWeek(delta: number) {
-    const base = selectedDay ? new Date(`${selectedDay}T00:00:00`) : new Date();
-    base.setDate(base.getDate() + delta * 7);
-    setSelectedDay(toKey(base));
-  }
-  function onAggTouchStart(e: React.TouchEvent) {
-    aggTouchStartX.current = e.touches[0].clientX;
-  }
-  function onAggTouchEnd(e: React.TouchEvent) {
-    if (aggTouchStartX.current == null) return;
-    const dx = e.changedTouches[0].clientX - aggTouchStartX.current;
-    aggTouchStartX.current = null;
-    if (Math.abs(dx) < 50) return;
-    const base = selectedDay ? new Date(`${selectedDay}T00:00:00`) : new Date();
-    base.setDate(base.getDate() + (dx < 0 ? 1 : -1));
-    setSelectedDay(toKey(base));
-  }
 
   async function addMeeting() {
     if (!mTitle.trim() || !mDateTime) {
@@ -386,15 +236,16 @@ export default function CoachHome({
 
   const today = new Date();
   const todayKey = toKey(today);
+  const weekAgo = new Date(today);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgoKey = toKey(weekAgo);
 
-  const lastCheckinByClient: Record<string, string> = {};
-  for (const ci of checkins) {
-    if (!lastCheckinByClient[ci.client_id]) lastCheckinByClient[ci.client_id] = ci.created_at;
-  }
+  // Чек-іни вже відсортовані від нових до старих: перший — останній,
+  // другий — попередній (для різниці ваги).
+  const checkinsByClient: Record<string, Checkin[]> = {};
+  for (const ci of checkins) (checkinsByClient[ci.client_id] = checkinsByClient[ci.client_id] || []).push(ci);
 
-  // ---- Пропущені тренування поспіль (з дня призначення, рахуючи до сьогодні) ----
-  // Беремо всі минулі призначені тренування клієнта, від найновішого до найстарішого,
-  // і рахуємо, скільки підряд не позначені виконаними — зупиняємось на першому виконаному.
+  // Пропущені тренування поспіль (від найновішого минулого до першого виконаного).
   function missedStreak(clientId: string): number {
     const past = workouts
       .filter((w) => w.client_id === clientId && w.date < todayKey)
@@ -407,742 +258,225 @@ export default function CoachHome({
     return n;
   }
 
-  // ---- Потребують уваги: ризик-статус кожного клієнта з причиною ----
-  type RiskRow = { client: Client; level: RiskLevel; reason: string };
-  const riskRows: RiskRow[] = clients
-    .map((c) => {
-      let level = clientRisk(c, lastCheckinByClient[c.id]);
-      let reason = "";
-      if (level === "risk") {
-        reason = "прострочена підписка";
-      } else if (level === "pending") {
-        const d = daysBetween(today, new Date(c.created_at));
-        reason = `запрошено ${d} ${d === 1 ? "день" : "дні"} тому, ще не підключився`;
-      } else if (level === "watch") {
-        if (!c.profile_id) {
-          const d = daysBetween(today, new Date(c.created_at));
-          reason = `не підключився ${d} днів`;
+  const foodTodayByClient = new Set(foodEntries.filter((f) => f.date === todayKey).map((f) => f.client_id));
+
+  type Row = {
+    client: Client;
+    level: RiskLevel;
+    reason: string;
+    lastCheckinDays: number | null;
+    weightText: string;
+    weekDone: number;
+    weekTotal: number;
+  };
+
+  const rows: Row[] = clients.map((c) => {
+    const list = checkinsByClient[c.id] || [];
+    const last = list[0];
+    let level = clientRisk(c, last?.created_at);
+    let reason = "";
+    if (level === "risk") {
+      reason = "прострочена підписка";
+    } else if (level === "pending") {
+      const d = daysBetween(today, new Date(c.created_at));
+      reason = `запрошено ${agoText(d)}, ще не зайшов(ла)`;
+    } else if (level === "watch") {
+      if (!c.profile_id) {
+        reason = `не зайшов(ла) вже ${daysBetween(today, new Date(c.created_at))} дн`;
+      } else {
+        reason = last ? `немає чек-іну ${daysBetween(today, new Date(last.created_at))} дн` : "ще жодного чек-іну";
+      }
+    }
+    if (c.profile_id) {
+      const streak = missedStreak(c.id);
+      if (streak >= 2) {
+        const streakReason = `${streak} тренувань поспіль пропущено`;
+        if (level === "ok") {
+          level = "watch";
+          reason = streakReason;
         } else {
-          const last = lastCheckinByClient[c.id];
-          reason = last
-            ? `немає чек-іну ${daysBetween(today, new Date(last))} днів`
-            : "ще жодного чек-іну";
+          reason = `${reason} · ${streakReason}`;
         }
       }
+    }
 
-      if (c.profile_id) {
-        const streak = missedStreak(c.id);
-        if (streak >= 2) {
-          const streakReason = `${streak} тренувань поспіль пропущено`;
-          if (level === "ok") {
-            level = "watch";
-            reason = streakReason;
-          } else {
-            reason = `${reason} · ${streakReason}`;
-          }
-        }
+    // Вага: остання + різниця з попереднім чек-іном, де вага була вказана.
+    const withWeight = list.filter((x) => x.weight != null);
+    let weightText = "";
+    if (withWeight.length > 0) {
+      const w = withWeight[0].weight as number;
+      weightText = `${w} кг`;
+      if (withWeight.length > 1) {
+        const diff = Math.round((w - (withWeight[1].weight as number)) * 10) / 10;
+        if (diff !== 0) weightText += ` (${diff > 0 ? "+" : "−"}${Math.abs(diff)})`;
       }
+    }
 
-      return { client: c, level, reason };
-    })
-    .filter((r) => r.level === "risk" || r.level === "watch" || r.level === "pending")
-    .sort((a, b) => {
-      const order: Record<RiskLevel, number> = { risk: 0, watch: 1, pending: 2, ok: 3 };
-      return order[a.level] - order[b.level];
-    })
-    .slice(0, 6);
+    const week = workouts.filter((w) => w.client_id === c.id && w.date > weekAgoKey && w.date <= todayKey);
+
+    return {
+      client: c,
+      level,
+      reason,
+      lastCheckinDays: last ? daysBetween(today, new Date(last.created_at)) : null,
+      weightText,
+      weekDone: week.filter((w) => w.completed_at).length,
+      weekTotal: week.length,
+    };
+  });
+
+  const levelOrder: Record<RiskLevel, number> = { risk: 0, watch: 1, pending: 2, ok: 3 };
+  const attentionRows = rows
+    .filter((r) => r.level !== "ok")
+    .sort((a, b) => levelOrder[a.level] - levelOrder[b.level]);
+
+  // Список клієнтів: лише підключені; ті, кому потрібна увага — першими.
+  const q = search.trim().toLowerCase();
+  const clientRows = rows
+    .filter((r) => r.client.profile_id)
+    .filter((r) => !q || clientLabel(r.client).toLowerCase().includes(q))
+    .sort(
+      (a, b) =>
+        levelOrder[a.level] - levelOrder[b.level] ||
+        clientLabel(a.client).localeCompare(clientLabel(b.client), "uk")
+    );
+  const connectedCount = rows.filter((r) => r.client.profile_id).length;
 
   const upcomingMeetings = meetings.filter((m) => new Date(m.scheduled_at).getTime() >= Date.now());
-  const nextMeeting = upcomingMeetings[0];
-
-  const year = cursor.getFullYear();
-  const month = cursor.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startOffset = (firstDay.getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const workoutsByDate: Record<string, AssignedWorkout[]> = {};
-  for (const w of workouts) {
-    (workoutsByDate[w.date] = workoutsByDate[w.date] || []).push(w);
-  }
-
-  const foodByDate: Record<string, { client_id: string; date: string }[]> = {};
-  for (const f of foodEntries) {
-    (foodByDate[f.date] = foodByDate[f.date] || []).push(f);
-  }
-
-  const cells: (Date | null)[] = [];
-  for (let i = 0; i < startOffset; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
-
-  const dayWorkouts = selectedDay ? workoutsByDate[selectedDay] || [] : [];
-  const clientById: Record<string, Client> = {};
-  for (const c of clients) clientById[c.id] = c;
-  const dayFoodClients = selectedDay
-    ? Array.from(new Set((foodByDate[selectedDay] || []).map((f) => f.client_id))).map((id) =>
-        clientById[id] ? clientLabel(clientById[id]) : "Клієнт"
-      )
-    : [];
-  const dayCheckins = selectedDay ? checkins.filter((c) => c.created_at.slice(0, 10) === selectedDay) : [];
-  const stripDates = weekDates(selectedDay || todayKey);
-
-  const selectedClient = clients.find((c) => c.id === selectedClientId) || null;
-  const selectedClientMarkers: CheckinMarker[] = checkins
-    .filter((c) => c.client_id === selectedClientId)
-    .map((c) => ({
-      id: c.id,
-      date: c.created_at.slice(0, 10),
-      weight: c.weight,
-      waist: c.waist,
-      hips: c.hips,
-      chest: c.chest,
-      comment: c.comment,
-      photoUrl: c.photo_path ? photoUrls[c.id] || null : null,
-    }));
-
-  function relTime(iso: string) {
-    const diffMs = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diffMs / 60000);
-    if (mins < 1) return "щойно";
-    if (mins < 60) return `${mins} хв тому`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours} год тому`;
-    const days = Math.floor(hours / 24);
-    return `${days} дн тому`;
-  }
-
-  const feed: FeedItem[] = [
-    ...checkins.map((c, i) => ({
-      key: `ci-${i}`,
-      text: `${c.clients?.name || "Клієнт"} надіслав(ла) чек-ін`,
-      at: c.created_at,
-    })),
-    ...messages.map((m, i) => ({
-      key: `msg-${i}`,
-      text: `${m.clients?.name || "Клієнт"} написав(ла) у чат`,
-      at: m.created_at,
-    })),
-    ...payments.map((p, i) => ({
-      key: `pay-${i}`,
-      text: `Оплата від ${p.clients?.name || "клієнта"}${p.amount ? `: ${p.amount}` : ""}`,
-      at: p.created_at,
-    })),
-  ]
-    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-    .slice(0, 10);
-
-  const activeCount = clients.filter((c) => c.subscription_until && c.subscription_until >= todayKey).length;
-  const todayWorkouts = workoutsByDate[todayKey] || [];
-  const todayCount = todayWorkouts.length;
-  const foodTodayCount = new Set((foodByDate[todayKey] || []).map((f) => f.client_id)).size;
-
-  // ---- Спарклайни для карток статистики (останні 7 днів) ----
-  const last7Keys: string[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    last7Keys.push(toKey(d));
-  }
-  const newClientsPerDay = last7Keys.map(
-    (k) => clients.filter((c) => toKey(new Date(c.created_at)) === k).length
-  );
-  const workoutsPerDay = last7Keys.map((k) => (workoutsByDate[k] || []).length);
-  const paymentsAmountPerDay = last7Keys.map((k) =>
-    monthPayments
-      .filter((p) => toKey(new Date(p.created_at)) === k)
-      .reduce((s, p) => s + (p.amount || 0), 0)
-  );
-
-  const newClientsThisWeek = newClientsPerDay.reduce((s, v) => s + v, 0);
-  const expiringSoon = clients.filter((c) => {
-    if (!c.subscription_until) return false;
-    const d = daysBetween(new Date(c.subscription_until), today);
-    return d >= 0 && d <= 7;
-  }).length;
-
-  // ---- Прогрес клієнтів: % виконання за 30 днів, найслабші першими ----
-  const since30 = new Date(today);
-  since30.setDate(since30.getDate() - 30);
-  const since30Key = toKey(since30);
-  type ProgressRow = { name: string; rate: number };
-  const progressRows: ProgressRow[] = clients
-    .filter((c) => c.profile_id)
-    .map((c) => {
-      const past = workouts.filter(
-        (w) => w.client_id === c.id && w.date >= since30Key && w.date <= todayKey
-      );
-      if (past.length === 0) return null;
-      const done = past.filter((w) => w.completed_at).length;
-      return { name: clientLabel(c), rate: Math.round((done / past.length) * 100) };
-    })
-    .filter((r): r is ProgressRow => r !== null)
-    .sort((a, b) => a.rate - b.rate)
-    .slice(0, 5);
-
-  const monthTotal = monthPayments.reduce((s, p) => s + (p.amount || 0), 0);
+  const todayMeetings = upcomingMeetings.filter((m) => toKey(new Date(m.scheduled_at)) === todayKey);
+  const laterMeetings = upcomingMeetings.filter((m) => toKey(new Date(m.scheduled_at)) !== todayKey).slice(0, 5);
+  const todayWorkouts = workouts.filter((w) => w.date === todayKey);
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-5 gap-1.5 sm:gap-3">
-        <button
-          type="button"
-          onClick={() => onNavigate?.("clients")}
-          className="rounded-lg border-l-2 border-accent bg-surface p-1.5 text-left transition hover:bg-line/20 sm:p-3"
-        >
-          <p className="truncate text-[9px] text-muted sm:text-xs">👥 Клієнти</p>
-          <div className="flex items-end justify-between gap-2">
-            <p className="truncate font-display text-sm font-semibold text-ink sm:text-2xl">{clients.length}</p>
-            {newClientsThisWeek > 0 && (
-              <span className="hidden rounded bg-green-400/10 px-1.5 py-0.5 text-[11px] text-green-400 sm:inline">
-                +{newClientsThisWeek} за тиждень
-              </span>
-            )}
-          </div>
-          <div className="hidden sm:block">
-            <Sparkline values={newClientsPerDay} color="#4ADE80" />
-          </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate?.("clients")}
-          className="rounded-lg border-l-2 border-accent bg-surface p-1.5 text-left transition hover:bg-line/20 sm:p-3"
-        >
-          <p className="truncate text-[9px] text-muted sm:text-xs">✅ Підписки</p>
-          <div className="flex items-end justify-between gap-2">
-            <p className="truncate font-display text-sm font-semibold text-green-400 sm:text-2xl">{activeCount}</p>
-            {expiringSoon > 0 && (
-              <span className="hidden rounded bg-yellow-400/10 px-1.5 py-0.5 text-[11px] text-yellow-400 sm:inline">
-                {expiringSoon} закінчуються
-              </span>
-            )}
-          </div>
-          <div className="hidden sm:block">
-            <Sparkline values={workoutsPerDay} color="#F2615B" />
-          </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate?.("clients")}
-          className="rounded-lg border-l-2 border-accent bg-surface p-1.5 text-left transition hover:bg-line/20 sm:p-3"
-        >
-          <p className="truncate text-[9px] text-muted sm:text-xs">🏋 Сьогодні</p>
-          <p className="truncate font-display text-sm font-semibold text-ink sm:text-2xl">{todayCount}</p>
-          <div className="hidden sm:block">
-            <Sparkline values={workoutsPerDay} color="#E8622C" />
-          </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate?.("clients")}
-          className="rounded-lg border-l-2 border-accent bg-surface p-1.5 text-left transition hover:bg-line/20 sm:p-3"
-        >
-          <p className="truncate text-[9px] text-muted sm:text-xs">🍽 Сьогодні</p>
-          <p className="truncate font-display text-sm font-semibold text-ink sm:text-2xl">{foodTodayCount}</p>
-          <div className="hidden sm:block">
-            <Sparkline values={workoutsPerDay} color="#60A5FA" />
-          </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate?.("payments")}
-          className="rounded-lg border-l-2 border-accent bg-surface p-1.5 text-left transition hover:bg-line/20 sm:p-3"
-        >
-          <p className="truncate text-[9px] text-muted sm:text-xs">💳 Оплата</p>
-          <p className="truncate font-display text-sm font-semibold text-ink sm:text-2xl">{monthTotal.toLocaleString("uk-UA")} ₴</p>
-          <div className="hidden sm:block">
-            <Sparkline values={paymentsAmountPerDay} color="#4ADE80" />
-          </div>
-        </button>
-      </div>
-
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px] lg:items-start">
         <div className="flex flex-col gap-5">
-          {riskRows.length > 0 && (
+          {attentionRows.length > 0 && (
             <div className="rounded-xl border border-line bg-surface p-4">
               <h2 className="mb-1 flex items-baseline justify-between text-sm font-semibold">
                 <span>Потребують уваги</span>
-                <span className="text-xs font-normal text-muted">{riskRows.length}</span>
+                <span className="text-xs font-normal text-muted">{attentionRows.length}</span>
               </h2>
               <div className="flex flex-col">
-                {riskRows.map((r) => (
+                {attentionRows.map((r) => (
                   <div
                     key={r.client.id}
                     className="flex flex-wrap items-center gap-2 border-t border-line py-2.5 first:border-t-0"
                   >
                     <span className={`h-2 w-2 flex-shrink-0 rounded-full ${RISK_DOT[r.level]}`} />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{clientLabel(r.client)}</span>
-                    <span className="whitespace-nowrap text-xs text-muted">{r.reason}</span>
+                    <span className="text-xs text-muted">{r.reason}</span>
                     <div className="ml-auto flex w-full flex-wrap justify-end gap-1.5 sm:w-auto">
-                      {!r.client.profile_id && (
-                        <button
-                          type="button"
-                          onClick={() => copyRowInvite(r.client.id, r.client.invite_code)}
-                          className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
-                        >
-                          {copiedRowId === r.client.id ? "Скопійовано" : "Копіювати посилання"}
-                        </button>
+                      {!r.client.profile_id ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => copyRowInvite(r.client.id, r.client.invite_code)}
+                            className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
+                          >
+                            {copiedRowId === r.client.id ? "Скопійовано" : "Копіювати посилання"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => cancelClient(r.client.id)}
+                            className="whitespace-nowrap rounded-full border border-line px-2.5 py-1 text-xs text-muted"
+                          >
+                            Видалити
+                          </button>
+                        </>
+                      ) : (
+                        onOpenClient && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenClient(r.client.id)}
+                            className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
+                          >
+                            Відкрити
+                          </button>
+                        )
                       )}
-                      {onOpenClients && (
-                        <button
-                          type="button"
-                          onClick={onOpenClients}
-                          className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
-                        >
-                          Відкрити
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => cancelClient(r.client.id)}
-                        className="whitespace-nowrap rounded-full border border-line px-2.5 py-1 text-xs text-muted"
-                      >
-                        Відключити
-                      </button>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {nextMeeting && (
-            <div className="border-l-2 border-accent bg-surface p-3 text-sm">
-              <p className="font-display text-sm font-medium text-accent">Найближча зустріч</p>
-              <p className="mt-1">
-                {nextMeeting.title}
-                {nextMeeting.clients?.name ? ` — ${nextMeeting.clients.name}` : ""}
-              </p>
-              <p className="text-muted">
-                {new Date(nextMeeting.scheduled_at).toLocaleString("uk-UA", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-              {nextMeeting.link && (
-                <a href={nextMeeting.link} target="_blank" rel="noreferrer" className="text-accent underline">
-                  Посилання на дзвінок
-                </a>
-              )}
             </div>
           )}
 
           <div className="rounded-xl border border-line bg-surface p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold">Щоденник</h2>
-              <select
-                value={selectedClientId}
-                onChange={(e) => {
-                  setSelectedClientId(e.target.value);
-                  setSelectedDay(todayKey);
-                }}
-                className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-xs outline-none"
-              >
-                <option value="">Усі клієнти</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {clientLabel(c)}
-                  </option>
-                ))}
-              </select>
+              <h2 className="text-sm font-semibold">Клієнти ({connectedCount})</h2>
+              {connectedCount > 6 && (
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Пошук"
+                  className="w-40 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-xs outline-none"
+                />
+              )}
             </div>
 
-            {selectedClientId && selectedClient ? (
-              <ClientActivityCalendar
-                key={selectedClientId}
-                clientId={selectedClientId}
-                checkins={selectedClientMarkers}
-                showHabits
-                habitsReadOnly
-                checkinWeekday={selectedClient.checkin_weekday ?? 0}
-              />
+            {connectedCount === 0 ? (
+              <p className="text-sm text-muted">
+                Підключених клієнтів ще немає. Створи запрошення у вкладці «Заявки» і надішли клієнту посилання.
+              </p>
+            ) : clientRows.length === 0 ? (
+              <p className="text-sm text-muted">Нікого не знайдено.</p>
             ) : (
-              <>
-                {!aggExpanded ? (
-                  <div onTouchStart={onAggTouchStart} onTouchEnd={onAggTouchEnd}>
-                    <div className="mb-2 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => shiftAggWeek(-1)}
-                        className="rounded bg-paper px-2 py-1 text-xs"
-                      >
-                        ‹
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAggExpanded(true)}
-                        className="font-display text-xs font-medium"
-                      >
-                        📅 {MONTHS[month]} {year}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => shiftAggWeek(1)}
-                        className="rounded bg-paper px-2 py-1 text-xs"
-                      >
-                        ›
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1">
-                      {stripDates.map((d) => {
-                        const key = toKey(d);
-                        const workoutCount = workoutsByDate[key]?.length || 0;
-                        const foodCount = new Set((foodByDate[key] || []).map((f) => f.client_id)).size;
-                        const checkinCount = checkins.filter((c) => c.created_at.slice(0, 10) === key).length;
-                        const isToday = key === todayKey;
-                        const isSelected = key === selectedDay;
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => setSelectedDay(key)}
-                            className={`flex flex-col items-center gap-0.5 rounded-lg border p-1.5 text-[11px] ${
-                              isSelected ? "border-accent bg-accent/10" : "border-line bg-paper"
-                            } ${isToday ? "ring-1 ring-accent" : ""}`}
-                          >
-                            <span className="text-muted">{WEEKDAYS[(d.getDay() + 6) % 7]}</span>
-                            <span className="font-medium">{d.getDate()}</span>
-                            <span className="flex gap-0.5 text-[9px] leading-none">
-                              {workoutCount > 0 && <span className="text-accent">🏋{workoutCount}</span>}
-                              {foodCount > 0 && <span className="text-blue-400">🍽{foodCount}</span>}
-                              {checkinCount > 0 && <span>⚖{checkinCount}</span>}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="mx-auto w-full max-w-[280px]">
-                      <div className="mb-2 flex items-center justify-between">
-                        <button
-                          type="button"
-                          onClick={() => setCursor(new Date(year, month - 1, 1))}
-                          className="rounded bg-paper px-2 py-1 text-xs"
-                        >
-                          ‹
-                        </button>
-                        <span className="font-display text-xs font-medium">
-                          {MONTHS[month]} {year}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setCursor(new Date(year, month + 1, 1))}
-                          className="rounded bg-paper px-2 py-1 text-xs"
-                        >
-                          ›
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted">
-                        {WEEKDAYS.map((w) => (
-                          <div key={w} className="py-0.5">
-                            {w}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="grid grid-cols-7 gap-0.5">
-                        {cells.map((d, i) => {
-                          if (!d) return <div key={i} />;
-                          const key = toKey(d);
-                          const workoutCount = workoutsByDate[key]?.length || 0;
-                          const foodCount = new Set((foodByDate[key] || []).map((f) => f.client_id)).size;
-                          const hasAny = workoutCount > 0 || foodCount > 0;
-                          const isToday = key === todayKey;
-                          const isSelected = key === selectedDay;
-                          return (
-                            <div key={key} className="group relative">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedDay(key)}
-                                className={`flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md border text-[11px] ${
-                                  hasAny ? "border-accent/40 bg-accent/10" : "border-line bg-paper text-muted"
-                                } ${isToday ? "ring-1 ring-accent" : ""} ${isSelected ? "outline outline-2 outline-accent" : ""}`}
-                              >
-                                <span>{d.getDate()}</span>
-                                {hasAny && (
-                                  <span className="flex items-center gap-1 text-[7px] leading-none">
-                                    {workoutCount > 0 && <span className="text-accent">🏋{workoutCount}</span>}
-                                    {foodCount > 0 && <span className="text-blue-400">🍽{foodCount}</span>}
-                                  </span>
-                                )}
-                              </button>
-                              {hasAny && (
-                                <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[11px] text-white opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100">
-                                  <p className="font-medium">
-                                    {d.getDate()} {MONTHS[month].toLowerCase()} {year}
-                                  </p>
-                                  {workoutCount > 0 && <p className="text-neutral-300">🏋 Тренувань: {workoutCount}</p>}
-                                  {foodCount > 0 && <p className="text-neutral-300">🍽 Залогували їжу: {foodCount}</p>}
-                                  <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-neutral-900" />
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+              <div className="flex flex-col">
+                {clientRows.map((r) => {
+                  const c = r.client;
+                  return (
                     <button
+                      key={c.id}
                       type="button"
-                      onClick={() => setAggExpanded(false)}
-                      className="mx-auto mt-2 block text-xs text-muted"
+                      onClick={() => onOpenClient?.(c.id)}
+                      className="flex items-center gap-3 border-t border-line py-3 text-left first:border-t-0 hover:bg-line/10"
                     >
-                      Згорнути ↑
+                      <span className="relative flex h-9 w-9 flex-none items-center justify-center rounded-full bg-accent/15 font-display text-sm font-semibold text-accent">
+                        {clientLabel(c).charAt(0).toUpperCase()}
+                        <span
+                          className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface ${RISK_DOT[r.level]}`}
+                        />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{clientLabel(c)}</span>
+                        <span className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
+                          <span>
+                            Чек-ін: {r.lastCheckinDays == null ? "—" : agoText(r.lastCheckinDays)}
+                          </span>
+                          <span>
+                            Тренування: {r.weekTotal > 0 ? `${r.weekDone}/${r.weekTotal} за тиждень` : "—"}
+                          </span>
+                          {foodTodayByClient.has(c.id) && <span className="text-blue-400">🍽 їжа сьогодні</span>}
+                        </span>
+                      </span>
+                      {r.weightText && (
+                        <span className="flex-none text-right text-xs text-muted">{r.weightText}</span>
+                      )}
+                      <span className="flex-none text-muted">›</span>
                     </button>
-                  </div>
-                )}
-
-                {selectedDay && (
-                  <div className="mt-3 rounded-lg bg-paper p-3 text-sm">
-                    <p className="mb-2 font-medium">{selectedDay}</p>
-                    {dayWorkouts.length === 0 && dayFoodClients.length === 0 && dayCheckins.length === 0 ? (
-                      <p className="text-muted">Нічого не відбувалось.</p>
-                    ) : (
-                      <div className="flex flex-col gap-2 text-muted">
-                        {dayWorkouts.length > 0 && (
-                          <div>
-                            <p className="mb-1 text-xs font-medium text-ink">🏋 Тренування</p>
-                            <ul className="flex flex-col gap-0.5">
-                              {dayWorkouts.map((w) => (
-                                <li key={w.id}>
-                                  {w.clients?.name || "—"} — {w.title}
-                                  {w.completed_at ? " · виконано" : ""}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {dayFoodClients.length > 0 && (
-                          <div>
-                            <p className="mb-1 text-xs font-medium text-ink">🍽 Залогували їжу</p>
-                            <ul className="flex flex-col gap-0.5">
-                              {dayFoodClients.map((name, i) => (
-                                <li key={i}>{name}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {dayCheckins.length > 0 && (
-                          <div>
-                            <p className="mb-1 text-xs font-medium text-ink">⚖ Чек-іни</p>
-                            <ul className="flex flex-col gap-0.5">
-                              {dayCheckins.map((c, i) => (
-                                <li key={i}>{c.clients?.name || "Клієнт"}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Кнопку "Нова зустріч" прибрано звідси — тепер вона в хедері
-              (сторінка dashboard), доступна з будь-якої вкладки. Створення
-              клієнта — тільки через вкладку "Клієнти", щоб не дублювати
-              цю дію в двох місцях. */}
-
-          {meetingModalOpen &&
-            typeof document !== "undefined" &&
-            createPortal(
-              <div className="fixed inset-0 z-[70]" onClick={() => setMeetingModalOpen(false)}>
-              <div className="absolute inset-0 bg-black/50" />
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-line bg-sidebar p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:inset-0 lg:m-auto lg:h-fit lg:w-[460px] lg:rounded-xl lg:border"
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold">+ Нова зустріч</h2>
-                  <button type="button" onClick={() => setMeetingModalOpen(false)} className="text-xs text-muted">
-                    Закрити
-                  </button>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      value={mTitle}
-                      onChange={(e) => setMTitle(e.target.value)}
-                      placeholder="Назва (напр. Дзвінок з клієнтом)"
-                      className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-                    />
-                    <select
-                      value={mClientId}
-                      onChange={(e) => setMClientId(e.target.value)}
-                      className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-                    >
-                      <option value="">Без клієнта</option>
-                      {clients.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {clientLabel(c)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      type="datetime-local"
-                      value={mDateTime}
-                      onChange={(e) => setMDateTime(e.target.value)}
-                      className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-                    />
-                    <input
-                      value={mLink}
-                      onChange={(e) => setMLink(e.target.value)}
-                      placeholder="Посилання на дзвінок (необов'язково)"
-                      className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-                    />
-                  </div>
-                  <input
-                    value={mNote}
-                    onChange={(e) => setMNote(e.target.value)}
-                    placeholder="Нотатка (необов'язково)"
-                    className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
-                  />
-                  <button
-                    type="button"
-                    disabled={mBusy}
-                    onClick={addMeeting}
-                    className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
-                  >
-                    {mBusy ? "Зберігаю…" : "Додати"}
-                  </button>
-                  {mErr && <p className="text-sm text-red-400">{mErr}</p>}
-                </div>
-              </div>
-              </div>,
-              document.body
-            )}
-
-          <div className="rounded-xl border border-line bg-surface p-4">
-            <h2 className="mb-3 text-sm font-semibold">Усі зустрічі ({meetings.length})</h2>
-            <div className="flex flex-col gap-2">
-              {meetings.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between rounded-lg border border-line p-3 text-sm"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {m.title}
-                      {m.clients?.name ? ` — ${m.clients.name}` : ""}
-                    </p>
-                    <p className="text-muted">
-                      {new Date(m.scheduled_at).toLocaleString("uk-UA", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <button type="button" onClick={() => deleteMeeting(m.id)} className="text-xs text-red-400">
-                    Видалити
-                  </button>
-                </div>
-              ))}
-              {meetings.length === 0 && <p className="text-sm text-muted">Зустрічей ще немає.</p>}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <div className="rounded-xl border border-line bg-surface p-4">
-            <h2 className="mb-3 text-sm font-semibold">Сьогодні</h2>
-            {upcomingMeetings.filter((m) => toKey(new Date(m.scheduled_at)) === todayKey).length === 0 &&
-            todayWorkouts.length === 0 ? (
-              <p className="text-sm text-muted">На сьогодні нічого не запланованo.</p>
-            ) : (
-              <div className="flex flex-col gap-2.5 text-sm">
-                {upcomingMeetings
-                  .filter((m) => toKey(new Date(m.scheduled_at)) === todayKey)
-                  .map((m) => (
-                    <div key={m.id} className="flex gap-2.5">
-                      <span className="w-11 flex-shrink-0 text-xs text-muted">
-                        {new Date(m.scheduled_at).toLocaleTimeString("uk-UA", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                      <span>
-                        <span className="font-medium">{m.clients?.name || "Без клієнта"}</span>
-                        <br />
-                        <span className="text-xs text-muted">{m.title}</span>
-                      </span>
-                    </div>
-                  ))}
-                {todayWorkouts.map((w) => (
-                  <div key={w.id} className="flex gap-2.5">
-                    <span className="w-11 flex-shrink-0 text-xs text-muted">🏋</span>
-                    <span>
-                      <span className="font-medium">{w.clients?.name || "—"}</span>
-                      <br />
-                      <span className="text-xs text-muted">
-                        {w.title}
-                        {w.completed_at ? " · виконано" : ""}
-                      </span>
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {progressRows.length > 0 && (
-            <div className="rounded-xl border border-line bg-surface p-4">
-              <h2 className="mb-3 flex items-baseline justify-between text-sm font-semibold">
-                <span>Прогрес клієнтів</span>
-                <span className="text-xs font-normal text-muted">30 днів</span>
-              </h2>
-              <div className="flex flex-col gap-3">
-                {progressRows.map((r) => (
-                  <div key={r.name}>
-                    <div className="mb-1 flex justify-between text-xs">
-                      <span>{r.name}</span>
-                      <span className="text-muted">{r.rate}%</span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-paper">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${r.rate}%`,
-                          background: r.rate < 50 ? "#F2615B" : r.rate < 75 ? "#facc15" : "#E8622C",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="rounded-xl border border-line bg-surface p-4">
-            <h2 className="mb-2 text-sm font-semibold">Оплата</h2>
-            <div className="mb-1 flex items-baseline justify-between">
-              <span className="text-xs text-muted">Цей місяць</span>
-              <span className="font-display text-xl font-semibold">{monthTotal.toLocaleString("uk-UA")} ₴</span>
-            </div>
-            <p className="text-xs text-muted">
-              {activeCount} активних підписок{expiringSoon > 0 ? ` · ${expiringSoon} закінчуються протягом тижня` : ""}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-line bg-surface p-4">
-            <h2 className="mb-1 text-sm font-semibold">Питання чек-іна</h2>
-            <p className="mb-2 text-xs text-muted">
+          <details className="rounded-xl border border-line bg-surface p-4">
+            <summary className="cursor-pointer text-sm font-semibold">Питання чек-іна ({checkinQuestions.length})</summary>
+            <p className="mb-2 mt-2 text-xs text-muted">
               Додаткові питання, які клієнт побачить і заповнить під час щотижневого чек-іна.
             </p>
             <div className="flex flex-col gap-1.5">
-              {checkinQuestions.map((q) => (
-                <div key={q.id} className="flex items-center justify-between rounded-lg border border-line px-2.5 py-1.5 text-xs">
+              {checkinQuestions.map((qu) => (
+                <div
+                  key={qu.id}
+                  className="flex items-center justify-between rounded-lg border border-line px-2.5 py-1.5 text-xs"
+                >
                   <span>
-                    {q.label}
-                    {q.kind === "scale" && <span className="text-muted"> (шкала 1–5)</span>}
+                    {qu.label}
+                    {qu.kind === "scale" && <span className="text-muted"> (шкала 1–5)</span>}
                   </span>
-                  <button type="button" onClick={() => deleteQuestion(q.id)} className="text-red-400">
+                  <button type="button" onClick={() => deleteQuestion(qu.id)} className="text-red-400">
                     Видалити
                   </button>
                 </div>
@@ -1173,31 +507,171 @@ export default function CoachHome({
                 Додати
               </button>
             </div>
+          </details>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold">Сьогодні</h2>
+            {todayMeetings.length === 0 && todayWorkouts.length === 0 ? (
+              <p className="text-sm text-muted">На сьогодні нічого не заплановано.</p>
+            ) : (
+              <div className="flex flex-col gap-2.5 text-sm">
+                {todayMeetings.map((m) => (
+                  <div key={m.id} className="flex gap-2.5">
+                    <span className="w-11 flex-shrink-0 text-xs text-muted">
+                      {new Date(m.scheduled_at).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <span>
+                      <span className="font-medium">{m.clients?.name || "Без клієнта"}</span>
+                      <br />
+                      <span className="text-xs text-muted">{m.title}</span>
+                      {m.link && (
+                        <>
+                          {" · "}
+                          <a href={m.link} target="_blank" rel="noreferrer" className="text-xs text-accent underline">
+                            дзвінок
+                          </a>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                ))}
+                {todayWorkouts.map((w) => (
+                  <div key={w.id} className="flex gap-2.5">
+                    <span className="w-11 flex-shrink-0 text-xs text-muted">🏋</span>
+                    <span>
+                      <span className="font-medium">{w.clients?.name || "—"}</span>
+                      <br />
+                      <span className="text-xs text-muted">
+                        {w.title}
+                        {w.completed_at ? " · виконано" : ""}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl border border-line bg-surface p-4">
-            <h2 className="mb-3 text-sm font-semibold">Останні події</h2>
-            {feed.length === 0 ? (
-              <p className="text-sm text-muted">Подій ще немає.</p>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Найближчі зустрічі</h2>
+              <button type="button" onClick={() => setMeetingModalOpen(true)} className="text-xs text-accent">
+                + Додати
+              </button>
+            </div>
+            {laterMeetings.length === 0 ? (
+              <p className="text-sm text-muted">Зустрічей немає.</p>
             ) : (
-              <ul className="flex flex-col gap-2 text-sm">
-                {feed.map((f) => {
-                  const isNew = feedSeenAt != null && new Date(f.at).getTime() > new Date(feedSeenAt).getTime();
-                  return (
-                    <li key={f.key} className="flex items-baseline justify-between gap-2">
-                      <span className="flex items-center gap-1.5">
-                        {isNew && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
-                        {f.text}
-                      </span>
-                      <span className="whitespace-nowrap text-xs text-muted">{relTime(f.at)}</span>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="flex flex-col gap-2">
+                {laterMeetings.map((m) => (
+                  <div key={m.id} className="flex items-start justify-between gap-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        {m.title}
+                        {m.clients?.name ? ` — ${m.clients.name}` : ""}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {new Date(m.scheduled_at).toLocaleString("uk-UA", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => deleteMeeting(m.id)} className="flex-none text-xs text-red-400">
+                      Видалити
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
+
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate("payments")}
+              className="rounded-xl border border-line bg-surface p-3 text-left text-sm text-muted transition hover:text-ink"
+            >
+              💳 Оплата та підписки ›
+            </button>
+          )}
         </div>
       </div>
+
+      {meetingModalOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[70]" onClick={() => setMeetingModalOpen(false)}>
+            <div className="absolute inset-0 bg-black/50" />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-line bg-sidebar p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:inset-0 lg:m-auto lg:h-fit lg:w-[460px] lg:rounded-xl lg:border"
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold">+ Нова зустріч</h2>
+                <button type="button" onClick={() => setMeetingModalOpen(false)} className="text-xs text-muted">
+                  Закрити
+                </button>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    value={mTitle}
+                    onChange={(e) => setMTitle(e.target.value)}
+                    placeholder="Назва (напр. Дзвінок з клієнтом)"
+                    className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                  />
+                  <select
+                    value={mClientId}
+                    onChange={(e) => setMClientId(e.target.value)}
+                    className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                  >
+                    <option value="">Без клієнта</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {clientLabel(c)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    type="datetime-local"
+                    value={mDateTime}
+                    onChange={(e) => setMDateTime(e.target.value)}
+                    className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                  />
+                  <input
+                    value={mLink}
+                    onChange={(e) => setMLink(e.target.value)}
+                    placeholder="Посилання на дзвінок (необов'язково)"
+                    className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <input
+                  value={mNote}
+                  onChange={(e) => setMNote(e.target.value)}
+                  placeholder="Нотатка (необов'язково)"
+                  className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
+                />
+                <button
+                  type="button"
+                  disabled={mBusy}
+                  onClick={addMeeting}
+                  className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50"
+                >
+                  {mBusy ? "Зберігаю…" : "Додати"}
+                </button>
+                {mErr && <p className="text-sm text-red-400">{mErr}</p>}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

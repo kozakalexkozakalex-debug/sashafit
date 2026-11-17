@@ -486,7 +486,10 @@ export default function CoachDashboard({
       <div className="min-w-0 flex-1">
       {tab === "home" ? (
         <CoachHome
-          onOpenClients={() => setTab("clients")}
+          onOpenClient={(id) => {
+            setTab("clients");
+            if (selectedId !== id) selectClient(id);
+          }}
           onNavigate={(t) => setTab(t)}
           actionSignal={homeAction}
         />
