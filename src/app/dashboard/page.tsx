@@ -54,11 +54,9 @@ export default function DashboardPage() {
           <span className="hidden sm:inline">RUNA Fitness</span>
         </button>
         <div className="flex items-center gap-2">
-          {role !== "coach" && (
-            <button type="button" onClick={signOut} className="text-sm text-muted hover:text-brand">
-              Вийти
-            </button>
-          )}
+          <button type="button" onClick={signOut} className="text-sm text-muted hover:text-brand">
+            Вийти
+          </button>
         </div>
       </div>
       )}
