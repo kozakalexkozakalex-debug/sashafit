@@ -14,20 +14,22 @@ type Message = {
 
 type ClientOption = { id: string; name: string | null; invite_code: string };
 
-type Props = { mode: "client"; clientId: string } | { mode: "coach" };
+type Props = { mode: "client"; clientId: string } | { mode: "coach"; fixedClientId?: string };
 
 export default function ChatPanel(props: Props) {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [activeClientId, setActiveClientId] = useState<string | null>(
-    props.mode === "client" ? props.clientId : null
+    props.mode === "client" ? props.clientId : props.fixedClientId ?? null
   );
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const scrollBoxRef = useRef<HTMLDivElement>(null);
 
+  const fixedClient = props.mode === "coach" ? props.fixedClientId : undefined;
+
   useEffect(() => {
-    if (props.mode !== "coach") return;
+    if (props.mode !== "coach" || fixedClient) return;
     (async () => {
       const { data } = await supabase
         .from("clients")
@@ -92,7 +94,7 @@ export default function ChatPanel(props: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
-      {props.mode === "coach" && (
+      {props.mode === "coach" && !fixedClient && (
         <select
           value={activeClientId || ""}
           onChange={(e) => setActiveClientId(e.target.value || null)}

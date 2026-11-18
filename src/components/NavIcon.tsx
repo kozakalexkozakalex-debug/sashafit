@@ -9,6 +9,7 @@ export type NavIconName =
   | "library"
   | "analytics"
   | "payments"
+  | "chat"
   | "more"
   | "profile";
 
@@ -43,6 +44,11 @@ const PATHS: Record<NavIconName, React.ReactNode> = {
       <rect x="3.5" y="6" width="17" height="12" rx="1.8" />
       <path d="M3.5 10h17" />
       <path d="M7 14.3h3.5" />
+    </>
+  ),
+  chat: (
+    <>
+      <path d="M5 6.5A1.5 1.5 0 0 1 6.5 5h11A1.5 1.5 0 0 1 19 6.5v8a1.5 1.5 0 0 1-1.5 1.5H11l-4 3.5V16H6.5A1.5 1.5 0 0 1 5 14.5z" />
     </>
   ),
   more: (

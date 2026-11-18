@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { clientRisk, RiskLevel } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
+import { UnreadInfo } from "@/lib/coachUnread";
+import CheckinReviewSheet from "@/components/CheckinReviewSheet";
 
 type Client = {
   id: string;
@@ -22,9 +24,11 @@ type AssignedWorkout = {
   clients: { name: string } | null;
 };
 type Checkin = {
+  id: string;
   client_id: string;
   created_at: string;
   weight: number | null;
+  reviewed_at: string | null;
 };
 type CheckinQuestion = { id: string; label: string; kind: "text" | "scale"; position: number };
 type Meeting = {
@@ -59,16 +63,37 @@ const RISK_DOT: Record<RiskLevel, string> = {
   ok: "bg-green-400",
 };
 
-type NavTab = "clients" | "library" | "analytics";
+function agoShort(iso: string) {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return "щойно";
+  if (mins < 60) return `${mins} хв`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} год`;
+  return `${Math.floor(hours / 24)} дн`;
+}
+
+type QItem = {
+  key: string;
+  kind: "message" | "checkin" | "risk" | "invite";
+  clientId: string;
+  name: string;
+  text: string;
+  level?: RiskLevel;
+};
+type QFilter = "all" | "checkin" | "message" | "risk";
 
 export default function CoachHome({
   onOpenClient,
-  onNavigate,
+  onOpenChat,
+  unread,
   actionSignal,
 }: {
+  // Відкриває розмову з клієнтом (вкладка "Чати").
+  onOpenChat?: (clientId: string) => void;
+  // Непрочитані повідомлення по клієнтах (рахує CoachDashboard).
+  unread?: UnreadInfo;
   // Відкриває вкладку "Клієнти" одразу з карткою цього клієнта.
   onOpenClient?: (clientId: string) => void;
-  onNavigate?: (tab: NavTab) => void;
   // Дозволяє відкрити форму "Нова зустріч" ззовні — з кнопки в хедері
   // (сторінка dashboard), а не тільки з кнопки на цій сторінці.
   actionSignal?: { ts: number } | null;
@@ -80,6 +105,9 @@ export default function CoachHome({
   const [foodEntries, setFoodEntries] = useState<{ client_id: string; date: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<QFilter>("all");
+  const [showAllQueue, setShowAllQueue] = useState(false);
+  const [reviewClientId, setReviewClientId] = useState<string | null>(null);
 
   const [mTitle, setMTitle] = useState("");
   const [mClientId, setMClientId] = useState("");
@@ -155,7 +183,7 @@ export default function CoachHome({
         .gte("date", sinceKey),
       supabase
         .from("checkins")
-        .select("client_id, created_at, weight")
+        .select("id, client_id, created_at, weight, reviewed_at")
         .order("created_at", { ascending: false }),
       supabase.from("meetings").select("*, clients(name)").order("scheduled_at", { ascending: true }),
       supabase.from("food_entries").select("client_id, date").gte("date", sinceKey),
@@ -325,9 +353,6 @@ export default function CoachHome({
   });
 
   const levelOrder: Record<RiskLevel, number> = { risk: 0, watch: 1, pending: 2, ok: 3 };
-  const attentionRows = rows
-    .filter((r) => r.level !== "ok")
-    .sort((a, b) => levelOrder[a.level] - levelOrder[b.level]);
 
   // Список клієнтів: лише підключені; ті, кому потрібна увага — першими.
   const q = search.trim().toLowerCase();
@@ -341,6 +366,57 @@ export default function CoachHome({
     );
   const connectedCount = rows.filter((r) => r.client.profile_id).length;
 
+  // ---- Черга "Потрібно зробити" ----
+  const queue: QItem[] = [];
+  for (const [cid, u] of Object.entries(unread || {})) {
+    const c = clients.find((x) => x.id === cid);
+    if (!c) continue;
+    queue.push({
+      key: `m-${cid}`,
+      kind: "message",
+      clientId: cid,
+      name: clientLabel(c),
+      text: `Нове повідомлення${u.count > 1 ? ` · ${u.count}` : ""} · ${agoShort(u.lastAt)} тому`,
+    });
+  }
+  for (const c of clients) {
+    const list = checkinsByClient[c.id] || [];
+    const idx = list.findIndex((x) => !x.reviewed_at);
+    if (idx < 0) continue;
+    const cur = list[idx];
+    const prevW = list.slice(idx + 1).find((x) => x.weight != null)?.weight ?? null;
+    let wText = "";
+    if (cur.weight != null) {
+      wText = ` · ${cur.weight} кг`;
+      if (prevW != null) {
+        const d = Math.round((cur.weight - prevW) * 10) / 10;
+        if (d !== 0) wText += ` (${d > 0 ? "+" : "−"}${Math.abs(d)})`;
+      }
+    }
+    queue.push({ key: `c-${c.id}`, kind: "checkin", clientId: c.id, name: clientLabel(c), text: `Чек-ін надіслано${wText}` });
+  }
+  const riskOrder: Record<RiskLevel, number> = { risk: 0, watch: 1, pending: 2, ok: 3 };
+  for (const r of rows.filter((x) => x.level !== "ok").sort((a, b) => riskOrder[a.level] - riskOrder[b.level])) {
+    queue.push({
+      key: `r-${r.client.id}`,
+      kind: r.client.profile_id ? "risk" : "invite",
+      clientId: r.client.id,
+      name: clientLabel(r.client),
+      text: r.reason,
+      level: r.level,
+    });
+  }
+  const checkinCount = queue.filter((q) => q.kind === "checkin").length;
+  const messageCount = queue.filter((q) => q.kind === "message").length;
+  const riskCount = queue.filter((q) => q.kind === "risk" || q.kind === "invite").length;
+  const filteredQueue = queue.filter(
+    (q) =>
+      filter === "all" ||
+      q.kind === filter ||
+      (filter === "risk" && q.kind === "invite")
+  );
+  const visibleQueue = showAllQueue ? filteredQueue : filteredQueue.slice(0, 7);
+
   const upcomingMeetings = meetings.filter((m) => new Date(m.scheduled_at).getTime() >= Date.now());
   const todayMeetings = upcomingMeetings.filter((m) => toKey(new Date(m.scheduled_at)) === todayKey);
   const laterMeetings = upcomingMeetings.filter((m) => toKey(new Date(m.scheduled_at)) !== todayKey).slice(0, 5);
@@ -350,56 +426,91 @@ export default function CoachHome({
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px] lg:items-start">
         <div className="flex flex-col gap-5">
-          {attentionRows.length > 0 && (
-            <div className="rounded-xl border border-line bg-surface p-4">
-              <h2 className="mb-1 flex items-baseline justify-between text-sm font-semibold">
-                <span>Потребують уваги</span>
-                <span className="text-xs font-normal text-muted">{attentionRows.length}</span>
-              </h2>
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <div className="mb-3 flex gap-2">
+              {(
+                [
+                  ["checkin", "Чек-іни", checkinCount],
+                  ["message", "Чати", messageCount],
+                  ["risk", "Увага", riskCount],
+                ] as [QFilter, string, number][]
+              ).map(([id, label, n]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setFilter(filter === id ? "all" : id)}
+                  className={`flex-1 rounded-lg border px-2 py-1.5 text-center text-xs ${
+                    filter === id ? "border-accent bg-accent/10" : "border-line bg-paper"
+                  } ${n === 0 ? "text-muted" : "text-ink"}`}
+                >
+                  <span className={`block font-display text-base font-semibold ${n === 0 ? "text-muted" : "text-accent"}`}>
+                    {n}
+                  </span>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <h2 className="mb-1 text-sm font-semibold">Потрібно зробити</h2>
+            {filteredQueue.length === 0 ? (
+              <p className="py-3 text-sm text-muted">Все розібрано ✓</p>
+            ) : (
               <div className="flex flex-col">
-                {attentionRows.map((r) => (
-                  <div
-                    key={r.client.id}
-                    className="flex flex-wrap items-center gap-2 border-t border-line py-2.5 first:border-t-0"
-                  >
-                    <span className={`h-2 w-2 flex-shrink-0 rounded-full ${RISK_DOT[r.level]}`} />
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{clientLabel(r.client)}</span>
-                    <span className="text-xs text-muted">{r.reason}</span>
-                    <div className="ml-auto flex w-full flex-wrap justify-end gap-1.5 sm:w-auto">
-                      {!r.client.profile_id ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => copyRowInvite(r.client.id, r.client.invite_code)}
-                            className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
-                          >
-                            {copiedRowId === r.client.id ? "Скопійовано" : "Копіювати посилання"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => cancelClient(r.client.id)}
-                            className="whitespace-nowrap rounded-full border border-line px-2.5 py-1 text-xs text-muted"
-                          >
-                            Видалити
-                          </button>
-                        </>
-                      ) : (
-                        onOpenClient && (
-                          <button
-                            type="button"
-                            onClick={() => onOpenClient(r.client.id)}
-                            className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
-                          >
-                            Відкрити
-                          </button>
-                        )
-                      )}
-                    </div>
+                {visibleQueue.map((q) => (
+                  <div key={q.key} className="flex items-center gap-3 border-t border-line py-2.5 first:border-t-0">
+                    <span
+                      className={`h-2 w-2 flex-none rounded-full ${
+                        q.kind === "risk" || q.kind === "invite" ? RISK_DOT[q.level || "watch"] : "bg-accent"
+                      }`}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{q.name}</span>
+                      <span className="block text-xs text-muted">{q.text}</span>
+                    </span>
+                    {q.kind === "invite" ? (
+                      <span className="flex flex-none gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const c = clients.find((x) => x.id === q.clientId);
+                            if (c) copyRowInvite(c.id, c.invite_code);
+                          }}
+                          className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
+                        >
+                          {copiedRowId === q.clientId ? "Скопійовано" : "Посилання"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => cancelClient(q.clientId)}
+                          className="whitespace-nowrap rounded-full border border-line px-2.5 py-1 text-xs text-muted"
+                        >
+                          Видалити
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => (q.kind === "checkin" ? setReviewClientId(q.clientId) : onOpenChat?.(q.clientId))}
+                        className={`flex-none whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${
+                          q.kind === "checkin" ? "bg-accent text-paper" : "border border-accent/40 text-accent"
+                        }`}
+                      >
+                        {q.kind === "checkin" ? "Перевірити" : q.kind === "message" ? "Відповісти" : "Написати"}
+                      </button>
+                    )}
                   </div>
                 ))}
+                {filteredQueue.length > 7 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllQueue((v) => !v)}
+                    className="mt-1 self-center text-xs text-muted"
+                  >
+                    {showAllQueue ? "Згорнути" : `Показати все (${filteredQueue.length})`}
+                  </button>
+                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="rounded-xl border border-line bg-surface p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -590,6 +701,22 @@ export default function CoachHome({
           </div>
         </div>
       </div>
+
+      {reviewClientId && (
+        <CheckinReviewSheet
+          clientId={reviewClientId}
+          clientName={clientLabel(clients.find((c) => c.id === reviewClientId) || { name: null, invite_code: "" })}
+          onClose={() => setReviewClientId(null)}
+          onDone={() => {
+            setReviewClientId(null);
+            load();
+          }}
+          onOpenClient={(id) => {
+            setReviewClientId(null);
+            onOpenClient?.(id);
+          }}
+        />
+      )}
 
       {meetingModalOpen &&
         typeof document !== "undefined" &&
