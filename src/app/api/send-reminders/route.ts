@@ -5,7 +5,8 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 // Раз на день (Vercel Cron) перевіряє: у кого тренування сьогодні ще не
 // відмічено виконаним, і у кого сьогодні їхній особистий день чек-іна
 // (checkin_weekday, задає тренер) й чек-іну ще немає — і шле їм
-// push-нагадування. Захищено CRON_SECRET, щоб маршрут не смикали ззовні.
+// нагадування: у Telegram від бота (основний канал) і web-push (запасний,
+// якщо ключі VAPID задані). Захищено CRON_SECRET, щоб маршрут не смикали ззовні.
 
 function toKey(d: Date) {
   const y = d.getFullYear();
@@ -23,14 +24,19 @@ export async function GET(req: NextRequest) {
 
   const vapidPublic = process.env.VAPID_PUBLIC_KEY;
   const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
-  if (!vapidPublic || !vapidPrivate) {
-    return NextResponse.json({ error: "VAPID keys not configured" }, { status: 500 });
+  const pushEnabled = !!(vapidPublic && vapidPrivate);
+  if (pushEnabled) {
+    webpush.setVapidDetails(
+      process.env.VAPID_SUBJECT || "mailto:support@sashafit.app",
+      vapidPublic as string,
+      vapidPrivate as string
+    );
   }
-  webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || "mailto:support@sashafit.app",
-    vapidPublic,
-    vapidPrivate
-  );
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const appUrl = process.env.APP_URL; // напр. https://sashafit.vercel.app — для кнопки «Відкрити»
+  if (!pushEnabled && !botToken) {
+    return NextResponse.json({ error: "Ні Telegram-бот, ні VAPID не налаштовані" }, { status: 500 });
+  }
 
   const supabase = getSupabaseAdmin();
   const today = new Date();
@@ -79,10 +85,46 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ sent: 0 });
   }
 
-  const { data: subs } = await supabase
-    .from("push_subscriptions")
-    .select("id, client_id, endpoint, p256dh, auth")
-    .in("client_id", Array.from(messagesByClient.keys()));
+  const clientIds = Array.from(messagesByClient.keys());
+
+  // Telegram: шлемо тим, хто увійшов через Telegram (profiles.telegram_id).
+  let tgSent = 0;
+  if (botToken) {
+    const { data: clientRows } = await supabase.from("clients").select("id, profile_id").in("id", clientIds);
+    const profileIds = (clientRows || []).map((c) => c.profile_id as string | null).filter(Boolean) as string[];
+    const { data: profileRows } = profileIds.length
+      ? await supabase.from("profiles").select("id, telegram_id").in("id", profileIds)
+      : { data: [] as { id: string; telegram_id: number | null }[] };
+    const tgByProfile = new Map((profileRows || []).map((p) => [p.id as string, p.telegram_id as number | null]));
+    for (const c of clientRows || []) {
+      const chatId = c.profile_id ? tgByProfile.get(c.profile_id as string) : null;
+      const msg = messagesByClient.get(c.id as string);
+      if (!chatId || !msg) continue;
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: `${msg.title}\n${msg.body}`,
+            ...(appUrl
+              ? { reply_markup: { inline_keyboard: [[{ text: "Відкрити SashaFit", web_app: { url: appUrl } }]] } }
+              : {}),
+          }),
+        });
+        if (res.ok) tgSent++;
+      } catch {
+        // не вдалось одному — решті все одно шлемо
+      }
+    }
+  }
+
+  const { data: subs } = pushEnabled
+    ? await supabase
+        .from("push_subscriptions")
+        .select("id, client_id, endpoint, p256dh, auth")
+        .in("client_id", clientIds)
+    : { data: [] as { id: string; client_id: string; endpoint: string; p256dh: string; auth: string }[] };
 
   let sent = 0;
   const staleIds: string[] = [];
@@ -108,5 +150,5 @@ export async function GET(req: NextRequest) {
     await supabase.from("push_subscriptions").delete().in("id", staleIds);
   }
 
-  return NextResponse.json({ sent, candidates: messagesByClient.size, removedStale: staleIds.length });
+  return NextResponse.json({ telegramSent: tgSent, sent, candidates: messagesByClient.size, removedStale: staleIds.length });
 }
