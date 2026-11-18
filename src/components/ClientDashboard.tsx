@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivityCalendar";
+import ClientActivityCalendar, { CheckinMarker, OpenRequest } from "@/components/ClientActivityCalendar";
+import ClientToday from "@/components/ClientToday";
 import ClientProfileCard from "@/components/ClientProfileCard";
 import ChatLauncher from "@/components/ChatLauncher";
 import NavIcon, { NavIconName } from "@/components/NavIcon";
@@ -43,7 +44,6 @@ type Checkin = {
 };
 
 type WorkoutSummary = { date: string; completed_at: string | null };
-type FoodSummary = { date: string; calories: number };
 
 function toKey(d: Date) {
   const y = d.getFullYear();
@@ -75,17 +75,11 @@ function ClientHomeSummary({
   client,
   checkins,
   workouts,
-  foodToday,
-  targetCalories,
 }: {
   client: ClientRow;
   checkins: Checkin[];
   workouts: WorkoutSummary[];
-  foodToday: number;
-  targetCalories: number | null;
 }) {
-  const todayKey = toKey(new Date());
-  const todayWorkout = workouts.find((w) => w.date === todayKey) || null;
   const streak = computeStreak(workouts);
 
   const latestWeight = checkins.length > 0 ? checkins[0].weight : client.start_weight;
@@ -102,10 +96,7 @@ function ClientHomeSummary({
 
   return (
     <div className="rounded-xl border border-line bg-surface p-3">
-      <h2 className="mb-2.5 font-display text-lg font-bold text-ink">
-        Привіт, {client.name || "друже"}!
-      </h2>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="rounded-lg border-l-2 border-brand bg-paper p-2.5">
           <p className="text-[10px] uppercase tracking-wide text-muted">Прогрес до цілі</p>
           {progressPct == null ? (
@@ -129,36 +120,32 @@ function ClientHomeSummary({
           </p>
         </div>
 
-        <div className="rounded-lg border-l-2 border-brand bg-paper p-2.5">
-          <p className="text-[10px] uppercase tracking-wide text-muted">Сьогодні</p>
-          <p className="mt-1 text-sm text-ink">
-            🏋{" "}
-            {!todayWorkout
-              ? "тренування нема"
-              : todayWorkout.completed_at
-              ? "виконано ✓"
-              : "ще не виконано"}
-          </p>
-          <p className="text-sm text-muted">
-            🍽 {Math.round(foodToday)}
-            {targetCalories ? ` з ${targetCalories}` : ""} ккал
-          </p>
-        </div>
       </div>
     </div>
   );
 }
 
-type TabId = "home" | "profile";
+type TabId = "today" | "plan" | "progress";
 const TABS: { id: TabId; label: string; icon: NavIconName }[] = [
-  { id: "home", label: "Головна", icon: "home" },
-  { id: "profile", label: "Профіль", icon: "profile" },
+  { id: "today", label: "Сьогодні", icon: "home" },
+  { id: "plan", label: "План", icon: "plan" },
+  { id: "progress", label: "Прогрес", icon: "progress" },
 ];
 
 export default function ClientDashboard() {
   const [client, setClient] = useState<ClientRow | null | "none">(null);
   const [editMode, setEditMode] = useState(false);
-  const [tab, setTab] = useState<TabId>("home");
+  const [tab, setTab] = useState<TabId>("today");
+  // Запит із «Сьогодні» відкрити конкретний попап у «Плані» (тренування, їжа, чек-ін).
+  const [openReq, setOpenReq] = useState<OpenRequest | null>(null);
+  // Чат — пункт у нижньому меню, що відкриває шторку (не окрема вкладка).
+  const [chatSignal, setChatSignal] = useState(0);
+  const [chatUnread, setChatUnread] = useState(0);
+
+  function goTab(t: TabId) {
+    setOpenReq(null);
+    setTab(t);
+  }
 
   const [name, setName] = useState("");
   const [height, setHeight] = useState("");
@@ -194,11 +181,9 @@ export default function ClientDashboard() {
 
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
-  // Для блоку "Головна" зверху — стрік, статус сьогодні. Легкі вибірки
-  // (тільки потрібні поля), окремо від повного завантаження в календарі.
+  // Для блоку на «Прогресі» — стрік тренувань. Легка вибірка (тільки потрібні
+  // поля), окремо від повного завантаження в календарі.
   const [workoutsSummary, setWorkoutsSummary] = useState<WorkoutSummary[]>([]);
-  const [foodToday, setFoodToday] = useState(0);
-  const [targetCalories, setTargetCalories] = useState<number | null>(null);
 
   async function load() {
     const { data } = await supabase.from("clients").select("*").maybeSingle();
@@ -211,20 +196,6 @@ export default function ClientDashboard() {
       .select("date, completed_at")
       .eq("client_id", clientId);
     setWorkoutsSummary((wk as WorkoutSummary[]) || []);
-
-    const { data: fd } = await supabase
-      .from("food_entries")
-      .select("date, calories")
-      .eq("client_id", clientId)
-      .eq("date", toKey(new Date()));
-    setFoodToday(((fd as FoodSummary[]) || []).reduce((s, e) => s + (e.calories || 0), 0));
-
-    const { data: nt } = await supabase
-      .from("nutrition_targets")
-      .select("calories")
-      .eq("client_id", clientId)
-      .maybeSingle();
-    setTargetCalories(nt?.calories ?? null);
   }
 
   async function loadCheckins(clientId: string) {
@@ -467,6 +438,13 @@ export default function ClientDashboard() {
     photoUrl: c.photo_path ? photoUrls[c.id] || null : null,
   }));
 
+  const chatBadge =
+    chatUnread > 0 ? (
+      <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">
+        {chatUnread > 9 ? "9+" : chatUnread}
+      </span>
+    ) : null;
+
   return (
     <div className="flex flex-col gap-6 pb-20 lg:flex-row lg:items-start lg:gap-8 lg:pb-0">
       <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden">
@@ -476,7 +454,7 @@ export default function ClientDashboard() {
             <button
               key={t.id}
               type="button"
-              onClick={() => setTab(t.id)}
+              onClick={() => goTab(t.id)}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
                 active ? "text-brand" : "text-muted"
               }`}
@@ -486,6 +464,17 @@ export default function ClientDashboard() {
             </button>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setChatSignal((n) => n + 1)}
+          className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium text-muted"
+        >
+          <span className="relative">
+            <NavIcon name="chat" className="h-5 w-5" />
+            {chatBadge}
+          </span>
+          Чат
+        </button>
       </nav>
 
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
@@ -495,7 +484,7 @@ export default function ClientDashboard() {
             <button
               key={t.id}
               type="button"
-              onClick={() => setTab(t.id)}
+              onClick={() => goTab(t.id)}
               className={`w-full rounded-md border-l-2 px-3 py-2 text-left font-display text-sm font-medium transition ${
                 active ? "border-brand bg-brand/15 text-ink" : "border-transparent text-muted hover:bg-line/30 hover:text-ink"
               }`}
@@ -504,44 +493,64 @@ export default function ClientDashboard() {
             </button>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setChatSignal((n) => n + 1)}
+          className="flex w-full items-center justify-between rounded-md border-l-2 border-transparent px-3 py-2 text-left font-display text-sm font-medium text-muted transition hover:bg-line/30 hover:text-ink"
+        >
+          Чат
+          {chatUnread > 0 && (
+            <span className="rounded-full bg-danger px-1.5 text-[11px] font-semibold text-white">{chatUnread}</span>
+          )}
+        </button>
       </nav>
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-col gap-3">
-          {tab === "home" ? (
+          {tab === "today" ? (
+            <ClientToday
+              clientId={client.id}
+              name={client.name}
+              checkinWeekday={client.checkin_weekday ?? 0}
+              onOpen={(kind) => {
+                setOpenReq({ kind, n: Date.now() });
+                setTab("plan");
+              }}
+            />
+          ) : tab === "plan" ? (
             <>
-              <ClientHomeSummary
-                client={client}
-                checkins={checkins}
-                workouts={workoutsSummary}
-                foodToday={foodToday}
-                targetCalories={targetCalories}
-              />
-              <h2 className="mt-1 font-display text-sm font-semibold uppercase tracking-wide text-muted">
-                📔 Щоденник
-              </h2>
               <ClientActivityCalendar
                 clientId={client.id}
                 checkins={checkinMarkers}
                 showHabits
                 checkinWeekday={client.checkin_weekday ?? 0}
+                openRequest={openReq}
               />
               <NotificationsToggle clientId={client.id} />
             </>
           ) : (
-            <ClientProfileCard
-              client={client}
-              checkins={checkins}
-              onEditAnketa={() => {
-                prefillFromClient(client);
-                setEditMode(true);
-              }}
-              onAvatarUpdated={load}
-              onCheckinAdded={() => loadCheckins(client.id)}
-            />
+            <>
+              <ClientHomeSummary client={client} checkins={checkins} workouts={workoutsSummary} />
+              <ClientProfileCard
+                client={client}
+                checkins={checkins}
+                onEditAnketa={() => {
+                  prefillFromClient(client);
+                  setEditMode(true);
+                }}
+                onAvatarUpdated={load}
+                onCheckinAdded={() => loadCheckins(client.id)}
+              />
+            </>
           )}
 
-          <ChatLauncher mode="client" clientId={client.id} />
+          <ChatLauncher
+            mode="client"
+            clientId={client.id}
+            hideButton
+            openSignal={chatSignal}
+            onUnreadChange={setChatUnread}
+          />
         </div>
       </div>
     </div>

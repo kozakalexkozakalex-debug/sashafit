@@ -11,7 +11,9 @@ export type NavIconName =
   | "payments"
   | "chat"
   | "more"
-  | "profile";
+  | "profile"
+  | "plan"
+  | "progress";
 
 const PATHS: Record<NavIconName, React.ReactNode> = {
   home: (
@@ -49,6 +51,18 @@ const PATHS: Record<NavIconName, React.ReactNode> = {
   chat: (
     <>
       <path d="M5 6.5A1.5 1.5 0 0 1 6.5 5h11A1.5 1.5 0 0 1 19 6.5v8a1.5 1.5 0 0 1-1.5 1.5H11l-4 3.5V16H6.5A1.5 1.5 0 0 1 5 14.5z" />
+    </>
+  ),
+  plan: (
+    <>
+      <rect x="4" y="5.5" width="16" height="14" rx="2" />
+      <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" />
+    </>
+  ),
+  progress: (
+    <>
+      <path d="M4 17.5 9.5 12l3.5 3.5L20 8" />
+      <path d="M15 8h5v5" />
     </>
   ),
   more: (

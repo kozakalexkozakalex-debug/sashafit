@@ -55,6 +55,8 @@ type BaseProduct = {
   carbs_per_100: number;
 };
 
+export type OpenRequest = { kind: "workout" | "food" | "checkin" | "habits"; n: number };
+
 export type CheckinMarker = {
   id: string;
   date: string; // YYYY-MM-DD, з created_at
@@ -97,7 +99,10 @@ export default function ClientActivityCalendar({
   showHabits,
   habitsReadOnly,
   checkinWeekday = 0,
+  openRequest = null,
 }: {
+  // Запит від екрана «Сьогодні»: відкрити конкретний попап за сьогоднішній день.
+  openRequest?: OpenRequest | null;
   clientId: string;
   checkins: CheckinMarker[];
   // Іконка звичок у щоденнику — показуємо і клієнту (відмічає сам), і
@@ -245,6 +250,19 @@ export default function ClientActivityCalendar({
     setFoodModalOpen(false);
     setCheckinModalOpen(false);
   }, [selected]);
+
+  // Запит із «Сьогодні» (кнопка «Почати тренування», «+ Їжа», «Пройти чек-ін»).
+  // Оголошений ПІСЛЯ ефекту закриття попапів, щоб відкриття перемагало.
+  useEffect(() => {
+    if (!openRequest) return;
+    setFilter("all");
+    setSelected(toKey(new Date()));
+    if (openRequest.kind === "workout") setWorkoutModalOpen(true);
+    else if (openRequest.kind === "food") setFoodModalOpen(true);
+    else if (openRequest.kind === "checkin") setCheckinModalOpen(true);
+    else setHabitsModalOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRequest?.n]);
 
   useEffect(() => {
     if (!workout) return;

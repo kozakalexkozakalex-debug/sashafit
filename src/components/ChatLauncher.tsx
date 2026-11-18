@@ -4,13 +4,34 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ChatPanel from "@/components/ChatPanel";
 
-type Props = { mode: "client"; clientId: string } | { mode: "coach" };
+type Props = (
+  | { mode: "client"; clientId: string }
+  | { mode: "coach" }
+) & {
+  // Кнопка чату може жити в нижньому меню замість плаваючої: тоді ховаємо
+  // свою кнопку, відкриваємо шторку за сигналом і віддаємо лічильник назовні.
+  hideButton?: boolean;
+  openSignal?: number;
+  onUnreadChange?: (n: number) => void;
+};
 
 // Плаваюча кнопка чату над нижньою панеллю (не займає місце серед вкладок) +
 // бейдж з кількістю непрочитаних + шторка, що виїжджає знизу при натисканні.
-export default function ChatLauncher(props: Props) {
+export default function ChatLauncher(allProps: Props) {
+  const { hideButton, openSignal, onUnreadChange, ...rest } = allProps;
+  const props = rest as { mode: "client"; clientId: string } | { mode: "coach" };
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    onUnreadChange?.(unreadCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unreadCount]);
+
+  useEffect(() => {
+    if (openSignal) handleOpen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSignal]);
 
   async function refreshUnread() {
     if (props.mode === "coach") {
@@ -85,6 +106,7 @@ export default function ChatLauncher(props: Props) {
 
   return (
     <>
+      {!hideButton && (
       <button
         type="button"
         onClick={() => (open ? setOpen(false) : handleOpen())}
@@ -98,6 +120,7 @@ export default function ChatLauncher(props: Props) {
           </span>
         )}
       </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-40" onClick={() => setOpen(false)}>
