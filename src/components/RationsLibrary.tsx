@@ -111,7 +111,7 @@ export default function RationsLibrary() {
     );
     const body = `
       <h1>${escapeHtml(r.title)}</h1>
-      <p class="muted">План харчування · SashaFit</p>
+      <p class="muted">План харчування · RUNA Fitness</p>
       <table>
         <tr><th>Продукт</th><th>Грам</th><th>Ккал</th><th>Б</th><th>Ж</th><th>В</th></tr>
         ${items

@@ -50,7 +50,7 @@ export default function DashboardPage() {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-96.png" alt="" className="h-8 w-8 rounded-md" />
-          <span className="hidden sm:inline">SashaFit</span>
+          <span className="hidden sm:inline">RUNA Fitness</span>
         </button>
         <div className="flex items-center gap-2">
           {role !== "coach" && (

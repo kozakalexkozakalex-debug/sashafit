@@ -17,13 +17,13 @@ const body = Golos_Text({
 });
 
 export const metadata: Metadata = {
-  title: "SashaFit",
+  title: "RUNA Fitness",
   description: "Платформа для онлайн-тренера та клієнтів",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "SashaFit",
+    title: "RUNA Fitness",
   },
   icons: {
     apple: "/apple-touch-icon.png",

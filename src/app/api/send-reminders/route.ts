@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
             chat_id: chatId,
             text: `${msg.title}\n${msg.body}`,
             ...(appUrl
-              ? { reply_markup: { inline_keyboard: [[{ text: "Відкрити SashaFit", web_app: { url: appUrl } }]] } }
+              ? { reply_markup: { inline_keyboard: [[{ text: "Відкрити RUNA Fitness", web_app: { url: appUrl } }]] } }
               : {}),
           }),
         });

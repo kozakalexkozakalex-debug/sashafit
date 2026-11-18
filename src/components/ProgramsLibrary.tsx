@@ -127,7 +127,7 @@ export default function ProgramsLibrary() {
     const days = [...p.program_days].sort((a, b) => a.position - b.position);
     const body = `
       <h1>${escapeHtml(p.title)}</h1>
-      <p class="muted">Програма тренувань · SashaFit</p>
+      <p class="muted">Програма тренувань · RUNA Fitness</p>
       ${days
         .map((d) => {
           const exercises = [...d.program_exercises].sort((a, b) => a.position - b.position);

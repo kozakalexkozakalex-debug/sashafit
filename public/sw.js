@@ -2,7 +2,7 @@
 // тренування/чек-ін). Нічого не кешує, офлайн-режим не робимо.
 
 self.addEventListener("push", (event) => {
-  let data = { title: "SashaFit", body: "Нове нагадування" };
+  let data = { title: "RUNA Fitness", body: "Нове нагадування" };
   try {
     if (event.data) data = event.data.json();
   } catch {
@@ -10,7 +10,7 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "SashaFit", {
+    self.registration.showNotification(data.title || "RUNA Fitness", {
       body: data.body || "",
       icon: "/icon-192.png",
       badge: "/icon-192.png",
