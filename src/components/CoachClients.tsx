@@ -58,6 +58,13 @@ type Checkin = {
 };
 type AnswerRow = { checkin_id: string; value: string | null; checkin_questions: { label: string } | null };
 
+type SubTab = "week" | "checkins" | "profile";
+const SUBTABS: { id: SubTab; label: string }[] = [
+  { id: "week", label: "Тиждень" },
+  { id: "checkins", label: "Чек-іни" },
+  { id: "profile", label: "Профіль" },
+];
+
 type AssignKind = "workout" | "program" | "ration" | "habits";
 
 // Шторка для дій над клієнтом: на мобільному виїжджає знизу, на ПК — по центру.
@@ -113,6 +120,7 @@ export default function CoachClients({
 
   // Відкритий клієнт.
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [subTab, setSubTab] = useState<SubTab>("week");
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [answers, setAnswers] = useState<Record<string, { label: string; value: string }[]>>({});
@@ -148,6 +156,7 @@ export default function CoachClients({
   useEffect(() => {
     if (!openRequest) return;
     setDetailId(openRequest.id);
+    setSubTab("week");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRequest?.n]);
 
@@ -249,6 +258,7 @@ export default function CoachClients({
   }
 
   function openClient(id: string) {
+    setSubTab("week");
     setDetailId(id);
   }
 
@@ -302,6 +312,15 @@ export default function CoachClients({
               <p className="truncate text-xs text-muted">{RISK_LABEL[clientRisk(current, lastCheckin[current.id])]}</p>
             )}
           </div>
+          {current.profile_id && (
+            <button
+              type="button"
+              onClick={() => onOpenChat(current.id)}
+              className="flex-none rounded-full border border-line px-3.5 py-1.5 text-xs font-bold text-ink"
+            >
+              💬 Чат
+            </button>
+          )}
         </div>
 
         {notFilled ? (
@@ -337,7 +356,7 @@ export default function CoachClients({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2">
+            {subTab === "week" && (
               <button
                 type="button"
                 onClick={() => setAssignMenu(true)}
@@ -345,16 +364,25 @@ export default function CoachClients({
               >
                 + Призначити
               </button>
-              <button
-                type="button"
-                onClick={() => onOpenChat(current.id)}
-                className="rounded-xl border border-line bg-surface py-3 text-sm font-bold text-ink"
-              >
-                💬 Написати
-              </button>
+            )}
+
+            <div className="flex gap-1 rounded-full border border-line bg-sidebar p-1">
+              {SUBTABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSubTab(t.id)}
+                  className={`flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    subTab === t.id ? "bg-accent text-paper" : "text-muted hover:text-ink"
+                  }`}
+                >
+                  {t.label}
+                  {t.id === "checkins" && unreviewed > 0 ? ` · ${unreviewed}` : ""}
+                </button>
+              ))}
             </div>
 
-            <h3 className="mt-1 text-sm font-semibold text-ink">План і календар</h3>
+            {subTab === "week" && (
             <ClientActivityCalendar
               key={calendarKey}
               clientId={current.id}
@@ -363,8 +391,9 @@ export default function CoachClients({
               habitsReadOnly
               checkinWeekday={current.checkin_weekday ?? 0}
             />
+            )}
 
-            <h3 className="mt-1 text-sm font-semibold text-ink">Чек-іни</h3>
+            {subTab === "checkins" && (
 
               <>
                 {checkins.length === 0 ? (
@@ -435,8 +464,9 @@ export default function CoachClients({
               </>
             
 
-            <h3 className="mt-1 text-sm font-semibold text-ink">Профіль, цілі, заміри</h3>
-            <ClientProfileCard client={current} checkins={checkins} readOnly />
+            )}
+
+            {subTab === "profile" && <ClientProfileCard client={current} checkins={checkins} readOnly />}
 
             <button
               type="button"

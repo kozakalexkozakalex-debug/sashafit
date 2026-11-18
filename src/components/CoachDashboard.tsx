@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabaseClient";
 import CoachHome from "@/components/CoachHome";
 import CoachClients from "@/components/CoachClients";
+import CoachToday from "@/components/CoachToday";
 import CoachChats from "@/components/CoachChats";
 import ThemeSettings from "@/components/ThemeSettings";
 import CheckinQuestionsSettings from "@/components/CheckinQuestionsSettings";
@@ -21,10 +22,11 @@ const NutritionSection = dynamic(() => import("@/components/NutritionSection"), 
 const CoachAnalytics = dynamic(() => import("@/components/CoachAnalytics"), { ssr: false });
 
 // «more» — екран-меню «Ще» (аналітика, налаштування); сам по собі нічого не показує.
-type TabId = "home" | "clients" | "library" | "more" | "analytics" | "appearance";
+type TabId = "today" | "home" | "clients" | "library" | "more" | "analytics" | "appearance";
 type LibrarySubTab = "workouts" | "food" | "habits";
 
 const TABS: { id: TabId; label: string }[] = [
+  { id: "today", label: "Сьогодні" },
   { id: "home", label: "Зустрічі й огляд" },
   { id: "clients", label: "Клієнти" },
   { id: "library", label: "База" },
@@ -41,11 +43,12 @@ const LIBRARY_SECTIONS: { id: LibrarySubTab; label: string; icon: string }[] = [
   { id: "habits", label: "Звички", icon: "💧" },
 ];
 
-// Знизу на мобільному — 3 пункти. Усе рідкісне (зустрічі, аналітика, налаштування,
+// Знизу на мобільному — 4 пункти. Усе рідкісне (зустрічі, аналітика, налаштування,
 // вихід) живе в «Ще»; чат — плаваюча кнопка.
-const MOBILE_MAIN_IDS: TabId[] = ["clients", "library", "more"];
+const MOBILE_MAIN_IDS: TabId[] = ["today", "clients", "library", "more"];
 const MORE_GROUP: TabId[] = ["more", "home", "analytics", "appearance"];
 const TAB_ICON: Record<TabId, NavIconName> = {
+  today: "home",
   home: "home",
   clients: "clients",
   library: "library",
@@ -61,7 +64,7 @@ export default function CoachDashboard({
   goHomeSignal?: number;
   onSignOut?: () => void;
 }) {
-  const [tab, setTab] = useState<TabId>("clients");
+  const [tab, setTab] = useState<TabId>("today");
   // Запит «відкрити клієнта» (з Головної) — скидаємо при ручному переході між вкладками,
   // інакше повернення на «Клієнти» знову відкрило б старого клієнта.
   const [clientReq, setClientReq] = useState<{ id: string; n: number } | null>(null);
@@ -99,7 +102,7 @@ export default function CoachDashboard({
   const [homeAction, setHomeAction] = useState<{ ts: number } | null>(null);
 
   useEffect(() => {
-    if (goHomeSignal) go("clients");
+    if (goHomeSignal) go("today");
   }, [goHomeSignal]);
 
   // При переключенні вкладки прокручуємо сторінку наверх.
@@ -160,7 +163,7 @@ export default function CoachDashboard({
         )}
 
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
-        {(["clients", "library", "home", "analytics", "appearance"] as TabId[]).map((id) => (
+        {(["today", "clients", "library", "home", "analytics", "appearance"] as TabId[]).map((id) => (
           <TabButton key={id} t={TABS.find((x) => x.id === id)!} />
         ))}
         <div className="my-2 h-px bg-line" />
@@ -174,7 +177,19 @@ export default function CoachDashboard({
       </nav>
 
       <div className="min-w-0 flex-1">
-        {tab === "home" ? (
+        {tab === "today" ? (
+          <CoachToday
+            unread={unread}
+            onOpenChat={(id) => {
+              setChatClientId(id);
+              setChatOpen(true);
+            }}
+            onOpenClient={(id) => {
+              setClientReq({ id, n: Date.now() });
+              setTab("clients");
+            }}
+          />
+        ) : tab === "home" ? (
           <div>
             {backToMore}
             <CoachHome
