@@ -24,11 +24,14 @@ export default function CoachChats({
   unread,
   onRead,
   openClientId,
+  embedded,
 }: {
   unread: UnreadInfo;
   onRead: () => void;
   // Якщо задано (кнопка "Відповісти" з головної) — одразу відкрити цю розмову.
   openClientId?: string | null;
+  // У попапі: без власної рамки, на всю висоту контейнера.
+  embedded?: boolean;
 }) {
   const [clients, setClients] = useState<Row[]>([]);
   const [last, setLast] = useState<Record<string, LastMsg>>({});
@@ -82,7 +85,13 @@ export default function CoachChats({
   const active = clients.find((c) => c.id === activeId);
   if (activeId && active) {
     return (
-      <div className="flex h-[calc(100dvh-9rem)] flex-col rounded-xl border border-line bg-surface p-3 lg:h-[34rem]">
+      <div
+        className={
+          embedded
+            ? "flex h-[calc(80dvh-6.5rem)] min-h-0 flex-col lg:h-[calc(30rem-6.5rem)]"
+            : "flex h-[calc(100dvh-9rem)] flex-col rounded-xl border border-line bg-surface p-3 lg:h-[34rem]"
+        }
+      >
         <div className="mb-2 flex items-center gap-2">
           <button type="button" onClick={() => setActiveId(null)} className="rounded-lg px-2 py-1 text-lg text-muted">
             ‹
@@ -102,8 +111,8 @@ export default function CoachChats({
   });
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-4">
-      <h2 className="mb-1 text-sm font-semibold">Чати</h2>
+    <div className={embedded ? "" : "rounded-xl border border-line bg-surface p-4"}>
+      {!embedded && <h2 className="mb-1 text-sm font-semibold">Чати</h2>}
       {sorted.length === 0 ? (
         <p className="text-sm text-muted">Підключених клієнтів ще немає.</p>
       ) : (

@@ -9,6 +9,7 @@ import ClientProfileCard from "@/components/ClientProfileCard";
 import CoachHome from "@/components/CoachHome";
 import CoachChats from "@/components/CoachChats";
 import ThemeSettings from "@/components/ThemeSettings";
+import CheckinQuestionsSettings from "@/components/CheckinQuestionsSettings";
 import { fetchCoachUnread, UnreadInfo } from "@/lib/coachUnread";
 import { clientRisk, RISK_LABEL } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
@@ -60,17 +61,16 @@ type Checkin = {
   created_at: string;
 };
 
-type TabId = "home" | "clients" | "chats" | "newClient" | "library" | "analytics" | "appearance";
+type TabId = "home" | "clients" | "newClient" | "library" | "analytics" | "appearance";
 type LibrarySubTab = "workouts" | "food" | "habits";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "home", label: "Головна" },
   { id: "clients", label: "Клієнти" },
-  { id: "chats", label: "Чати" },
   { id: "newClient", label: "Заявки" },
   { id: "library", label: "База" },
   { id: "analytics", label: "Аналітика" },
-  { id: "appearance", label: "Оформлення" },
+  { id: "appearance", label: "Налаштування" },
 ];
 
 // Розділи-кружки на вкладці «База». Щоб додати новий розділ у майбутньому
@@ -82,14 +82,12 @@ const LIBRARY_SECTIONS: { id: LibrarySubTab; label: string; icon: string }[] = [
   { id: "habits", label: "Звички", icon: "💧" },
 ];
 
-// Знизу на мобільному — 3 основні вкладки + кнопка «Ще» (База, Аналітика).
-// «Заявки» відкриваються з кнопки в хедері та з вкладки «Клієнти».
-const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "chats"];
-const MOBILE_MORE_IDS: TabId[] = ["library", "analytics", "appearance"];
+// Знизу на мобільному — 4 вкладки. «Заявки» — кнопка в хедері та вкладка
+// «Клієнти»; «Налаштування» — шестірня в хедері; чат — плаваюча кнопка.
+const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "library", "analytics"];
 const TAB_ICON: Record<TabId, NavIconName> = {
   home: "home",
   clients: "clients",
-  chats: "chat",
   newClient: "clients",
   library: "library",
   analytics: "analytics",
@@ -118,15 +116,17 @@ export default function CoachDashboard({
   goHomeSignal,
   meetingSignal,
   newClientSignal,
+  settingsSignal,
 }: {
   goHomeSignal?: number;
   meetingSignal?: number;
   newClientSignal?: number;
+  settingsSignal?: number;
 }) {
   const [tab, setTab] = useState<TabId>("home");
-  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   // Непрочитані повідомлення клієнтів: для бейджа на вкладці «Чати» і черги на головній.
   const [unread, setUnread] = useState<UnreadInfo>({});
+  const [chatOpen, setChatOpen] = useState(false);
   const [chatClientId, setChatClientId] = useState<string | null>(null);
   async function refreshUnread() {
     setUnread(await fetchCoachUnread());
@@ -145,9 +145,6 @@ export default function CoachDashboard({
       supabase.removeChannel(channel);
     };
   }, []);
-  useEffect(() => {
-    if (tab !== "chats") setChatClientId(null);
-  }, [tab]);
   const unreadTotal = Object.values(unread).reduce((s, u) => s + u.count, 0);
   const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>("workouts");
   // Сигнал для CoachHome: відкрити форму "Нова зустріч" (кнопка в хедері),
@@ -173,6 +170,11 @@ export default function CoachDashboard({
   useEffect(() => {
     if (newClientSignal) setTab("newClient");
   }, [newClientSignal]);
+
+  // Кнопка-шестірня в хедері — відкриває "Налаштування" (тема, питання чек-іна).
+  useEffect(() => {
+    if (settingsSignal) setTab("appearance");
+  }, [settingsSignal]);
 
   // При переключенні вкладки прокручуємо сторінку наверх — інакше лишається
   // позиція скролу з попередньої вкладки (напр. знизу списку клієнтів).
@@ -454,61 +456,24 @@ export default function CoachDashboard({
                   type="button"
                   onClick={() => {
                     setTab(id);
-                    setMobileMoreOpen(false);
                   }}
                   className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
                     active ? "text-brand" : "text-muted"
                   }`}
                 >
-                  <span className="relative">
-                    <NavIcon name={TAB_ICON[id]} className="h-5 w-5" />
-                    {id === "chats" && unreadTotal > 0 && (
-                      <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-paper">
-                        {unreadTotal > 9 ? "9+" : unreadTotal}
-                      </span>
-                    )}
-                  </span>
+                  <NavIcon name={TAB_ICON[id]} className="h-5 w-5" />
                   {t.label}
                 </button>
               );
             })}
-            <button
-              type="button"
-              onClick={() => setMobileMoreOpen((v) => !v)}
-              aria-expanded={mobileMoreOpen}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                MOBILE_MORE_IDS.includes(tab) || mobileMoreOpen ? "text-brand" : "text-muted"
-              }`}
-            >
-              <NavIcon name="more" className="h-5 w-5" />
-              Ще
-            </button>
           </nav>,
-          document.body
-        )}
-
-      {mobileMoreOpen &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div className="fixed inset-0 z-[60] lg:hidden" onClick={() => setMobileMoreOpen(false)}>
-            <div className="absolute inset-0 bg-black/50" />
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-line bg-sidebar p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
-            >
-              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
-              {MOBILE_MORE_IDS.map((id) => (
-                <TabButton key={id} t={TABS.find((x) => x.id === id)!} onSelect={() => setMobileMoreOpen(false)} />
-              ))}
-            </div>
-          </div>,
           document.body
         )}
 
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
         <TabButton t={TABS.find((x) => x.id === "home")!} />
         <div className="my-2 h-px bg-line" />
-        {(["clients", "chats", "newClient", "library", "analytics", "appearance"] as TabId[]).map((id) => (
+        {(["clients", "newClient", "library", "analytics", "appearance"] as TabId[]).map((id) => (
           <TabButton key={id} t={TABS.find((x) => x.id === id)!} />
         ))}
       </nav>
@@ -522,20 +487,16 @@ export default function CoachDashboard({
           }}
           onOpenChat={(id) => {
             setChatClientId(id);
-            setTab("chats");
+            setChatOpen(true);
           }}
           unread={unread}
           actionSignal={homeAction}
         />
       ) : tab === "appearance" ? (
-        <ThemeSettings />
-      ) : tab === "chats" ? (
-        <CoachChats
-          key={chatClientId ?? "list"}
-          unread={unread}
-          onRead={refreshUnread}
-          openClientId={chatClientId}
-        />
+        <div className="flex flex-col gap-4">
+          <ThemeSettings />
+          <CheckinQuestionsSettings />
+        </div>
       ) : tab === "library" ? (
         <div>
           <div className="mb-5 flex gap-4">
@@ -893,6 +854,52 @@ export default function CoachDashboard({
       )}
       </div>
 
+
+      <button
+        type="button"
+        onClick={() => {
+          setChatClientId(null);
+          setChatOpen(true);
+        }}
+        aria-label="Чат"
+        className="fixed bottom-20 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-accent text-paper shadow-lg transition hover:brightness-110 lg:bottom-6"
+      >
+        <NavIcon name="chat" className="h-6 w-6" />
+        {unreadTotal > 0 && !chatOpen && (
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[11px] font-semibold text-white">
+            {unreadTotal > 9 ? "9+" : unreadTotal}
+          </span>
+        )}
+      </button>
+
+      {chatOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[65]" onClick={() => setChatOpen(false)}>
+            <div className="absolute inset-0 bg-black/50" />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute inset-x-0 bottom-0 flex h-[80dvh] flex-col rounded-t-2xl border-t border-line bg-sidebar pb-[env(safe-area-inset-bottom)] lg:inset-x-auto lg:bottom-6 lg:right-4 lg:h-[30rem] lg:w-96 lg:rounded-xl lg:border"
+            >
+              <div className="flex items-center justify-between border-b border-line p-3">
+                <h2 className="text-sm font-semibold">Повідомлення</h2>
+                <button type="button" onClick={() => setChatOpen(false)} className="text-xs text-muted">
+                  Закрити
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                <CoachChats
+                  key={chatClientId ?? "list"}
+                  embedded
+                  unread={unread}
+                  onRead={refreshUnread}
+                  openClientId={chatClientId}
+                />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

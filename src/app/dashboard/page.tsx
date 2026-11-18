@@ -15,6 +15,7 @@ export default function DashboardPage() {
   const [goHomeSignal, setGoHomeSignal] = useState(0);
   const [meetingSignal, setMeetingSignal] = useState(0);
   const [newClientSignal, setNewClientSignal] = useState(0);
+  const [settingsSignal, setSettingsSignal] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -81,6 +82,17 @@ export default function DashboardPage() {
                 <span className="hidden sm:inline">Заявки</span>
                 <span className="sm:hidden">Заявки</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setSettingsSignal((v) => v + 1)}
+                aria-label="Налаштування"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-line text-muted transition hover:text-brand"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+                </svg>
+              </button>
             </>
           )}
           <button type="button" onClick={signOut} className="text-sm text-muted hover:text-brand">
@@ -94,6 +106,7 @@ export default function DashboardPage() {
             goHomeSignal={goHomeSignal}
             meetingSignal={meetingSignal}
             newClientSignal={newClientSignal}
+            settingsSignal={settingsSignal}
           />
         ) : (
           <ClientDashboard />
