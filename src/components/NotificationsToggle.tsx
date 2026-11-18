@@ -43,7 +43,7 @@ export default function NotificationsToggle({ clientId }: { clientId: string }) 
         <p className="text-xs text-muted">
           {subscribed ? "Увімкнено — надсилатимемо, якщо забудеш потренуватись чи зробити чек-ін." : "Отримуй push, якщо забудеш потренуватись чи зробити чек-ін."}
         </p>
-        {err && <p className="mt-1 text-xs text-red-400">{err}</p>}
+        {err && <p className="mt-1 text-xs text-danger">{err}</p>}
       </div>
       <button
         type="button"

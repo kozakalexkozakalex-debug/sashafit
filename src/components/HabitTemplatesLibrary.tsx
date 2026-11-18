@@ -69,7 +69,7 @@ export default function HabitTemplatesLibrary() {
                 type="button"
                 onClick={() => setIcon(ic)}
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-base transition ${
-                  icon === ic ? "border-accent bg-accent/15" : "border-line bg-paper"
+                  icon === ic ? "border-brand bg-brand/15" : "border-line bg-paper"
                 }`}
               >
                 {ic}
@@ -115,17 +115,17 @@ export default function HabitTemplatesLibrary() {
           {templates.map((t) => (
             <div
               key={t.id}
-              className="relative flex flex-col items-center gap-2 rounded-xl border-l-2 border-accent bg-paper p-4 text-center shadow-sm transition hover:shadow-md"
+              className="relative flex flex-col items-center gap-2 rounded-xl border-l-2 border-brand bg-paper p-4 text-center shadow-sm transition hover:shadow-md"
             >
               <button
                 type="button"
                 onClick={() => removeTemplate(t.id)}
                 title="Видалити з бібліотеки"
-                className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-xs text-muted/60 transition hover:text-red-400"
+                className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-xs text-muted/60 transition hover:text-danger"
               >
                 ✕
               </button>
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/15 text-2xl">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand/15 text-2xl">
                 {t.icon}
               </span>
               <span className="font-display text-sm font-semibold text-ink">{t.label}</span>

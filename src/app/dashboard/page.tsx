@@ -75,7 +75,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setNewClientSignal((v) => v + 1)}
-                className="flex items-center gap-1.5 rounded-full border border-accent px-3 py-1.5 text-xs font-semibold text-accent transition hover:bg-accent/10 sm:text-sm"
+                className="flex items-center gap-1.5 rounded-full border border-brand px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand/10 sm:text-sm"
               >
                 <span className="text-sm leading-none">+</span>
                 <span className="hidden sm:inline">Заявки</span>
@@ -83,7 +83,7 @@ export default function DashboardPage() {
               </button>
             </>
           )}
-          <button type="button" onClick={signOut} className="text-sm text-muted hover:text-accent">
+          <button type="button" onClick={signOut} className="text-sm text-muted hover:text-brand">
             Вийти
           </button>
         </div>

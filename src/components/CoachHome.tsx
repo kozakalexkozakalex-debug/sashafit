@@ -57,10 +57,10 @@ function agoText(days: number) {
 }
 
 const RISK_DOT: Record<RiskLevel, string> = {
-  risk: "bg-red-400",
-  watch: "bg-yellow-400",
+  risk: "bg-danger",
+  watch: "bg-warn",
   pending: "bg-muted",
-  ok: "bg-green-400",
+  ok: "bg-success",
 };
 
 function agoShort(iso: string) {
@@ -440,10 +440,10 @@ export default function CoachHome({
                   type="button"
                   onClick={() => setFilter(filter === id ? "all" : id)}
                   className={`flex-1 rounded-lg border px-2 py-1.5 text-center text-xs ${
-                    filter === id ? "border-accent bg-accent/10" : "border-line bg-paper"
+                    filter === id ? "border-brand bg-brand/10" : "border-line bg-paper"
                   } ${n === 0 ? "text-muted" : "text-ink"}`}
                 >
-                  <span className={`block font-display text-base font-semibold ${n === 0 ? "text-muted" : "text-accent"}`}>
+                  <span className={`block font-display text-base font-semibold ${n === 0 ? "text-muted" : "text-brand"}`}>
                     {n}
                   </span>
                   {label}
@@ -474,7 +474,7 @@ export default function CoachHome({
                             const c = clients.find((x) => x.id === q.clientId);
                             if (c) copyRowInvite(c.id, c.invite_code);
                           }}
-                          className="whitespace-nowrap rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent"
+                          className="whitespace-nowrap rounded-full border border-brand/40 px-2.5 py-1 text-xs text-brand"
                         >
                           {copiedRowId === q.clientId ? "Скопійовано" : "Посилання"}
                         </button>
@@ -491,7 +491,7 @@ export default function CoachHome({
                         type="button"
                         onClick={() => (q.kind === "checkin" ? setReviewClientId(q.clientId) : onOpenChat?.(q.clientId))}
                         className={`flex-none whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${
-                          q.kind === "checkin" ? "bg-accent text-paper" : "border border-accent/40 text-accent"
+                          q.kind === "checkin" ? "bg-accent text-paper" : "border border-accent/40 text-brand"
                         }`}
                       >
                         {q.kind === "checkin" ? "Перевірити" : q.kind === "message" ? "Відповісти" : "Написати"}
@@ -542,7 +542,7 @@ export default function CoachHome({
                       onClick={() => onOpenClient?.(c.id)}
                       className="flex items-center gap-3 border-t border-line py-3 text-left first:border-t-0 hover:bg-line/10"
                     >
-                      <span className="relative flex h-9 w-9 flex-none items-center justify-center rounded-full bg-accent/15 font-display text-sm font-semibold text-accent">
+                      <span className="relative flex h-9 w-9 flex-none items-center justify-center rounded-full bg-brand/15 font-display text-sm font-semibold text-brand">
                         {clientLabel(c).charAt(0).toUpperCase()}
                         <span
                           className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface ${RISK_DOT[r.level]}`}
@@ -557,7 +557,7 @@ export default function CoachHome({
                           <span>
                             Тренування: {r.weekTotal > 0 ? `${r.weekDone}/${r.weekTotal} за тиждень` : "—"}
                           </span>
-                          {foodTodayByClient.has(c.id) && <span className="text-blue-400">🍽 їжа сьогодні</span>}
+                          {foodTodayByClient.has(c.id) && <span className="text-info">🍽 їжа сьогодні</span>}
                         </span>
                       </span>
                       {r.weightText && (
@@ -586,7 +586,7 @@ export default function CoachHome({
                     {qu.label}
                     {qu.kind === "scale" && <span className="text-muted"> (шкала 1–5)</span>}
                   </span>
-                  <button type="button" onClick={() => deleteQuestion(qu.id)} className="text-red-400">
+                  <button type="button" onClick={() => deleteQuestion(qu.id)} className="text-danger">
                     Видалити
                   </button>
                 </div>
@@ -639,7 +639,7 @@ export default function CoachHome({
                       {m.link && (
                         <>
                           {" · "}
-                          <a href={m.link} target="_blank" rel="noreferrer" className="text-xs text-accent underline">
+                          <a href={m.link} target="_blank" rel="noreferrer" className="text-xs text-brand underline">
                             дзвінок
                           </a>
                         </>
@@ -667,7 +667,7 @@ export default function CoachHome({
           <div className="rounded-xl border border-line bg-surface p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold">Найближчі зустрічі</h2>
-              <button type="button" onClick={() => setMeetingModalOpen(true)} className="text-xs text-accent">
+              <button type="button" onClick={() => setMeetingModalOpen(true)} className="text-xs text-brand">
                 + Додати
               </button>
             </div>
@@ -691,7 +691,7 @@ export default function CoachHome({
                         })}
                       </p>
                     </div>
-                    <button type="button" onClick={() => deleteMeeting(m.id)} className="flex-none text-xs text-red-400">
+                    <button type="button" onClick={() => deleteMeeting(m.id)} className="flex-none text-xs text-danger">
                       Видалити
                     </button>
                   </div>
@@ -782,7 +782,7 @@ export default function CoachHome({
                 >
                   {mBusy ? "Зберігаю…" : "Додати"}
                 </button>
-                {mErr && <p className="text-sm text-red-400">{mErr}</p>}
+                {mErr && <p className="text-sm text-danger">{mErr}</p>}
               </div>
             </div>
           </div>,

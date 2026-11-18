@@ -119,7 +119,7 @@ function TrendLineChart({ points, target }: { points: { label: string; value: nu
           strokeDasharray="3 3"
         />
       )}
-      {n > 1 && <path d={path} fill="none" stroke="currentColor" className="text-accent" strokeWidth={2} />}
+      {n > 1 && <path d={path} fill="none" stroke="currentColor" className="text-brand" strokeWidth={2} />}
       {points.map((p, i) => (
         <circle key={i} cx={padL + i * stepX} cy={toY(p.value)} r={2.3} className="fill-accent" />
       ))}
@@ -368,11 +368,11 @@ export default function CoachAnalytics() {
                   >
                     <div className="min-w-0 truncate">
                       <span className="font-medium">{clientLabel(c)}</span>
-                      {!c.profile_id && <span className="stamp ml-2 text-accent">очікує</span>}
+                      {!c.profile_id && <span className="stamp ml-2 text-brand">очікує</span>}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-muted">
                       {delta != null && delta !== 0 && (
-                        <span className={delta < 0 ? "text-green-400" : "text-red-400"}>
+                        <span className={delta < 0 ? "text-success" : "text-danger"}>
                           {delta > 0 ? `+${delta}` : delta} кг за {period} дн.
                         </span>
                       )}

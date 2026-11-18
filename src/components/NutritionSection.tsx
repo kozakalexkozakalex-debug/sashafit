@@ -16,7 +16,7 @@ export default function NutritionSection() {
           type="button"
           onClick={() => setSub("products")}
           className={`-mb-px border-b-2 pb-2 font-display text-sm font-medium transition ${
-            sub === "products" ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"
+            sub === "products" ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
           }`}
         >
           База продуктів
@@ -25,7 +25,7 @@ export default function NutritionSection() {
           type="button"
           onClick={() => setSub("rations")}
           className={`-mb-px border-b-2 pb-2 font-display text-sm font-medium transition ${
-            sub === "rations" ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"
+            sub === "rations" ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
           }`}
         >
           Раціони

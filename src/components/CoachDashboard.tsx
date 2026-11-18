@@ -8,6 +8,7 @@ import ClientActivityCalendar, { CheckinMarker } from "@/components/ClientActivi
 import ClientProfileCard from "@/components/ClientProfileCard";
 import CoachHome from "@/components/CoachHome";
 import CoachChats from "@/components/CoachChats";
+import ThemeSettings from "@/components/ThemeSettings";
 import { fetchCoachUnread, UnreadInfo } from "@/lib/coachUnread";
 import { clientRisk, RISK_LABEL } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
@@ -59,7 +60,7 @@ type Checkin = {
   created_at: string;
 };
 
-type TabId = "home" | "clients" | "chats" | "newClient" | "library" | "analytics";
+type TabId = "home" | "clients" | "chats" | "newClient" | "library" | "analytics" | "appearance";
 type LibrarySubTab = "workouts" | "food" | "habits";
 
 const TABS: { id: TabId; label: string }[] = [
@@ -69,6 +70,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "newClient", label: "Заявки" },
   { id: "library", label: "База" },
   { id: "analytics", label: "Аналітика" },
+  { id: "appearance", label: "Оформлення" },
 ];
 
 // Розділи-кружки на вкладці «База». Щоб додати новий розділ у майбутньому
@@ -83,7 +85,7 @@ const LIBRARY_SECTIONS: { id: LibrarySubTab; label: string; icon: string }[] = [
 // Знизу на мобільному — 3 основні вкладки + кнопка «Ще» (База, Аналітика).
 // «Заявки» відкриваються з кнопки в хедері та з вкладки «Клієнти».
 const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "chats"];
-const MOBILE_MORE_IDS: TabId[] = ["library", "analytics"];
+const MOBILE_MORE_IDS: TabId[] = ["library", "analytics", "appearance"];
 const TAB_ICON: Record<TabId, NavIconName> = {
   home: "home",
   clients: "clients",
@@ -91,6 +93,7 @@ const TAB_ICON: Record<TabId, NavIconName> = {
   newClient: "clients",
   library: "library",
   analytics: "analytics",
+  appearance: "profile",
 };
 
 // Поп-ап для дій над клієнтом (призначити тренування/програму/раціон) —
@@ -315,13 +318,13 @@ export default function CoachDashboard({
 
   function ClientCard({ c }: { c: Client }) {
     return (
-      <div className="flex flex-col gap-2 rounded-lg border-l-2 border-accent bg-paper p-3 text-sm">
+      <div className="flex flex-col gap-2 rounded-lg border-l-2 border-brand bg-paper p-3 text-sm">
         <button type="button" onClick={() => selectClient(c.id)} className="flex items-start justify-between gap-2 text-left">
           <span className="min-w-0">
             <span className="block truncate font-medium text-ink">{clientLabel(c)}</span>
             {c.goal && <span className="mt-0.5 block truncate text-xs text-muted">{c.goal}</span>}
           </span>
-          <span className={`flex-none stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
+          <span className={`flex-none stamp ${c.profile_id ? "text-success" : "text-brand"}`}>
             {c.profile_id ? "Підключено" : "Очікує"}
           </span>
         </button>
@@ -344,7 +347,7 @@ export default function CoachDashboard({
             <button
               type="button"
               onClick={() => copy(inviteUrl(c.invite_code))}
-              className="whitespace-nowrap rounded bg-surface px-2 py-1 text-xs text-accent"
+              className="whitespace-nowrap rounded bg-surface px-2 py-1 text-xs text-brand"
             >
               Копіювати
             </button>
@@ -384,7 +387,7 @@ export default function CoachDashboard({
           <span className="block truncate font-medium text-ink">{clientLabel(c)}</span>
           {c.goal && <span className="block truncate text-xs text-muted">{c.goal}</span>}
         </span>
-        <span className={`w-fit stamp ${c.profile_id ? "text-green-400" : "text-accent"}`}>
+        <span className={`w-fit stamp ${c.profile_id ? "text-success" : "text-brand"}`}>
           {c.profile_id ? "Підключено" : "Очікує"}
         </span>
         <span className="text-xs text-muted">
@@ -402,7 +405,7 @@ export default function CoachDashboard({
             <button
               type="button"
               onClick={() => copy(inviteUrl(c.invite_code))}
-              className="whitespace-nowrap rounded border border-line px-2 py-1 text-[11px] text-accent"
+              className="whitespace-nowrap rounded border border-line px-2 py-1 text-[11px] text-brand"
             >
               Копіювати
             </button>
@@ -429,7 +432,7 @@ export default function CoachDashboard({
           onSelect?.();
         }}
         className={`w-full rounded-md border-l-2 px-3 py-2 text-left font-display text-sm font-medium transition ${
-          active ? "border-accent bg-accent/15 text-ink" : "border-transparent text-muted hover:bg-line/30 hover:text-ink"
+          active ? "border-brand bg-brand/15 text-ink" : "border-transparent text-muted hover:bg-line/30 hover:text-ink"
         }`}
       >
         {t.label}
@@ -454,7 +457,7 @@ export default function CoachDashboard({
                     setMobileMoreOpen(false);
                   }}
                   className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                    active ? "text-accent" : "text-muted"
+                    active ? "text-brand" : "text-muted"
                   }`}
                 >
                   <span className="relative">
@@ -474,7 +477,7 @@ export default function CoachDashboard({
               onClick={() => setMobileMoreOpen((v) => !v)}
               aria-expanded={mobileMoreOpen}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                MOBILE_MORE_IDS.includes(tab) || mobileMoreOpen ? "text-accent" : "text-muted"
+                MOBILE_MORE_IDS.includes(tab) || mobileMoreOpen ? "text-brand" : "text-muted"
               }`}
             >
               <NavIcon name="more" className="h-5 w-5" />
@@ -505,7 +508,7 @@ export default function CoachDashboard({
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
         <TabButton t={TABS.find((x) => x.id === "home")!} />
         <div className="my-2 h-px bg-line" />
-        {(["clients", "chats", "newClient", "library", "analytics"] as TabId[]).map((id) => (
+        {(["clients", "chats", "newClient", "library", "analytics", "appearance"] as TabId[]).map((id) => (
           <TabButton key={id} t={TABS.find((x) => x.id === id)!} />
         ))}
       </nav>
@@ -524,6 +527,8 @@ export default function CoachDashboard({
           unread={unread}
           actionSignal={homeAction}
         />
+      ) : tab === "appearance" ? (
+        <ThemeSettings />
       ) : tab === "chats" ? (
         <CoachChats
           key={chatClientId ?? "list"}
@@ -546,13 +551,13 @@ export default function CoachDashboard({
                   <span
                     className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-2xl transition ${
                       active
-                        ? "border-accent bg-accent/15 shadow-sm shadow-accent/20"
-                        : "border-line bg-paper text-muted hover:border-accent/50"
+                        ? "border-brand bg-brand/15 shadow-sm shadow-accent/20"
+                        : "border-line bg-paper text-muted hover:border-brand/50"
                     }`}
                   >
                     {s.icon}
                   </span>
-                  <span className={`text-xs font-medium ${active ? "text-accent" : "text-muted"}`}>{s.label}</span>
+                  <span className={`text-xs font-medium ${active ? "text-brand" : "text-muted"}`}>{s.label}</span>
                 </button>
               );
             })}
@@ -599,7 +604,7 @@ export default function CoachDashboard({
                 {busy ? "Створюю…" : "+ Нове посилання"}
               </button>
             </div>
-            {err && <p className="mb-2 text-sm text-red-400">{err}</p>}
+            {err && <p className="mb-2 text-sm text-danger">{err}</p>}
             {pendingClients.length === 0 ? (
               <p className="text-sm text-muted">
                 Заявок ще немає. Натисни «+ Нове посилання», щоб створити посилання для нового клієнта — воно зʼявиться
@@ -672,8 +677,8 @@ export default function CoachDashboard({
             ) : (
               <div>
                 {selectedClientIds.size > 0 && (
-                  <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg bg-accent/10 px-3 py-2 text-xs">
-                    <span className="font-medium text-accent">Вибрано: {selectedClientIds.size}</span>
+                  <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg bg-brand/10 px-3 py-2 text-xs">
+                    <span className="font-medium text-brand">Вибрано: {selectedClientIds.size}</span>
                     <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
                       <button
                         type="button"
@@ -685,7 +690,7 @@ export default function CoachDashboard({
                       <button
                         type="button"
                         onClick={() => setShowBulkAssignHabits(true)}
-                        className="whitespace-nowrap rounded-full border border-accent px-3 py-1 font-semibold text-accent"
+                        className="whitespace-nowrap rounded-full border border-brand px-3 py-1 font-semibold text-brand"
                       >
                         Призначити звички
                       </button>
@@ -788,7 +793,7 @@ export default function CoachDashboard({
                             setShowAssignRation(false);
                             setShowAssignHabits(false);
                           }}
-                          className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-accent"
+                          className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-brand"
                         >
                           {showBuilder ? "Сховати" : "Призначити тренування"}
                         </button>
@@ -800,7 +805,7 @@ export default function CoachDashboard({
                             setShowAssignRation(false);
                             setShowAssignHabits(false);
                           }}
-                          className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-accent"
+                          className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-brand"
                         >
                           {showAssignProgram ? "Сховати" : "Призначити програму"}
                         </button>
@@ -812,7 +817,7 @@ export default function CoachDashboard({
                             setShowAssignProgram(false);
                             setShowAssignHabits(false);
                           }}
-                          className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-accent"
+                          className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-brand"
                         >
                           {showAssignRation ? "Сховати" : "Призначити раціон"}
                         </button>
@@ -824,7 +829,7 @@ export default function CoachDashboard({
                             setShowAssignProgram(false);
                             setShowAssignRation(false);
                           }}
-                          className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-accent"
+                          className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-brand"
                         >
                           {showAssignHabits ? "Сховати" : "Призначити звички"}
                         </button>

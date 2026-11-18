@@ -237,7 +237,7 @@ function LoginForm() {
           {busy ? "Зачекай…" : isLogin ? "Увійти" : "Почати"}
         </button>
 
-        {err && <p className="mt-3 rounded-lg bg-paper px-3 py-2 text-sm text-red-400">{err}</p>}
+        {err && <p className="mt-3 rounded-lg bg-paper px-3 py-2 text-sm text-danger">{err}</p>}
       </div>
     </main>
   );

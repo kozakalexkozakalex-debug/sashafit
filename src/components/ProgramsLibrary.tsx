@@ -204,7 +204,7 @@ export default function ProgramsLibrary() {
             Додати
           </button>
         </div>
-        {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+        {err && <p className="mt-2 text-sm text-danger">{err}</p>}
       </div>
 
       <div className="rounded-xl border border-line bg-surface p-4">
@@ -219,7 +219,7 @@ export default function ProgramsLibrary() {
               <div
                 key={p.id}
                 className={`flex flex-col rounded-xl border-l-2 bg-paper text-sm shadow-sm transition ${
-                  isOpen ? "border-accent" : "border-line"
+                  isOpen ? "border-brand" : "border-line"
                 }`}
               >
                 <div
@@ -232,7 +232,7 @@ export default function ProgramsLibrary() {
                   <div className="flex flex-col gap-1.5">
                     <span className="font-display text-base font-semibold">{p.title}</span>
                     <div className="flex flex-wrap gap-1.5">
-                      <span className="stamp text-accent">{days.length} {days.length === 1 ? "день" : "дні"}</span>
+                      <span className="stamp text-brand">{days.length} {days.length === 1 ? "день" : "дні"}</span>
                       <span className="stamp text-muted">{totalExercises} вправ</span>
                     </div>
                   </div>
@@ -244,7 +244,7 @@ export default function ProgramsLibrary() {
                         printProgram(p);
                       }}
                       title="Друк / PDF"
-                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-accent"
+                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-brand hover:text-brand"
                     >
                       🖨
                     </button>
@@ -256,7 +256,7 @@ export default function ProgramsLibrary() {
                         duplicateProgram(p);
                       }}
                       title="Дублювати програму"
-                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-accent disabled:opacity-50"
+                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-brand hover:text-brand disabled:opacity-50"
                     >
                       {copyingId === p.id ? "…" : "⧉"}
                     </button>
@@ -279,7 +279,7 @@ export default function ProgramsLibrary() {
                                 key={e.id}
                                 className="flex items-center gap-3 border-b border-line/60 py-1.5 last:border-0"
                               >
-                                <span className="font-display text-xs text-accent">
+                                <span className="font-display text-xs text-brand">
                                   {String(i + 1).padStart(2, "0")}
                                 </span>
                                 <span className="flex-1">{e.name}</span>
@@ -372,7 +372,7 @@ export default function ProgramsLibrary() {
                       <button
                         type="button"
                         onClick={() => addDay(p.id)}
-                        className="rounded-lg bg-paper px-3 py-1.5 text-xs font-semibold text-accent"
+                        className="rounded-lg bg-paper px-3 py-1.5 text-xs font-semibold text-brand"
                       >
                         + день
                       </button>
@@ -381,7 +381,7 @@ export default function ProgramsLibrary() {
                     <button
                       type="button"
                       onClick={() => deleteProgram(p.id)}
-                      className="self-start text-xs text-red-400"
+                      className="self-start text-xs text-danger"
                     >
                       Видалити програму
                     </button>

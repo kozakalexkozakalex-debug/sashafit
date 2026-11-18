@@ -36,7 +36,7 @@ function LibraryExercise({ ex, onAdd }: { ex: Exercise; onAdd: () => void }) {
     <button
       type="button"
       onClick={onAdd}
-      className="flex items-center gap-2 rounded-lg border border-line bg-paper px-3 py-2.5 text-left text-sm transition active:bg-accent/10"
+      className="flex items-center gap-2 rounded-lg border border-line bg-paper px-3 py-2.5 text-left text-sm transition active:bg-brand/10"
     >
       <span className="flex-1">
         {ex.name}
@@ -236,7 +236,7 @@ export default function WorkoutBuilder({
           />
         </div>
         {/* Завжди на видноті, скільки вже додано — не треба гортати вниз, щоб перевірити. */}
-        <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+        <span className="rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand">
           У тренуванні: {items.length}
         </span>
       </div>
@@ -301,7 +301,7 @@ export default function WorkoutBuilder({
         >
           {busy ? "Зберігаю…" : "Зберегти тренування"}
         </button>
-        {err && <p className="text-sm text-red-400">{err}</p>}
+        {err && <p className="text-sm text-danger">{err}</p>}
       </div>
     </div>
   );

@@ -503,8 +503,8 @@ export default function ClientActivityCalendar({
         <h2 className="text-sm font-semibold">Календар</h2>
       </div>
 
-      <div className="mb-3 flex items-center gap-3 rounded-xl border border-accent/30 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent px-3 py-2.5">
-        <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-accent/20 text-xl">
+      <div className="mb-3 flex items-center gap-3 rounded-xl border border-brand/30 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent px-3 py-2.5">
+        <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-brand/20 text-xl">
           🏋
         </div>
         <div className="min-w-0">
@@ -567,11 +567,11 @@ export default function ClientActivityCalendar({
               const disabledForCheckin = checkinOnlyMode && !isSunday;
               const wColor =
                 wStatus === "done"
-                  ? "bg-green-500/20"
+                  ? "bg-success/20"
                   : wStatus === "missed"
-                  ? "bg-red-500/15"
+                  ? "bg-danger/15"
                   : wStatus === "planned"
-                  ? "bg-yellow-500/15"
+                  ? "bg-warn/15"
                   : "";
               return (
                 <button
@@ -581,10 +581,10 @@ export default function ClientActivityCalendar({
                   onClick={() => setSelected(key)}
                   className={`flex flex-col items-center gap-0.5 rounded-lg border py-1.5 text-[11px] ${
                     wColor || "border-line bg-paper text-muted"
-                  } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-accent" : ""} ${
-                    isSelected ? "outline outline-2 outline-accent" : ""
+                  } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-brand" : ""} ${
+                    isSelected ? "outline outline-2 outline-brand" : ""
                   } ${disabledForCheckin ? "cursor-not-allowed opacity-25" : ""} ${
-                    checkinOnlyMode && isSunday ? "border-blue-400/50" : ""
+                    checkinOnlyMode && isSunday ? "border-info/50" : ""
                   }`}
                 >
                   <span className="text-[9px] uppercase text-muted">{WEEKDAYS[(d.getDay() + 6) % 7]}</span>
@@ -594,7 +594,7 @@ export default function ClientActivityCalendar({
                   </span>
                   <span className="flex gap-0.5">
                     {hasFood && <span className="h-1 w-1 rounded-full bg-accent" />}
-                    {hasCheckin && <span className="h-1 w-1 rounded-full bg-blue-400" />}
+                    {hasCheckin && <span className="h-1 w-1 rounded-full bg-info" />}
                   </span>
                 </button>
               );
@@ -635,11 +635,11 @@ export default function ClientActivityCalendar({
               const disabledForCheckin = checkinOnlyMode && !isSunday;
               const wColor =
                 wStatus === "done"
-                  ? "bg-green-500/20"
+                  ? "bg-success/20"
                   : wStatus === "missed"
-                  ? "bg-red-500/15"
+                  ? "bg-danger/15"
                   : wStatus === "planned"
-                  ? "bg-yellow-500/15"
+                  ? "bg-warn/15"
                   : "";
               return (
                 <button
@@ -649,10 +649,10 @@ export default function ClientActivityCalendar({
                   onClick={() => setSelected(key)}
                   className={`flex aspect-square flex-col items-center justify-center rounded-md border text-[11px] ${
                     wColor || "border-line bg-paper text-muted"
-                  } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-accent" : ""} ${
-                    isSelected ? "outline outline-2 outline-accent" : ""
+                  } ${wColor ? "border-transparent" : ""} ${isToday ? "ring-1 ring-brand" : ""} ${
+                    isSelected ? "outline outline-2 outline-brand" : ""
                   } ${disabledForCheckin ? "cursor-not-allowed opacity-25" : ""} ${
-                    checkinOnlyMode && isSunday ? "border-blue-400/50" : ""
+                    checkinOnlyMode && isSunday ? "border-info/50" : ""
                   }`}
                 >
                   <span className="flex items-center gap-0.5">
@@ -661,7 +661,7 @@ export default function ClientActivityCalendar({
                   </span>
                   <span className="flex gap-0.5">
                     {hasFood && <span className="h-1 w-1 rounded-full bg-accent" />}
-                    {hasCheckin && <span className="h-1 w-1 rounded-full bg-blue-400" />}
+                    {hasCheckin && <span className="h-1 w-1 rounded-full bg-info" />}
                   </span>
                 </button>
               );
@@ -714,10 +714,10 @@ export default function ClientActivityCalendar({
               aria-label="Тренування"
               className={`flex h-11 w-11 items-center justify-center rounded-full text-lg transition ${
                 !workout
-                  ? "bg-red-500/15 text-red-400"
+                  ? "bg-danger/15 text-danger"
                   : workout.completed_at
-                  ? "bg-green-500/15 text-green-400"
-                  : "bg-accent/15 text-accent"
+                  ? "bg-success/15 text-success"
+                  : "bg-brand/15 text-brand"
               }`}
             >
               🏋
@@ -729,7 +729,7 @@ export default function ClientActivityCalendar({
               onClick={() => setFoodModalOpen(true)}
               aria-label="Харчування"
               className={`flex h-11 w-11 items-center justify-center rounded-full text-lg transition ${
-                dayEntries.length > 0 ? "bg-accent/15 text-accent" : "bg-line/30 text-muted"
+                dayEntries.length > 0 ? "bg-brand/15 text-brand" : "bg-line/30 text-muted"
               }`}
             >
               🍽
@@ -741,7 +741,7 @@ export default function ClientActivityCalendar({
               onClick={() => setCheckinModalOpen(true)}
               aria-label="Чек-ін"
               className={`flex h-11 w-11 items-center justify-center rounded-full text-lg transition ${
-                selectedCheckin ? "bg-accent/15 text-accent" : "bg-line/30 text-muted"
+                selectedCheckin ? "bg-brand/15 text-brand" : "bg-line/30 text-muted"
               }`}
             >
               ⚖
@@ -812,7 +812,7 @@ export default function ClientActivityCalendar({
                         />
                       )}
                       {e.exercises?.video_url && (
-                        <a href={e.exercises.video_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[11px] text-accent underline">
+                        <a href={e.exercises.video_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[11px] text-brand underline">
                           Відео техніки
                         </a>
                       )}
@@ -865,7 +865,7 @@ export default function ClientActivityCalendar({
                 })}
             </div>
             {restSecondsLeft != null && restSecondsLeft > 0 && (
-              <div className="mt-1.5 flex items-center justify-between rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs">
+              <div className="mt-1.5 flex items-center justify-between rounded-lg border border-brand/40 bg-brand/10 px-3 py-2 text-xs">
                 <span className="text-ink">
                   ⏱ Відпочинок після «{restLabel}»: {Math.floor(restSecondsLeft / 60)}:
                   {String(restSecondsLeft % 60).padStart(2, "0")}
@@ -886,7 +886,7 @@ export default function ClientActivityCalendar({
               </button>
             )}
             {workout.completed_at && (
-              <span className="absolute right-2 top-2 rounded-full border border-green-400 bg-paper px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-green-400">
+              <span className="absolute right-2 top-2 rounded-full border border-success bg-paper px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-success">
                 Виконано ✓
               </span>
             )}
@@ -921,7 +921,7 @@ export default function ClientActivityCalendar({
                   r={ringR}
                   fill="none"
                   stroke="currentColor"
-                  className="text-accent"
+                  className="text-brand"
                   strokeWidth="6"
                   strokeLinecap="round"
                   strokeDasharray={ringCirc}
@@ -975,7 +975,7 @@ export default function ClientActivityCalendar({
                             setAddingMeal(isAdding ? null : meal);
                             setFErr("");
                           }}
-                          className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent"
+                          className="flex h-5 w-5 items-center justify-center rounded-full bg-brand/15 text-xs font-bold text-brand"
                         >
                           +
                         </button>
@@ -1010,7 +1010,7 @@ export default function ClientActivityCalendar({
                             placeholder="Пошук продукту"
                             className="flex-1 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs outline-none"
                           />
-                          <button type="button" onClick={doSearch} disabled={searching} className="rounded-lg bg-paper px-2.5 py-1.5 text-[11px] text-accent">
+                          <button type="button" onClick={doSearch} disabled={searching} className="rounded-lg bg-paper px-2.5 py-1.5 text-[11px] text-brand">
                             {searching ? "…" : "Знайти"}
                           </button>
                         </div>
@@ -1066,7 +1066,7 @@ export default function ClientActivityCalendar({
                         >
                           {fBusy ? "Зберігаю…" : "Додати запис"}
                         </button>
-                        {fErr && <p className="mt-1 text-xs text-red-400">{fErr}</p>}
+                        {fErr && <p className="mt-1 text-xs text-danger">{fErr}</p>}
                       </div>
                     )}
                   </div>

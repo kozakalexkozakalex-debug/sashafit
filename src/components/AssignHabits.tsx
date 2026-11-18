@@ -122,7 +122,7 @@ export default function AssignHabits({
             {busy ? "Призначаю…" : "Призначити"}
           </button>
           {result && (
-            <p className="text-sm text-green-400">
+            <p className="text-sm text-success">
               Додано {result.created} звичок
               {result.skipped ? `, пропущено ${result.skipped} (вже були в клієнта)` : ""}.
             </p>

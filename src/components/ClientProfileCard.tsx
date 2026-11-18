@@ -80,7 +80,7 @@ function TrendChart({ points, unit }: { points: { date: string; value: number }[
 
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
-      <path d={path} fill="none" stroke="currentColor" className="text-accent" strokeWidth={2} />
+      <path d={path} fill="none" stroke="currentColor" className="text-brand" strokeWidth={2} />
       {coords.map((c, i) => (
         <circle key={i} cx={c.x} cy={c.y} r={2.5} className="fill-accent" />
       ))}
@@ -339,7 +339,7 @@ export default function ClientProfileCard({
           <div className="flex items-center justify-between">
             <h2 className="truncate text-sm font-semibold">{client.name || "Моя анкета"}</h2>
             {!readOnly && onEditAnketa && (
-              <button type="button" onClick={onEditAnketa} className="flex-none text-xs text-accent">
+              <button type="button" onClick={onEditAnketa} className="flex-none text-xs text-brand">
                 Редагувати
               </button>
             )}
@@ -533,7 +533,7 @@ export default function ClientProfileCard({
             >
               {ciBusy ? "Зберігаю…" : "Зберегти чек-ін"}
             </button>
-            {ciErr && <p className="text-sm text-red-400">{ciErr}</p>}
+            {ciErr && <p className="text-sm text-danger">{ciErr}</p>}
           </div>
         )}
       </div>
@@ -579,7 +579,7 @@ export default function ClientProfileCard({
               {tBusy ? "Зберігаю…" : "Зберегти ціль"}
             </button>
           </div>
-          {tSaved && <p className="mt-1 text-xs text-green-400">Збережено</p>}
+          {tSaved && <p className="mt-1 text-xs text-success">Збережено</p>}
         </div>
       )}
     </div>

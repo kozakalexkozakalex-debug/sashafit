@@ -118,7 +118,7 @@ export default function CoachChats({
                 onClick={() => setActiveId(c.id)}
                 className="flex items-center gap-3 border-t border-line py-3 text-left first:border-t-0"
               >
-                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-accent/15 font-display text-sm font-semibold text-accent">
+                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-brand/15 font-display text-sm font-semibold text-brand">
                   {clientLabel(c).charAt(0).toUpperCase()}
                 </span>
                 <span className="min-w-0 flex-1">

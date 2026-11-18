@@ -230,9 +230,9 @@ export default function AssignProgram({
             </div>
           )}
 
-          {err && <p className="text-sm text-red-400">{err}</p>}
+          {err && <p className="text-sm text-danger">{err}</p>}
           {result && (
-            <p className="text-sm text-green-400">
+            <p className="text-sm text-success">
               Створено {result.created} тренувань
               {result.skipped ? `, пропущено ${result.skipped} (на ці дати вже було тренування)` : ""}.
             </p>

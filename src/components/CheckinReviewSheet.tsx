@@ -192,7 +192,7 @@ export default function CheckinReviewSheet({
               placeholder="Відповідь клієнту (необов'язково)"
               className="rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none"
             />
-            {err && <p className="text-sm text-red-400">{err}</p>}
+            {err && <p className="text-sm text-danger">{err}</p>}
             <div className="flex gap-2">
               <button
                 type="button"

@@ -229,7 +229,7 @@ export default function ExerciseLibrary() {
               >
                 {busy ? "Зберігаю…" : "Додати"}
               </button>
-              {err && <p className="text-sm text-red-400">{err}</p>}
+              {err && <p className="text-sm text-danger">{err}</p>}
             </div>
           </div>
         </div>
@@ -249,7 +249,7 @@ export default function ExerciseLibrary() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={url} alt={ex.name} className="h-32 w-full object-cover" />
                 ) : (
-                  <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-1 bg-paper text-xs text-muted hover:text-accent">
+                  <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-1 bg-paper text-xs text-muted hover:text-brand">
                     {photoUploadingId === ex.id ? (
                       "Завантажую…"
                     ) : (
@@ -281,7 +281,7 @@ export default function ExerciseLibrary() {
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {ex.muscle_group && <span className="stamp text-accent">{ex.muscle_group}</span>}
+                    {ex.muscle_group && <span className="stamp text-brand">{ex.muscle_group}</span>}
                     {ex.equipment && <span className="stamp text-muted">{ex.equipment}</span>}
                   </div>
                   {ex.description && <p className="text-muted">{ex.description}</p>}
@@ -290,7 +290,7 @@ export default function ExerciseLibrary() {
                       href={ex.video_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-accent underline"
+                      className="text-brand underline"
                     >
                       Відео
                     </a>

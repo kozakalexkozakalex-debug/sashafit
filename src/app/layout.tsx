@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Unbounded, Golos_Text } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import ThemeInit from "@/components/ThemeInit";
 
 const display = Unbounded({
   subsets: ["latin", "cyrillic"],
@@ -42,10 +43,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="uk" className={`${display.variable} ${body.variable}`}>
+    <html lang="uk" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Ставимо тему до першого малювання, щоб екран не блимав іншими кольорами. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('sf_theme');if(t!=='violet'&&t!=='mono'&&t!=='orange')t='orange';var m=localStorage.getItem('sf_mode');if(m!=='dark'&&m!=='light')m='auto';if(m==='auto'){var w=window.Telegram&&window.Telegram.WebApp;m=w&&w.colorScheme?w.colorScheme:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark')}var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-mode',m)}catch(e){}})()",
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-paper font-sans text-ink antialiased">
         {/* Офіційний скрипт Telegram Mini App: дає застосунку знати, хто його відкрив. */}
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+        <ThemeInit />
         {children}
       </body>
     </html>

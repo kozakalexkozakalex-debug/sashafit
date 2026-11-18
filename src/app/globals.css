@@ -2,6 +2,101 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Теми SashaFit: три палітри (orange, violet, mono) × тёмный/світлий режим.
+   Значення — RGB-трійки, щоб працювали прозорості Tailwind (bg-accent/15).
+   Перемикається атрибутами на <html>: data-theme і data-mode (див. src/lib/theme.ts). */
+
+:root,
+:root[data-theme="orange"][data-mode="dark"] {
+  --c-paper: 21 23 27;
+  --c-surface: 35 38 48;
+  --c-sidebar: 27 30 37;
+  --c-ink: 242 240 234;
+  --c-muted: 154 156 165;
+  --c-line: 60 65 80;
+  --c-accent: 232 119 58;
+  --c-brand: 232 119 58;
+  --c-success: 111 191 139;
+  --c-warn: 227 176 75;
+  --c-danger: 229 115 107;
+  --c-info: 127 168 201;
+}
+
+:root[data-theme="orange"][data-mode="light"] {
+  --c-paper: 244 242 238;
+  --c-surface: 255 255 255;
+  --c-sidebar: 236 233 227;
+  --c-ink: 29 31 36;
+  --c-muted: 107 110 120;
+  --c-line: 218 214 206;
+  --c-accent: 188 74 19;
+  --c-brand: 188 74 19;
+  --c-success: 37 118 74;
+  --c-warn: 143 90 6;
+  --c-danger: 194 58 50;
+  --c-info: 47 111 163;
+}
+
+:root[data-theme="violet"][data-mode="dark"] {
+  --c-paper: 19 15 36;
+  --c-surface: 34 27 64;
+  --c-sidebar: 24 19 48;
+  --c-ink: 243 240 255;
+  --c-muted: 165 155 201;
+  --c-line: 58 47 102;
+  --c-accent: 196 235 63;
+  --c-brand: 169 146 255;
+  --c-success: 111 191 139;
+  --c-warn: 227 176 75;
+  --c-danger: 229 115 107;
+  --c-info: 169 146 255;
+}
+
+:root[data-theme="violet"][data-mode="light"] {
+  --c-paper: 244 241 255;
+  --c-surface: 255 255 255;
+  --c-sidebar: 234 229 251;
+  --c-ink: 26 18 51;
+  --c-muted: 106 95 143;
+  --c-line: 217 209 242;
+  --c-accent: 91 59 216;
+  --c-brand: 91 59 216;
+  --c-success: 37 118 74;
+  --c-warn: 143 90 6;
+  --c-danger: 194 58 50;
+  --c-info: 91 59 216;
+}
+
+:root[data-theme="mono"][data-mode="dark"] {
+  --c-paper: 11 11 12;
+  --c-surface: 26 26 29;
+  --c-sidebar: 17 17 19;
+  --c-ink: 245 245 245;
+  --c-muted: 154 154 162;
+  --c-line: 46 46 51;
+  --c-accent: 245 245 245;
+  --c-brand: 245 245 245;
+  --c-success: 111 191 139;
+  --c-warn: 227 176 75;
+  --c-danger: 229 115 107;
+  --c-info: 138 164 192;
+}
+
+:root[data-theme="mono"][data-mode="light"] {
+  --c-paper: 245 245 245;
+  --c-surface: 255 255 255;
+  --c-sidebar: 235 235 238;
+  --c-ink: 11 11 12;
+  --c-muted: 102 102 110;
+  --c-line: 218 218 221;
+  --c-accent: 11 11 12;
+  --c-brand: 11 11 12;
+  --c-success: 37 118 74;
+  --c-warn: 143 90 6;
+  --c-danger: 194 58 50;
+  --c-info: 61 106 148;
+}
+
 @layer base {
   h1,
   h2,
@@ -10,12 +105,12 @@
   }
 
   ::selection {
-    background-color: #f0702f;
-    color: #15171b;
+    background-color: rgb(var(--c-accent));
+    color: rgb(var(--c-paper));
   }
 
   :focus-visible {
-    outline: 2px solid #f0702f;
+    outline: 2px solid rgb(var(--c-brand));
     outline-offset: 2px;
   }
 }

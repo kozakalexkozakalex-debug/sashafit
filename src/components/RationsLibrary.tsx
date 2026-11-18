@@ -243,7 +243,7 @@ export default function RationsLibrary() {
             Додати
           </button>
         </div>
-        {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+        {err && <p className="mt-2 text-sm text-danger">{err}</p>}
       </div>
 
       <div className="rounded-xl border border-line bg-surface p-4">
@@ -258,7 +258,7 @@ export default function RationsLibrary() {
               <div
                 key={r.id}
                 className={`flex flex-col rounded-xl border-l-2 bg-paper text-sm shadow-sm transition ${
-                  isOpen ? "border-accent" : "border-line"
+                  isOpen ? "border-brand" : "border-line"
                 }`}
               >
                 <div
@@ -271,7 +271,7 @@ export default function RationsLibrary() {
                   <div className="flex flex-col gap-1.5">
                     <span className="font-display text-base font-semibold">{r.title}</span>
                     <div className="flex flex-wrap gap-1.5">
-                      <span className="stamp text-accent">{items.length} прод.</span>
+                      <span className="stamp text-brand">{items.length} прод.</span>
                       <span className="stamp text-muted">{Math.round(totalCal)} ккал</span>
                     </div>
                   </div>
@@ -283,7 +283,7 @@ export default function RationsLibrary() {
                         printRation(r);
                       }}
                       title="Друк / PDF"
-                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-accent"
+                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-brand hover:text-brand"
                     >
                       🖨
                     </button>
@@ -295,7 +295,7 @@ export default function RationsLibrary() {
                         duplicateRation(r);
                       }}
                       title="Дублювати раціон"
-                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-accent disabled:opacity-50"
+                      className="rounded-full border border-line px-2 py-1 text-xs text-muted transition hover:border-brand hover:text-brand disabled:opacity-50"
                     >
                       {copyingId === r.id ? "…" : "⧉"}
                     </button>
@@ -334,7 +334,7 @@ export default function RationsLibrary() {
                         type="button"
                         onClick={() => doSearch(r.id)}
                         disabled={searching[r.id]}
-                        className="rounded-lg bg-paper px-3 py-1.5 text-xs text-accent"
+                        className="rounded-lg bg-paper px-3 py-1.5 text-xs text-brand"
                       >
                         {searching[r.id] ? "…" : "Знайти"}
                       </button>
@@ -424,7 +424,7 @@ export default function RationsLibrary() {
                     <button
                       type="button"
                       onClick={() => deleteRation(r.id)}
-                      className="self-start text-xs text-red-400"
+                      className="self-start text-xs text-danger"
                     >
                       Видалити раціон
                     </button>

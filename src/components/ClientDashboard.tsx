@@ -106,12 +106,12 @@ function ClientHomeSummary({
         Привіт, {client.name || "друже"}!
       </h2>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <div className="rounded-lg border-l-2 border-accent bg-paper p-2.5">
+        <div className="rounded-lg border-l-2 border-brand bg-paper p-2.5">
           <p className="text-[10px] uppercase tracking-wide text-muted">Прогрес до цілі</p>
           {progressPct == null ? (
             <p className="mt-1 text-sm text-muted">Вкажи бажану вагу в анкеті</p>
           ) : kgLeft === 0 ? (
-            <p className="mt-1 font-display text-lg font-bold text-green-400">Ціль досягнута 🎉</p>
+            <p className="mt-1 font-display text-lg font-bold text-success">Ціль досягнута 🎉</p>
           ) : (
             <>
               <p className="mt-1 font-display text-lg font-bold text-ink">{kgLeft} кг лишилось</p>
@@ -122,14 +122,14 @@ function ClientHomeSummary({
           )}
         </div>
 
-        <div className="rounded-lg border-l-2 border-accent bg-paper p-2.5">
+        <div className="rounded-lg border-l-2 border-brand bg-paper p-2.5">
           <p className="text-[10px] uppercase tracking-wide text-muted">Стрік тренувань</p>
           <p className="mt-1 font-display text-lg font-bold text-ink">
             {streak > 0 ? `🔥 ${streak} ${streak === 1 ? "день" : "днів"} поспіль` : "Почни сьогодні"}
           </p>
         </div>
 
-        <div className="rounded-lg border-l-2 border-accent bg-paper p-2.5">
+        <div className="rounded-lg border-l-2 border-brand bg-paper p-2.5">
           <p className="text-[10px] uppercase tracking-wide text-muted">Сьогодні</p>
           <p className="mt-1 text-sm text-ink">
             🏋{" "}
@@ -450,7 +450,7 @@ export default function ClientDashboard() {
               </button>
             )}
           </div>
-          {err && <p className="text-sm text-red-400">{err}</p>}
+          {err && <p className="text-sm text-danger">{err}</p>}
         </div>
       </div>
     );
@@ -478,7 +478,7 @@ export default function ClientDashboard() {
               type="button"
               onClick={() => setTab(t.id)}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                active ? "text-accent" : "text-muted"
+                active ? "text-brand" : "text-muted"
               }`}
             >
               <NavIcon name={t.icon} className="h-5 w-5" />
@@ -497,7 +497,7 @@ export default function ClientDashboard() {
               type="button"
               onClick={() => setTab(t.id)}
               className={`w-full rounded-md border-l-2 px-3 py-2 text-left font-display text-sm font-medium transition ${
-                active ? "border-accent bg-accent/15 text-ink" : "border-transparent text-muted hover:bg-line/30 hover:text-ink"
+                active ? "border-brand bg-brand/15 text-ink" : "border-transparent text-muted hover:bg-line/30 hover:text-ink"
               }`}
             >
               {t.label}

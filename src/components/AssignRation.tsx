@@ -160,8 +160,8 @@ export default function AssignRation({
             </button>
           </div>
 
-          {err && <p className="text-sm text-red-400">{err}</p>}
-          {done && <p className="text-sm text-green-400">Раціон додано на {date}.</p>}
+          {err && <p className="text-sm text-danger">{err}</p>}
+          {done && <p className="text-sm text-success">Раціон додано на {date}.</p>}
         </div>
       )}
     </div>

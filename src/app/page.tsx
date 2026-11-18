@@ -5,7 +5,7 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-10 p-8 text-center">
       <div className="flex flex-col items-center gap-3">
         <span className="font-display text-4xl font-medium tracking-tight sm:text-5xl">
-          Sasha<span className="text-accent">Fit</span>
+          Sasha<span className="text-brand">Fit</span>
         </span>
         <span className="h-px w-16 bg-accent" />
         <p className="max-w-xs text-sm text-muted">
@@ -14,7 +14,7 @@ export default function Home() {
       </div>
       <Link
         href="/login"
-        className="border border-accent px-8 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent hover:text-paper"
+        className="border border-accent px-8 py-2.5 text-sm font-semibold text-brand transition hover:bg-accent hover:text-paper"
       >
         Увійти
       </Link>

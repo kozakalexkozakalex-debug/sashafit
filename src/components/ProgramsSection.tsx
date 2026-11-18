@@ -16,7 +16,7 @@ export default function ProgramsSection() {
           type="button"
           onClick={() => setSub("exercises")}
           className={`-mb-px border-b-2 pb-2 font-display text-sm font-medium transition ${
-            sub === "exercises" ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"
+            sub === "exercises" ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
           }`}
         >
           База вправ
@@ -25,7 +25,7 @@ export default function ProgramsSection() {
           type="button"
           onClick={() => setSub("programs")}
           className={`-mb-px border-b-2 pb-2 font-display text-sm font-medium transition ${
-            sub === "programs" ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"
+            sub === "programs" ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
           }`}
         >
           Програми
