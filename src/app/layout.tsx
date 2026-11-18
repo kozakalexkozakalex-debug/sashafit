@@ -1,18 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Unbounded, Golos_Text } from "next/font/google";
+import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import ThemeInit from "@/components/ThemeInit";
 
-const display = Unbounded({
+// Один нейтральний гротеск на весь застосунок — як у референсі.
+const body = Inter({
   subsets: ["latin", "cyrillic"],
-  weight: ["500", "700"],
-  variable: "--font-display",
-});
-
-const body = Golos_Text({
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-body",
 });
 
@@ -43,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="uk" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
+    <html lang="uk" className={body.variable} suppressHydrationWarning>
       <head>
         {/* Ставимо тему до першого малювання, щоб екран не блимав іншими кольорами. */}
         <script

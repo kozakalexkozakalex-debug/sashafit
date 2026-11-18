@@ -6,6 +6,7 @@ import { clientLabel } from "@/lib/clientLabel";
 import { UnreadInfo } from "@/lib/coachUnread";
 import CheckinReviewSheet from "@/components/CheckinReviewSheet";
 import Avatar from "@/components/Avatar";
+import NavIcon from "@/components/NavIcon";
 import { useAvatars } from "@/lib/useAvatars";
 
 type Client = {
@@ -187,7 +188,7 @@ export default function CoachToday({
           aria-label="Повідомлення"
           className="relative flex h-11 w-11 flex-none items-center justify-center rounded-full border border-line bg-surface text-lg"
         >
-          🔔
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>
           {todo.length > 0 && <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-danger" />}
         </button>
       </div>
@@ -199,7 +200,7 @@ export default function CoachToday({
           <div className="grid grid-cols-2 gap-3">
             <div className={tileCls}>
               <p className="flex items-center gap-1.5 text-xs text-muted">
-                <span className="text-brand">👥</span> Усього клієнтів
+                <span className="text-brand"><NavIcon name="clients" className="h-4 w-4" /></span> Усього клієнтів
               </p>
               <p className="mt-2 flex items-baseline gap-2">
                 <span className="font-display text-3xl font-bold text-ink">{clients.length}</span>
@@ -239,7 +240,7 @@ export default function CoachToday({
               </div>
             </div>
             <div className={tileCls}>
-              <p className="text-brand">📅</p>
+              <p className="text-brand"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg></p>
               <p className="mt-1 font-display text-2xl font-bold text-ink">{todo.length}</p>
               <p className="text-xs text-muted">Очікують</p>
             </div>
@@ -248,7 +249,7 @@ export default function CoachToday({
           {attention.length > 0 && (
             <div className="rounded-3xl border border-warn/60 bg-gradient-to-br from-warn/15 to-transparent p-4 shadow-[0_0_28px_-14px_rgb(var(--c-warn)/0.7)]">
               <div className="mb-3 flex items-center justify-between">
-                <p className="flex items-center gap-2 text-sm font-bold text-warn">⚠ Потрібна увага</p>
+                <p className="flex items-center gap-2 text-sm font-bold text-warn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19L12 3Z" /><path d="M12 10v5M12 17.5v.5" /></svg> Потрібна увага</p>
                 <button type="button" onClick={() => onQuick?.("clients")} className="text-xs text-ink">
                   Усі →
                 </button>
@@ -313,7 +314,8 @@ export default function CoachToday({
               onClick={() => setQuickOpen(true)}
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-3.5 text-sm font-bold text-paper shadow-[0_12px_36px_-10px_rgb(var(--c-accent)/0.6)]"
             >
-              ⚡ Швидкі дії
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" /></svg>
+              Швидкі дії
             </button>
           </div>
         </>

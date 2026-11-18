@@ -42,6 +42,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen">
+      {role !== "coach" && (
       <div className="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-line bg-paper px-4 py-3 sm:px-6">
         <button
           type="button"
@@ -60,6 +61,7 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      )}
       <div className="p-4 sm:p-6">
         {role === "coach" ? (
           <CoachDashboard
