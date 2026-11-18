@@ -172,7 +172,7 @@ export default function CoachToday({
   const R = 26;
   const C = 2 * Math.PI * R;
 
-  const tileCls = "rounded-3xl border border-line bg-gradient-to-br from-surface to-paper p-4";
+  const tileCls = "flex h-[96px] flex-col justify-between rounded-[22px] border border-line bg-gradient-to-br from-surface to-paper p-4";
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-3.5">
@@ -199,50 +199,50 @@ export default function CoachToday({
         <>
           <div className="grid grid-cols-2 gap-3">
             <div className={tileCls}>
-              <p className="flex items-center gap-1.5 text-xs text-muted">
-                <span className="text-brand"><NavIcon name="clients" className="h-4 w-4" /></span> Усього клієнтів
-              </p>
-              <p className="mt-2 flex items-baseline gap-2">
-                <span className="font-display text-3xl font-bold text-ink">{clients.length}</span>
-                {newThisWeek > 0 && <span className="text-xs font-semibold text-success">↑ +{newThisWeek}</span>}
-              </p>
+              <div className="flex items-center gap-3">
+                <span className="text-info"><NavIcon name="clients" className="h-7 w-7" /></span>
+                <span className="font-display text-3xl font-bold leading-none text-ink">{clients.length}</span>
+                {newThisWeek > 0 && <span className="ml-auto self-start text-xs font-semibold text-success">↑ +{newThisWeek}</span>}
+              </div>
+              <p className="text-sm text-muted">Усього клієнтів</p>
             </div>
             <div className={tileCls}>
-              <p className="flex items-center gap-1.5 text-xs text-muted">
-                <span className="h-2 w-2 rounded-full bg-success" /> Активні
-              </p>
-              <p className="mt-2 font-display text-3xl font-bold text-ink">{activeCount}</p>
-              <p className="text-[11px] text-muted">за 7 днів</p>
+              <div className="flex items-center gap-3">
+                <span className="text-brand"><NavIcon name="clients" className="h-7 w-7" /></span>
+                <span className="font-display text-3xl font-bold leading-none text-ink">{activeCount}</span>
+              </div>
+              <p className="text-sm text-muted">Активні за 7 днів</p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-[1.4fr_1fr] gap-3">
-            <div className={`${tileCls} flex items-center gap-3`}>
-              <div className="relative h-16 w-16 flex-none">
-                <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90" aria-hidden="true">
-                  <circle cx="32" cy="32" r={R} fill="none" strokeWidth="7" style={{ stroke: "rgb(var(--c-line))" }} />
+            <div className={tileCls}>
+              <div className="flex items-center gap-3">
+                <svg viewBox="0 0 64 64" className="h-7 w-7 flex-none -rotate-90" aria-hidden="true">
+                  <circle cx="32" cy="32" r={R} fill="none" strokeWidth="9" style={{ stroke: "rgb(var(--c-line))" }} />
                   <circle
                     cx="32"
                     cy="32"
                     r={R}
                     fill="none"
-                    strokeWidth="7"
+                    strokeWidth="9"
                     strokeLinecap="round"
                     strokeDasharray={C}
                     strokeDashoffset={C * (1 - pct / 100)}
-                    style={{ stroke: "rgb(var(--c-accent))", filter: "drop-shadow(0 0 5px rgb(var(--c-accent) / 0.6))" }}
+                    style={{ stroke: "rgb(var(--c-accent))", filter: "drop-shadow(0 0 4px rgb(var(--c-accent) / 0.6))" }}
                   />
                 </svg>
+                <span className="font-display text-3xl font-bold leading-none text-ink">
+                  {adherence === null ? "—" : `${adherence}%`}
+                </span>
               </div>
-              <div>
-                <p className="font-display text-2xl font-bold text-ink">{adherence === null ? "—" : `${adherence}%`}</p>
-                <p className="text-xs text-muted">Виконання</p>
-              </div>
+              <p className="text-sm text-muted">Виконання</p>
             </div>
             <div className={tileCls}>
-              <p className="text-brand"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg></p>
-              <p className="mt-1 font-display text-2xl font-bold text-ink">{todo.length}</p>
-              <p className="text-xs text-muted">Очікують</p>
+              <div className="flex items-center gap-3">
+                <span style={{ color: "rgb(160 110 255)" }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+                </span>
+                <span className="font-display text-3xl font-bold leading-none text-ink">{todo.length}</span>
+              </div>
+              <p className="text-sm text-muted">Очікують</p>
             </div>
           </div>
 
