@@ -172,21 +172,23 @@ export default function CoachToday({
   const R = 26;
   const C = 2 * Math.PI * R;
 
-  const tileCls = "flex h-[96px] flex-col justify-between rounded-[22px] border border-line bg-gradient-to-br from-surface to-paper p-4";
+  const tileBase = "rounded-[22px] border border-line bg-gradient-to-br from-surface to-paper p-4";
+  const tileTop = `flex h-[112px] flex-col justify-between ${tileBase}`;
+  const tileBottom = `flex h-[92px] items-center gap-3 ${tileBase}`;
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-3.5">
       <div className="flex items-center gap-3">
-        <Avatar name={coachName || "Т"} url={null} size={52} />
+        <Avatar name={coachName || "Т"} url={null} size={60} />
         <div className="min-w-0 flex-1">
           <p className="text-xs text-muted">{greeting},</p>
-          <p className="truncate font-display text-xl font-bold text-ink">{coachName || "тренер"}</p>
+          <p className="truncate font-display text-2xl font-bold text-ink">{coachName || "тренер"} <span className="text-base text-muted">⌄</span></p>
         </div>
         <button
           type="button"
           onClick={() => onQuick?.("chat")}
           aria-label="Повідомлення"
-          className="relative flex h-11 w-11 flex-none items-center justify-center rounded-full border border-line bg-surface text-lg"
+          className="relative flex h-11 w-11 flex-none items-center justify-center text-ink"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>
           {todo.length > 0 && <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-danger" />}
@@ -198,49 +200,51 @@ export default function CoachToday({
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3">
-            <div className={tileCls}>
-              <div className="flex items-center gap-3">
-                <span className="text-info"><NavIcon name="clients" className="h-7 w-7" /></span>
-                <span className="font-display text-3xl font-bold leading-none text-ink">{clients.length}</span>
-                {newThisWeek > 0 && <span className="ml-auto self-start text-xs font-semibold text-success">↑ +{newThisWeek}</span>}
+            <div className={tileTop}>
+              <span className="text-info"><NavIcon name="clients" className="h-6 w-6" /></span>
+              <div>
+                <p className="text-sm text-muted">Усього клієнтів</p>
+                <p className="mt-0.5 flex items-baseline gap-2">
+                  <span className="font-display text-3xl font-bold leading-none text-ink">{clients.length}</span>
+                  {newThisWeek > 0 && <span className="text-sm font-semibold text-success">↑ +{newThisWeek}</span>}
+                </p>
               </div>
-              <p className="text-sm text-muted">Усього клієнтів</p>
             </div>
-            <div className={tileCls}>
-              <div className="flex items-center gap-3">
-                <span className="text-brand"><NavIcon name="clients" className="h-7 w-7" /></span>
-                <span className="font-display text-3xl font-bold leading-none text-ink">{activeCount}</span>
+            <div className={tileTop}>
+              <span className="flex items-center gap-1.5 text-xs text-muted"><span className="h-2 w-2 rounded-full bg-success" />Активні</span>
+              <div>
+                <p className="text-sm text-muted">За 7 днів</p>
+                <p className="mt-0.5 font-display text-3xl font-bold leading-none text-ink">{activeCount}</p>
               </div>
-              <p className="text-sm text-muted">Активні за 7 днів</p>
             </div>
-            <div className={tileCls}>
-              <div className="flex items-center gap-3">
-                <svg viewBox="0 0 64 64" className="h-7 w-7 flex-none -rotate-90" aria-hidden="true">
-                  <circle cx="32" cy="32" r={R} fill="none" strokeWidth="9" style={{ stroke: "rgb(var(--c-line))" }} />
-                  <circle
-                    cx="32"
-                    cy="32"
-                    r={R}
-                    fill="none"
-                    strokeWidth="9"
-                    strokeLinecap="round"
-                    strokeDasharray={C}
-                    strokeDashoffset={C * (1 - pct / 100)}
-                    style={{ stroke: "rgb(var(--c-accent))", filter: "drop-shadow(0 0 4px rgb(var(--c-accent) / 0.6))" }}
-                  />
-                </svg>
-                <span className="font-display text-3xl font-bold leading-none text-ink">
-                  {adherence === null ? "—" : `${adherence}%`}
-                </span>
+          </div>
+          <div className="grid grid-cols-[1.35fr_1fr] gap-3">
+            <div className={tileBottom}>
+              <svg viewBox="0 0 64 64" className="h-16 w-16 flex-none -rotate-90" aria-hidden="true">
+                <circle cx="32" cy="32" r={R} fill="none" strokeWidth="8" style={{ stroke: "rgb(var(--c-line))" }} />
+                <circle
+                  cx="32"
+                  cy="32"
+                  r={R}
+                  fill="none"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={C}
+                  strokeDashoffset={C * (1 - pct / 100)}
+                  style={{ stroke: "rgb(var(--c-accent))", filter: "drop-shadow(0 0 4px rgb(var(--c-accent) / 0.6))" }}
+                />
+              </svg>
+              <div>
+                <p className="font-display text-2xl font-bold leading-none text-ink">{adherence === null ? "—" : `${adherence}%`}</p>
+                <p className="mt-1 text-sm text-muted">Виконання</p>
               </div>
-              <p className="text-sm text-muted">Виконання</p>
             </div>
-            <div className={tileCls}>
-              <div className="flex items-center gap-3">
+            <div className={tileBottom + " flex-col !items-start !justify-center !gap-1"}>
+              <div className="flex items-center gap-2">
                 <span style={{ color: "rgb(160 110 255)" }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
                 </span>
-                <span className="font-display text-3xl font-bold leading-none text-ink">{todo.length}</span>
+                <span className="font-display text-2xl font-bold leading-none text-ink">{todo.length}</span>
               </div>
               <p className="text-sm text-muted">Очікують</p>
             </div>
