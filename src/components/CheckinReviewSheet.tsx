@@ -13,6 +13,8 @@ type Checkin = {
   hips: number | null;
   chest: number | null;
   photo_path: string | null;
+  photo_side_path: string | null;
+  photo_back_path: string | null;
   comment: string | null;
   reviewed_at: string | null;
 };
@@ -43,7 +45,7 @@ export default function CheckinReviewSheet({
 }) {
   const [cur, setCur] = useState<Checkin | null>(null);
   const [prev, setPrev] = useState<Checkin | null>(null);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<{ label: string; url: string }[]>([]);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,7 +65,7 @@ export default function CheckinReviewSheet({
     (async () => {
       const { data } = await supabase
         .from("checkins")
-        .select("id, created_at, weight, waist, hips, chest, photo_path, comment, reviewed_at")
+        .select("id, created_at, weight, waist, hips, chest, photo_path, photo_side_path, photo_back_path, comment, reviewed_at")
         .eq("client_id", clientId)
         .order("created_at", { ascending: false })
         .limit(6);
@@ -74,17 +76,26 @@ export default function CheckinReviewSheet({
       setCur(target);
       setPrev(idx >= 0 ? rows[idx + 1] || null : null);
       if (target) {
-        const [{ data: ans }, signed] = await Promise.all([
+        const photoDefs: [string, string | null][] = [
+          ["Спереду", target.photo_path],
+          ["Збоку", target.photo_side_path],
+          ["Ззаду", target.photo_back_path],
+        ];
+        const [{ data: ans }, signedList] = await Promise.all([
           supabase
             .from("checkin_answers")
             .select("value, checkin_questions(label)")
             .eq("checkin_id", target.id),
-          target.photo_path
-            ? supabase.storage.from("checkins").createSignedUrl(target.photo_path, 3600)
-            : Promise.resolve({ data: null }),
+          Promise.all(
+            photoDefs.map(async ([label, path]) => {
+              if (!path) return null;
+              const { data: signed } = await supabase.storage.from("checkins").createSignedUrl(path, 3600);
+              return signed?.signedUrl ? { label, url: signed.signedUrl } : null;
+            })
+          ),
         ]);
         setAnswers((ans as unknown as Answer[]) || []);
-        setPhotoUrl(signed.data?.signedUrl ?? null);
+        setPhotos(signedList.filter((p): p is { label: string; url: string } => p !== null));
       }
       setLoading(false);
     })();
@@ -164,9 +175,16 @@ export default function CheckinReviewSheet({
                 ))}
             </div>
 
-            {photoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photoUrl} alt="Фото чек-іна" className="max-h-72 w-full rounded-lg object-cover" />
+            {photos.length > 0 && (
+              <div className={`grid gap-1.5 ${photos.length === 1 ? "grid-cols-1" : photos.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                {photos.map((p) => (
+                  <div key={p.label} className="overflow-hidden rounded-lg border border-line">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url} alt={`Фото ${p.label.toLowerCase()}`} className="h-44 w-full object-cover" />
+                    <p className="bg-surface py-0.5 text-center text-[10px] text-muted">{p.label}</p>
+                  </div>
+                ))}
+              </div>
             )}
 
             {cur.comment && (

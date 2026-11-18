@@ -7,7 +7,12 @@ import { markCoachRead, UnreadInfo } from "@/lib/coachUnread";
 import ChatPanel from "@/components/ChatPanel";
 
 type Row = { id: string; name: string | null; invite_code: string };
-type LastMsg = { body: string; created_at: string; sender: "coach" | "client" };
+type LastMsg = {
+  body: string;
+  created_at: string;
+  sender: "coach" | "client";
+  attachment_kind: "image" | "video" | null;
+};
 
 function shortTime(iso: string) {
   const d = new Date(iso);
@@ -44,7 +49,7 @@ export default function CoachChats({
         supabase.from("clients").select("id, name, invite_code").not("profile_id", "is", null),
         supabase
           .from("messages")
-          .select("client_id, body, created_at, sender")
+          .select("client_id, body, created_at, sender, attachment_kind")
           .order("created_at", { ascending: false })
           .limit(300),
       ]);
@@ -135,7 +140,7 @@ export default function CoachChats({
                     {clientLabel(c)}
                   </span>
                   <span className="block truncate text-xs text-muted">
-                    {lm ? `${lm.sender === "coach" ? "Ви: " : ""}${lm.body}` : "Повідомлень ще немає"}
+                    {lm ? `${lm.sender === "coach" ? "Ви: " : ""}${lm.body || (lm.attachment_kind === "video" ? "🎥 Відео" : "📷 Фото")}` : "Повідомлень ще немає"}
                   </span>
                 </span>
                 <span className="flex flex-none flex-col items-end gap-1">

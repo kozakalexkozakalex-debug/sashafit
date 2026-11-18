@@ -12,6 +12,13 @@ import BodyMap, { Zone, ZONE_LABEL } from "@/components/BodyMap";
 
 type CheckinQuestion = { id: string; label: string; kind: "text" | "scale"; position: number };
 
+type Angle = "front" | "side" | "back";
+const ANGLES: { id: Angle; label: string }[] = [
+  { id: "front", label: "Спереду" },
+  { id: "side", label: "Збоку" },
+  { id: "back", label: "Ззаду" },
+];
+
 function num(v: string): number | null {
   const n = Number(v.replace(",", ".").trim());
   return v.trim() !== "" && Number.isFinite(n) ? n : null;
@@ -30,7 +37,7 @@ export default function CheckinSheet({
   const [vals, setVals] = useState<Record<Zone, string>>({ chest: "", waist: "", hips: "" });
   const [zone, setZone] = useState<Zone | null>(null);
   const [comment, setComment] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<Record<Angle, File | null>>({ front: null, side: null, back: null });
   const [questions, setQuestions] = useState<CheckinQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -72,18 +79,20 @@ export default function CheckinSheet({
     setErr("");
     setBusy(true);
 
-    let photoPath: string | null = null;
-    if (file) {
+    const paths: Record<Angle, string | null> = { front: null, side: null, back: null };
+    for (const a of ANGLES) {
+      const file = files[a.id];
+      if (!file) continue;
       const photo = await compressImage(file);
-      const path = `${clientId}/${Date.now()}-${photo.name}`;
+      const path = `${clientId}/${Date.now()}-${a.id}-${photo.name}`;
       const { error: upErr } = await supabase.storage.from("checkins").upload(path, photo);
       if (upErr) {
         setBusy(false);
-        setErr("Не вдалось завантажити фото: " + upErr.message);
+        setErr(`Не вдалось завантажити фото (${a.label.toLowerCase()}): ` + upErr.message);
         haptic("error");
         return;
       }
-      photoPath = path;
+      paths[a.id] = path;
     }
 
     const { data: inserted, error } = await supabase
@@ -94,7 +103,9 @@ export default function CheckinSheet({
         waist: num(vals.waist),
         hips: num(vals.hips),
         chest: num(vals.chest),
-        photo_path: photoPath,
+        photo_path: paths.front,
+        photo_side_path: paths.side,
+        photo_back_path: paths.back,
         comment: comment.trim() || null,
       })
       .select("id")
@@ -178,16 +189,31 @@ export default function CheckinSheet({
           )}
         </div>
 
-        <label className="mt-3 flex cursor-pointer items-center justify-between rounded-2xl border border-dashed border-line bg-surface p-3">
-          <span className="text-sm text-ink">{file ? `📷 ${file.name}` : "📷 Додати фото"}</span>
-          <span className="text-xs text-brand">{file ? "Змінити" : "Вибрати"}</span>
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
-        </label>
+        <div className="mt-3 rounded-2xl border border-line bg-surface p-3">
+          <p className="mb-2 text-xs text-muted">Фото (необов&apos;язково): спереду, збоку, ззаду</p>
+          <div className="grid grid-cols-3 gap-2">
+            {ANGLES.map((a) => (
+              <label
+                key={a.id}
+                className={`flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border text-center ${
+                  files[a.id] ? "border-accent bg-accent/10" : "border-dashed border-line bg-paper"
+                }`}
+              >
+                <span className="text-lg">{files[a.id] ? "✓" : "📷"}</span>
+                <span className="text-[11px] text-ink">{a.label}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setFiles((prev) => ({ ...prev, [a.id]: f }));
+                  }}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
 
         {questions.length > 0 && (
           <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-line bg-surface p-3">

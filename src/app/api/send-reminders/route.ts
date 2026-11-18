@@ -51,23 +51,30 @@ export async function GET(req: NextRequest) {
     .is("completed_at", null);
   const workoutClientIds = new Set((workouts || []).map((w) => w.client_id as string));
 
-  // У свій день тижня (checkin_weekday, за замовчуванням неділя) — кому ще
-  // нема чек-іну сьогодні.
+  // Чек-ін: нагадуємо в свій день тижня і ще раз наступного дня, якщо
+  // чек-іну в цьому вікні (день + 2 дні) ще немає.
   const checkinClientIds = new Set<string>();
   {
     const { data: allClients } = await supabase
       .from("clients")
       .select("id, checkin_weekday")
       .not("profile_id", "is", null);
-    const { data: todaysCheckins } = await supabase
-      .from("checkins")
-      .select("client_id")
-      .gte("created_at", `${todayKey}T00:00:00`)
-      .lte("created_at", `${todayKey}T23:59:59`);
-    const doneToday = new Set((todaysCheckins || []).map((c) => c.client_id as string));
+    const since = new Date(today.getTime() - 4 * 86400000).toISOString();
+    const { data: recentCheckins } = await supabase.from("checkins").select("client_id, created_at").gte("created_at", since);
+    const datesByClient = new Map<string, string[]>();
+    for (const c of recentCheckins || []) {
+      const list = datesByClient.get(c.client_id as string) || [];
+      list.push((c.created_at as string).slice(0, 10));
+      datesByClient.set(c.client_id as string, list);
+    }
     for (const c of allClients || []) {
       const weekday = (c.checkin_weekday as number | null) ?? 0;
-      if (weekday === todayWeekday && !doneToday.has(c.id as string)) checkinClientIds.add(c.id as string);
+      const back = (todayWeekday - weekday + 7) % 7;
+      if (back > 1) continue;
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - back);
+      const startKey = toKey(start);
+      const done = (datesByClient.get(c.id as string) || []).some((d) => d >= startKey);
+      if (!done) checkinClientIds.add(c.id as string);
     }
   }
 
@@ -77,7 +84,7 @@ export async function GET(req: NextRequest) {
   }
   for (const id of checkinClientIds) {
     if (!messagesByClient.has(id)) {
-      messagesByClient.set(id, { title: "Час для чек-іну ⚖", body: "Сьогодні день твого щотижневого чек-іну." });
+      messagesByClient.set(id, { title: "Час для чек-іну ⚖", body: "Твій щотижневий чек-ін ще не зроблено — це займе 2 хвилини." });
     }
   }
 

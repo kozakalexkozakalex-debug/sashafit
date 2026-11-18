@@ -7,14 +7,29 @@ import { supabase } from "@/lib/supabaseClient";
 // фото, бачать їх поруч з датою і вагою. Дані тягнемо напряму тут, бо
 // photo_path/підписані URL ніде вище по дереву компонентів не прокидуються.
 
-type PhotoCheckin = { id: string; created_at: string; weight: number | null; photo_path: string };
+type Angle = "front" | "side" | "back";
+const ANGLES: { id: Angle; label: string }[] = [
+  { id: "front", label: "Спереду" },
+  { id: "side", label: "Збоку" },
+  { id: "back", label: "Ззаду" },
+];
+type RawCheckin = {
+  id: string;
+  created_at: string;
+  weight: number | null;
+  photo_path: string | null;
+  photo_side_path: string | null;
+  photo_back_path: string | null;
+};
+type PhotoCheckin = { id: string; created_at: string; weight: number | null; path: string };
 
 function fmt(d: string) {
   return new Date(d).toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 export default function PhotoCompare({ clientId }: { clientId: string }) {
-  const [checkins, setCheckins] = useState<PhotoCheckin[]>([]);
+  const [raw, setRaw] = useState<RawCheckin[]>([]);
+  const [angle, setAngle] = useState<Angle>("front");
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [beforeId, setBeforeId] = useState("");
@@ -25,30 +40,46 @@ export default function PhotoCompare({ clientId }: { clientId: string }) {
       setLoading(true);
       const { data } = await supabase
         .from("checkins")
-        .select("id, created_at, weight, photo_path")
+        .select("id, created_at, weight, photo_path, photo_side_path, photo_back_path")
         .eq("client_id", clientId)
-        .not("photo_path", "is", null)
         .order("created_at", { ascending: true });
-      const rows = (data as PhotoCheckin[]) || [];
-      setCheckins(rows);
-      if (rows.length >= 2) {
-        setBeforeId(rows[0].id);
-        setAfterId(rows[rows.length - 1].id);
-      }
-      const entries: Record<string, string> = {};
-      await Promise.all(
-        rows.map(async (c) => {
-          const { data: signed } = await supabase.storage.from("checkins").createSignedUrl(c.photo_path, 3600);
-          if (signed?.signedUrl) entries[c.id] = signed.signedUrl;
-        })
-      );
-      setUrls(entries);
+      setRaw(((data as RawCheckin[]) || []).filter((r) => r.photo_path || r.photo_side_path || r.photo_back_path));
       setLoading(false);
     })();
   }, [clientId]);
 
+  const pathOf = (r: RawCheckin) =>
+    angle === "front" ? r.photo_path : angle === "side" ? r.photo_side_path : r.photo_back_path;
+  const checkins: PhotoCheckin[] = raw
+    .filter((r) => pathOf(r))
+    .map((r) => ({ id: r.id, created_at: r.created_at, weight: r.weight, path: pathOf(r) as string }));
+
+  // При зміні ракурсу: вибираємо найстаріший і найновіший чек-ін з цим ракурсом
+  // і підтягуємо підписані посилання.
+  useEffect(() => {
+    if (checkins.length >= 2) {
+      setBeforeId(checkins[0].id);
+      setAfterId(checkins[checkins.length - 1].id);
+    }
+    let cancelled = false;
+    (async () => {
+      const entries: Record<string, string> = {};
+      await Promise.all(
+        checkins.map(async (c) => {
+          const { data: signed } = await supabase.storage.from("checkins").createSignedUrl(c.path, 3600);
+          if (signed?.signedUrl) entries[c.id] = signed.signedUrl;
+        })
+      );
+      if (!cancelled) setUrls(entries);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raw, angle]);
+
   if (loading) return null;
-  if (checkins.length < 2) return null;
+  if (raw.length < 2) return null;
 
   const before = checkins.find((c) => c.id === beforeId);
   const after = checkins.find((c) => c.id === afterId);
@@ -56,6 +87,21 @@ export default function PhotoCompare({ clientId }: { clientId: string }) {
   return (
     <div className="mt-3 border-t border-line pt-3">
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">До / Після</h3>
+      <div className="mb-2 flex gap-1.5">
+        {ANGLES.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            onClick={() => setAngle(a.id)}
+            className={`rounded-full border px-3 py-1 text-xs ${
+              angle === a.id ? "border-accent bg-accent text-paper" : "border-line text-muted"
+            }`}
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>
+      {checkins.length < 2 && <p className="text-xs text-muted">Для цього ракурсу ще немає двох фото.</p>}
       <div className="mb-2 flex gap-2">
         <select
           value={beforeId}

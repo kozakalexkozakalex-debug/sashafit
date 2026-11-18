@@ -1,5 +1,6 @@
 "use client";
 
+import { checkinWindow } from "@/lib/checkinWindow";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { compressImage } from "@/lib/compressImage";
@@ -165,13 +166,18 @@ export default function ClientProfileCard({
     setWeekdaySaving(false);
   }
 
-  const todayKey = toKey(now);
-  const dow = now.getDay();
-  const didCheckinToday = checkins.some((c) => c.created_at.slice(0, 10) === todayKey);
-  const isSundayNow = dow === checkinWeekday; // назва змінної стара, сенс — "сьогодні день чек-іна"
-  const daysToNextSunday = isSundayNow ? 7 : (checkinWeekday - dow + 7) % 7;
+  // Назви змінних старі: isSundayNow = «зараз можна робити чек-ін» (день + 2 дні після),
+  // didCheckinToday = «у цьому вікні чек-ін уже є».
+  const win = checkinWindow(
+    now,
+    checkinWeekday,
+    checkins.map((c) => c.created_at.slice(0, 10))
+  );
+  const didCheckinToday = win.done;
+  const isSundayNow = win.open;
+  const daysToNextSunday = win.daysToNext;
   const nextSunday = new Date(now);
-  nextSunday.setDate(now.getDate() + (isSundayNow ? 7 : daysToNextSunday));
+  nextSunday.setDate(now.getDate() + daysToNextSunday);
   const nextSundayLabel = nextSunday.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit" });
   const checkinDayAccusative = WEEKDAY_ACCUSATIVE[checkinWeekday];
 
@@ -358,7 +364,7 @@ export default function ClientProfileCard({
             onClick={onStartCheckin}
             className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-bold text-paper"
           >
-            Зроби чек-ін сьогодні
+            {win.late ? "Зробити чек-ін" : "Зроби чек-ін сьогодні"}
           </button>
         ) : (
           <p className="text-xs text-muted">

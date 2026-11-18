@@ -49,6 +49,8 @@ type Checkin = {
   hips: number | null;
   chest: number | null;
   photo_path: string | null;
+  photo_side_path: string | null;
+  photo_back_path: string | null;
   comment: string | null;
   created_at: string;
   reviewed_at: string | null;
@@ -158,14 +160,23 @@ export default function CoachClients({
     const rows = (data as Checkin[]) || [];
     setCheckins(rows);
 
+    // Ключі: «id» — фото спереду (для календаря), «id:side» і «id:back».
     const urls: Record<string, string> = {};
     await Promise.all(
-      rows
-        .filter((c) => c.photo_path)
-        .map(async (c) => {
-          const { data: signed } = await supabase.storage.from("checkins").createSignedUrl(c.photo_path as string, 3600);
-          if (signed?.signedUrl) urls[c.id] = signed.signedUrl;
-        })
+      rows.flatMap((c) =>
+        (
+          [
+            [c.id, c.photo_path],
+            [`${c.id}:side`, c.photo_side_path],
+            [`${c.id}:back`, c.photo_back_path],
+          ] as [string, string | null][]
+        )
+          .filter(([, path]) => path)
+          .map(async ([key, path]) => {
+            const { data: signed } = await supabase.storage.from("checkins").createSignedUrl(path as string, 3600);
+            if (signed?.signedUrl) urls[key] = signed.signedUrl;
+          })
+      )
     );
     setPhotoUrls(urls);
 
@@ -386,13 +397,28 @@ export default function CoachClients({
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
-                      {photoUrls[ci.id] && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={photoUrls[ci.id]}
-                          alt="Фото чек-іна"
-                          className="mt-2 max-h-64 w-full rounded-lg object-cover"
-                        />
+                      {[ci.id, `${ci.id}:side`, `${ci.id}:back`].some((k) => photoUrls[k]) && (
+                        <div className="mt-2 grid grid-cols-3 gap-1.5">
+                          {(
+                            [
+                              [ci.id, "Спереду"],
+                              [`${ci.id}:side`, "Збоку"],
+                              [`${ci.id}:back`, "Ззаду"],
+                            ] as [string, string][]
+                          ).map(([key, label]) =>
+                            photoUrls[key] ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                key={key}
+                                src={photoUrls[key]}
+                                alt={`Фото ${label.toLowerCase()}`}
+                                className="h-36 w-full rounded-lg object-cover"
+                              />
+                            ) : (
+                              <div key={key} />
+                            )
+                          )}
+                        </div>
                       )}
                       {ci.comment && <p className="mt-2 text-xs text-muted">{ci.comment}</p>}
                       {(answers[ci.id] || []).length > 0 && (

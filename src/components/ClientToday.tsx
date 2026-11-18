@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { OpenRequest } from "@/components/ClientActivityCalendar";
 import { haptic } from "@/lib/telegram";
+import { checkinWindow } from "@/lib/checkinWindow";
 
 // Екран «Сьогодні» — перше, що бачить клієнт. Одна головна дія дня
 // (чек-ін або тренування), кільця прогресу, звички одним тапом і кнопка «+ Їжа».
@@ -112,7 +113,7 @@ export default function ClientToday({
           .from("checkins")
           .select("created_at")
           .eq("client_id", clientId)
-          .gte("created_at", toKey(monday)),
+          .gte("created_at", toKey(new Date(Date.now() - 8 * 86400000))),
         supabase.from("food_entries").select("calories").eq("client_id", clientId).eq("date", todayKey),
         supabase.from("nutrition_targets").select("calories").eq("client_id", clientId).maybeSingle(),
         supabase
@@ -171,9 +172,9 @@ export default function ClientToday({
   });
 
   const todayWorkout = week.find((w) => w.date === todayKey) || null;
-  const isCheckinDay = now.getDay() === checkinWeekday;
-  const checkinDoneToday = checkinDates.includes(todayKey);
-  const needCheckin = isCheckinDay && !checkinDoneToday;
+  // Чек-ін можна зробити в свій день і ще 2 дні після нього.
+  const win = checkinWindow(now, checkinWeekday, checkinDates);
+  const needCheckin = win.open && !win.done;
   const workoutPending = !!todayWorkout && !todayWorkout.completed_at;
 
   const weekTotal = week.length;
@@ -222,7 +223,9 @@ export default function ClientToday({
       ) : needCheckin ? (
         <>
           <div className="rounded-3xl bg-accent p-5 text-paper shadow-[0_12px_36px_-10px_rgb(var(--c-accent)/0.6)]">
-            <p className="text-xs font-medium text-paper/80">Сьогодні день чек-іна</p>
+            <p className="text-xs font-medium text-paper/80">
+              {win.late ? "Чек-ін цього тижня ще не зроблено" : "Сьогодні день чек-іна"}
+            </p>
             <p className="mt-1 font-display text-2xl font-bold leading-tight">Час зважитись і сфоткатись</p>
             <p className="mt-1 text-sm text-paper/80">Вага, заміри, фото і пара питань — 2 хвилини.</p>
             <button
