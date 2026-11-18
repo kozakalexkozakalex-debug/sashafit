@@ -664,9 +664,10 @@ export default function CoachClients({
           type="button"
           disabled={busy}
           onClick={addClient}
-          className="flex-none rounded-xl bg-accent px-3.5 py-2.5 text-sm font-bold text-paper disabled:opacity-50"
+          aria-label="Додати клієнта"
+          className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-accent text-2xl font-bold leading-none text-paper shadow-[0_10px_28px_-10px_rgb(var(--c-accent)/0.7)] disabled:opacity-50"
         >
-          {busy ? "…" : "+ Клієнт"}
+          {busy ? "…" : "+"}
         </button>
       </div>
       <div className="flex gap-2 overflow-x-auto">

@@ -24,23 +24,23 @@ export const THEMES: {
   },
   {
     id: "violet",
-    label: "Фіалка і лайм",
-    hint: "Темно-фіолетова, лайм лише на головній кнопці",
-    dark: ["#130F24", "#221B40", "#C4EB3F", "#A992FF"],
+    label: "Чорний і фіолет",
+    hint: "Чорний фон, фіолетовий акцент",
+    dark: ["#0A0A0B", "#18191B", "#A06EFF", "#A06EFF"],
     light: ["#F4F1FF", "#FFFFFF", "#5B3BD8", "#5B3BD8"],
   },
   {
     id: "mono",
-    label: "Чорно-біла",
-    hint: "Без кольору, лише крапки статусів",
-    dark: ["#0B0B0C", "#1A1A1D", "#F5F5F5", "#F5F5F5"],
+    label: "Чорний і білий",
+    hint: "Чорний фон, білий акцент",
+    dark: ["#0A0A0B", "#18191B", "#F0F0F2", "#F0F0F2"],
     light: ["#F5F5F5", "#FFFFFF", "#0B0B0C", "#0B0B0C"],
   },
   {
     id: "orange",
-    label: "Графіт і апельсин",
-    hint: "Графітова з теплим оранжевим",
-    dark: ["#15171B", "#232630", "#E8773A", "#E8773A"],
+    label: "Чорний і помаранч",
+    hint: "Чорний фон, оранжевий акцент",
+    dark: ["#0A0A0B", "#18191B", "#FF7A29", "#FF7A29"],
     light: ["#F4F2EE", "#FFFFFF", "#BC4A13", "#BC4A13"],
   },
 ];
@@ -51,8 +51,8 @@ function isTheme(v: string | null): v is ThemeId {
 
 export function readPrefs(): { theme: ThemeId; mode: ModePref } {
   try {
-    const t = localStorage.getItem("sf_theme2");
-    const m = localStorage.getItem("sf_mode2");
+    const t = localStorage.getItem("sf_theme3");
+    const m = localStorage.getItem("sf_mode3");
     return {
       theme: isTheme(t) ? t : DEFAULT_THEME,
       mode: m === "dark" || m === "light" || m === "auto" ? m : "dark",
@@ -92,8 +92,8 @@ export function applyTheme(theme: ThemeId, modePref: ModePref) {
 
 export function saveAndApply(theme: ThemeId, mode: ModePref) {
   try {
-    localStorage.setItem("sf_theme2", theme);
-    localStorage.setItem("sf_mode2", mode);
+    localStorage.setItem("sf_theme3", theme);
+    localStorage.setItem("sf_mode3", mode);
   } catch {
     /* ігноруємо — немає доступу до localStorage */
   }

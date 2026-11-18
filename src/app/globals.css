@@ -39,18 +39,18 @@
 }
 
 :root[data-theme="orange"][data-mode="dark"] {
-  --c-paper: 21 23 27;
-  --c-surface: 35 38 48;
-  --c-sidebar: 27 30 37;
-  --c-ink: 242 240 234;
-  --c-muted: 154 156 165;
-  --c-line: 60 65 80;
-  --c-accent: 232 119 58;
-  --c-brand: 232 119 58;
-  --c-success: 111 191 139;
-  --c-warn: 227 176 75;
-  --c-danger: 229 115 107;
-  --c-info: 127 168 201;
+  --c-paper: 10 10 11;
+  --c-surface: 24 25 27;
+  --c-sidebar: 16 17 18;
+  --c-ink: 245 246 243;
+  --c-muted: 146 149 144;
+  --c-line: 42 44 43;
+  --c-accent: 255 122 41;
+  --c-brand: 255 122 41;
+  --c-success: 96 210 110;
+  --c-warn: 255 122 41;
+  --c-danger: 240 84 84;
+  --c-info: 130 170 255;
 }
 
 :root[data-theme="orange"][data-mode="light"] {
@@ -69,18 +69,18 @@
 }
 
 :root[data-theme="violet"][data-mode="dark"] {
-  --c-paper: 19 15 36;
-  --c-surface: 34 27 64;
-  --c-sidebar: 24 19 48;
-  --c-ink: 243 240 255;
-  --c-muted: 165 155 201;
-  --c-line: 58 47 102;
-  --c-accent: 196 235 63;
-  --c-brand: 169 146 255;
-  --c-success: 111 191 139;
-  --c-warn: 227 176 75;
-  --c-danger: 229 115 107;
-  --c-info: 169 146 255;
+  --c-paper: 10 10 11;
+  --c-surface: 24 25 27;
+  --c-sidebar: 16 17 18;
+  --c-ink: 245 246 243;
+  --c-muted: 146 149 144;
+  --c-line: 42 44 43;
+  --c-accent: 160 110 255;
+  --c-brand: 160 110 255;
+  --c-success: 96 210 110;
+  --c-warn: 160 110 255;
+  --c-danger: 240 84 84;
+  --c-info: 130 170 255;
 }
 
 :root[data-theme="violet"][data-mode="light"] {
@@ -99,18 +99,18 @@
 }
 
 :root[data-theme="mono"][data-mode="dark"] {
-  --c-paper: 11 11 12;
-  --c-surface: 26 26 29;
-  --c-sidebar: 17 17 19;
-  --c-ink: 245 245 245;
-  --c-muted: 154 154 162;
-  --c-line: 46 46 51;
-  --c-accent: 245 245 245;
-  --c-brand: 245 245 245;
-  --c-success: 111 191 139;
-  --c-warn: 227 176 75;
-  --c-danger: 229 115 107;
-  --c-info: 138 164 192;
+  --c-paper: 10 10 11;
+  --c-surface: 24 25 27;
+  --c-sidebar: 16 17 18;
+  --c-ink: 245 246 243;
+  --c-muted: 146 149 144;
+  --c-line: 42 44 43;
+  --c-accent: 240 240 242;
+  --c-brand: 240 240 242;
+  --c-success: 96 210 110;
+  --c-warn: 235 235 238;
+  --c-danger: 240 84 84;
+  --c-info: 130 170 255;
 }
 
 :root[data-theme="mono"][data-mode="light"] {
