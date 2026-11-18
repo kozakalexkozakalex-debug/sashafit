@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { OpenRequest } from "@/components/ClientActivityCalendar";
+import { haptic } from "@/lib/telegram";
 
 // Екран «Сьогодні» — перше, що бачить клієнт. Одна головна дія дня
 // (чек-ін або тренування), кільця прогресу, звички одним тапом і кнопка «+ Їжа».
@@ -55,7 +56,11 @@ function Ring({ pct, value, label }: { pct: number; value: string; label: string
             strokeLinecap="round"
             strokeDasharray={circ}
             strokeDashoffset={offset}
-            style={{ stroke: "rgb(var(--c-accent))", transition: "stroke-dashoffset .6s ease" }}
+            style={{
+              stroke: "rgb(var(--c-accent))",
+              transition: "stroke-dashoffset .6s ease",
+              filter: "drop-shadow(0 0 4px rgb(var(--c-accent) / 0.55))",
+            }}
           />
         </svg>
         <span className="absolute inset-0 flex items-center justify-center font-display text-sm font-bold text-ink">
@@ -147,6 +152,7 @@ export default function ClientToday({
 
   async function toggleHabit(habitId: string) {
     const wasDone = doneHabitIds.includes(habitId);
+    haptic(wasDone ? "tap" : "success");
     // Одразу міняємо на екрані, а в базу пишемо у фоні.
     setDoneHabitIds((ids) => (wasDone ? ids.filter((i) => i !== habitId) : [...ids, habitId]));
     if (wasDone) {
@@ -215,7 +221,7 @@ export default function ClientToday({
         <div className="h-36 animate-pulse rounded-3xl bg-surface" />
       ) : needCheckin ? (
         <>
-          <div className="rounded-3xl bg-accent p-5 text-paper">
+          <div className="rounded-3xl bg-accent p-5 text-paper shadow-[0_12px_36px_-10px_rgb(var(--c-accent)/0.6)]">
             <p className="text-xs font-medium text-paper/80">Сьогодні день чек-іна</p>
             <p className="mt-1 font-display text-2xl font-bold leading-tight">Час зважитись і сфоткатись</p>
             <p className="mt-1 text-sm text-paper/80">Вага, заміри, фото і пара питань — 2 хвилини.</p>
@@ -242,7 +248,7 @@ export default function ClientToday({
           )}
         </>
       ) : workoutPending && todayWorkout ? (
-        <div className="rounded-3xl bg-accent p-5 text-paper">
+        <div className="rounded-3xl bg-accent p-5 text-paper shadow-[0_12px_36px_-10px_rgb(var(--c-accent)/0.6)]">
           <p className="text-xs font-medium text-paper/80">Тренування сьогодні</p>
           <p className="mt-1 font-display text-2xl font-bold leading-tight">{todayWorkout.title}</p>
           <p className="mt-1 text-sm text-paper/80">

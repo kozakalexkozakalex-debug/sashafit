@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ClientActivityCalendar, { CheckinMarker, OpenRequest } from "@/components/ClientActivityCalendar";
 import ClientToday from "@/components/ClientToday";
+import CheckinSheet from "@/components/CheckinSheet";
 import ClientProfileCard from "@/components/ClientProfileCard";
 import ChatLauncher from "@/components/ChatLauncher";
 import NavIcon, { NavIconName } from "@/components/NavIcon";
@@ -139,6 +140,9 @@ export default function ClientDashboard() {
   // Запит із «Сьогодні» відкрити конкретний попап у «Плані» (тренування, їжа, чек-ін).
   const [openReq, setOpenReq] = useState<OpenRequest | null>(null);
   // Чат — пункт у нижньому меню, що відкриває шторку (не окрема вкладка).
+  const [checkinOpen, setCheckinOpen] = useState(false);
+  // Після чек-іна перемальовуємо «Сьогодні» (змінюється ключ).
+  const [todayRefresh, setTodayRefresh] = useState(0);
   const [chatSignal, setChatSignal] = useState(0);
   const [chatUnread, setChatUnread] = useState(0);
 
@@ -447,7 +451,7 @@ export default function ClientDashboard() {
 
   return (
     <div className="flex flex-col gap-6 pb-20 lg:flex-row lg:items-start lg:gap-8 lg:pb-0">
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-sidebar/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
         {TABS.map((t) => {
           const active = tab === t.id;
           return (
@@ -509,10 +513,15 @@ export default function ClientDashboard() {
         <div className="flex flex-col gap-3">
           {tab === "today" ? (
             <ClientToday
+              key={todayRefresh}
               clientId={client.id}
               name={client.name}
               checkinWeekday={client.checkin_weekday ?? 0}
               onOpen={(kind) => {
+                if (kind === "checkin") {
+                  setCheckinOpen(true);
+                  return;
+                }
                 setOpenReq({ kind, n: Date.now() });
                 setTab("plan");
               }}
@@ -540,8 +549,20 @@ export default function ClientDashboard() {
                 }}
                 onAvatarUpdated={load}
                 onCheckinAdded={() => loadCheckins(client.id)}
+                onStartCheckin={() => setCheckinOpen(true)}
               />
             </>
+          )}
+
+          {checkinOpen && (
+            <CheckinSheet
+              clientId={client.id}
+              onClose={() => setCheckinOpen(false)}
+              onSaved={() => {
+                loadCheckins(client.id);
+                setTodayRefresh((n) => n + 1);
+              }}
+            />
           )}
 
           <ChatLauncher

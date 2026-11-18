@@ -10,6 +10,10 @@ import { supabase } from "@/lib/supabaseClient";
 type HabitTemplate = { id: string; label: string; icon: string | null };
 type ExistingHabit = { client_id: string; label: string };
 
+// Більше трьох звичок одному клієнту — це вже не звички, а список справ:
+// клієнт перестає їх відмічати. Тому тримаємо жорсткий ліміт.
+const MAX_HABITS = 3;
+
 export default function AssignHabits({
   clientIds,
   onClose,
@@ -22,7 +26,7 @@ export default function AssignHabits({
   const [templates, setTemplates] = useState<HabitTemplate[]>([]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ created: number; skipped: number } | null>(null);
+  const [result, setResult] = useState<{ created: number; skipped: number; limited: number } | null>(null);
 
   useEffect(() => {
     supabase
@@ -57,6 +61,7 @@ export default function AssignHabits({
 
     let created = 0;
     let skipped = 0;
+    let limited = 0;
     const toInsert: { client_id: string; label: string; icon: string | null; position: number }[] = [];
 
     for (const clientId of clientIds) {
@@ -66,6 +71,10 @@ export default function AssignHabits({
         const key = `${clientId}::${t.label}`;
         if (existingSet.has(key)) {
           skipped++;
+          continue;
+        }
+        if (pos >= MAX_HABITS) {
+          limited++;
           continue;
         }
         toInsert.push({ client_id: clientId, label: t.label, icon: t.icon, position: pos });
@@ -79,7 +88,7 @@ export default function AssignHabits({
     }
 
     setBusy(false);
-    setResult({ created, skipped });
+    setResult({ created, skipped, limited });
     onSaved();
   }
 
@@ -124,7 +133,8 @@ export default function AssignHabits({
           {result && (
             <p className="text-sm text-success">
               Додано {result.created} звичок
-              {result.skipped ? `, пропущено ${result.skipped} (вже були в клієнта)` : ""}.
+              {result.skipped ? `, пропущено ${result.skipped} (вже були в клієнта)` : ""}
+              {result.limited ? `, не додано ${result.limited} (максимум ${MAX_HABITS} звички на клієнта)` : ""}.
             </p>
           )}
         </div>

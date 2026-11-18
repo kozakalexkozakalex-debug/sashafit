@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ChatPanel from "@/components/ChatPanel";
+import { useTelegramBack } from "@/lib/telegram";
 
 type Props = (
   | { mode: "client"; clientId: string }
@@ -22,6 +23,7 @@ export default function ChatLauncher(allProps: Props) {
   const props = rest as { mode: "client"; clientId: string } | { mode: "coach" };
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  useTelegramBack(open, () => setOpen(false));
 
   useEffect(() => {
     onUnreadChange?.(unreadCount);

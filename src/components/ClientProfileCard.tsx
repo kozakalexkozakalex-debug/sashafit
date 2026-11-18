@@ -100,6 +100,7 @@ export default function ClientProfileCard({
   onEditAnketa,
   onAvatarUpdated,
   onCheckinAdded,
+  onStartCheckin,
   readOnly = false,
 }: {
   client: ClientRow;
@@ -107,6 +108,8 @@ export default function ClientProfileCard({
   onEditAnketa?: () => void;
   onAvatarUpdated?: () => void;
   onCheckinAdded?: () => void;
+  // Відкрити шторку чек-іна (її малює батьківський екран).
+  onStartCheckin?: () => void;
   readOnly?: boolean;
 }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -209,92 +212,6 @@ export default function ClientProfileCard({
     });
     setTBusy(false);
     setTSaved(true);
-  }
-
-  const [ciOpen, setCiOpen] = useState(false);
-  const [ciWeight, setCiWeight] = useState("");
-  const [ciWaist, setCiWaist] = useState("");
-  const [ciHips, setCiHips] = useState("");
-  const [ciChest, setCiChest] = useState("");
-  const [ciComment, setCiComment] = useState("");
-  const [ciFile, setCiFile] = useState<File | null>(null);
-  const [ciBusy, setCiBusy] = useState(false);
-  const [ciErr, setCiErr] = useState("");
-
-  // Кастомні питання чек-іна, налаштовані тренером — показуємо під
-  // стандартними полями, відповіді зберігаємо окремо після створення чек-іна.
-  const [questions, setQuestions] = useState<CheckinQuestion[]>([]);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (readOnly) return;
-    supabase
-      .from("checkin_questions")
-      .select("*")
-      .order("position", { ascending: true })
-      .then(({ data }) => setQuestions((data as CheckinQuestion[]) || []));
-  }, [readOnly]);
-
-  async function addCheckin() {
-    if (!isSundayNow) {
-      setCiErr(`Чек-ін можна додати тільки в ${checkinDayAccusative}`);
-      return;
-    }
-    if (!ciWeight.trim()) {
-      setCiErr("Вкажи вагу");
-      return;
-    }
-    setCiErr("");
-    setCiBusy(true);
-
-    let photoPath: string | null = null;
-    if (ciFile) {
-      const photo = await compressImage(ciFile);
-      const path = `${client.id}/${Date.now()}-${photo.name}`;
-      const { error: upErr } = await supabase.storage.from("checkins").upload(path, photo);
-      if (upErr) {
-        setCiBusy(false);
-        setCiErr("Не вдалось завантажити фото: " + upErr.message);
-        return;
-      }
-      photoPath = path;
-    }
-
-    const { data: inserted, error } = await supabase
-      .from("checkins")
-      .insert({
-        client_id: client.id,
-        weight: Number(ciWeight),
-        waist: ciWaist.trim() ? Number(ciWaist) : null,
-        hips: ciHips.trim() ? Number(ciHips) : null,
-        chest: ciChest.trim() ? Number(ciChest) : null,
-        photo_path: photoPath,
-        comment: ciComment.trim() || null,
-      })
-      .select("id")
-      .single();
-    setCiBusy(false);
-    if (error) {
-      setCiErr(error.message);
-      return;
-    }
-
-    const answerRows = questions
-      .filter((q) => answers[q.id]?.trim())
-      .map((q) => ({ checkin_id: inserted.id, question_id: q.id, value: answers[q.id].trim() }));
-    if (answerRows.length > 0) {
-      await supabase.from("checkin_answers").insert(answerRows);
-    }
-
-    setCiWeight("");
-    setCiWaist("");
-    setCiHips("");
-    setCiChest("");
-    setCiComment("");
-    setCiFile(null);
-    setAnswers({});
-    setCiOpen(false);
-    onCheckinAdded?.();
   }
 
   return (
@@ -438,10 +355,10 @@ export default function ClientProfileCard({
         ) : isSundayNow && !didCheckinToday ? (
           <button
             type="button"
-            onClick={() => setCiOpen((v) => !v)}
+            onClick={onStartCheckin}
             className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-bold text-paper"
           >
-            {ciOpen ? "Згорнути" : "Зроби чек-ін сьогодні"}
+            Зроби чек-ін сьогодні
           </button>
         ) : (
           <p className="text-xs text-muted">
@@ -451,91 +368,6 @@ export default function ClientProfileCard({
           </p>
         )}
 
-        {!readOnly && ciOpen && isSundayNow && !didCheckinToday && (
-          <div className="mt-2.5 flex flex-col gap-2">
-            <input
-              value={ciWeight}
-              onChange={(e) => setCiWeight(e.target.value)}
-              inputMode="decimal"
-              placeholder="Вага, кг"
-              className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
-            />
-            <div className="flex gap-2">
-              <input
-                value={ciWaist}
-                onChange={(e) => setCiWaist(e.target.value)}
-                inputMode="decimal"
-                placeholder="Талія, см"
-                className="flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
-              />
-              <input
-                value={ciHips}
-                onChange={(e) => setCiHips(e.target.value)}
-                inputMode="decimal"
-                placeholder="Стегна, см"
-                className="flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
-              />
-              <input
-                value={ciChest}
-                onChange={(e) => setCiChest(e.target.value)}
-                inputMode="decimal"
-                placeholder="Груди, см"
-                className="flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
-              />
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setCiFile(e.target.files?.[0] ?? null)}
-              className="text-xs text-muted"
-            />
-            <textarea
-              value={ciComment}
-              onChange={(e) => setCiComment(e.target.value)}
-              placeholder="Коментар (необов'язково)"
-              rows={2}
-              className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
-            />
-            {questions.map((q) => (
-              <div key={q.id}>
-                <p className="mb-1 text-xs text-muted">{q.label}</p>
-                {q.kind === "scale" ? (
-                  <div className="flex gap-1.5">
-                    {[1, 2, 3, 4, 5].map((v) => (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => setAnswers((prev) => ({ ...prev, [q.id]: String(v) }))}
-                        className={`flex h-8 w-8 items-center justify-center rounded-full border text-sm ${
-                          answers[q.id] === String(v)
-                            ? "border-accent bg-accent text-paper"
-                            : "border-line text-muted"
-                        }`}
-                      >
-                        {v}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <input
-                    value={answers[q.id] || ""}
-                    onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                    className="w-full rounded-lg border border-line bg-paper px-3 py-1.5 text-sm outline-none"
-                  />
-                )}
-              </div>
-            ))}
-            <button
-              type="button"
-              disabled={ciBusy}
-              onClick={addCheckin}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-bold text-paper disabled:opacity-50"
-            >
-              {ciBusy ? "Зберігаю…" : "Зберегти чек-ін"}
-            </button>
-            {ciErr && <p className="text-sm text-danger">{ciErr}</p>}
-          </div>
-        )}
       </div>
 
       {readOnly && (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
+import { useTelegramBack } from "@/lib/telegram";
 
 type Checkin = {
   id: string;
@@ -48,6 +49,7 @@ export default function CheckinReviewSheet({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
+  useTelegramBack(true, onClose);
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;

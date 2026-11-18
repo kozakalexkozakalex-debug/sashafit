@@ -1,5 +1,6 @@
 "use client";
 
+import { useTelegramBack } from "@/lib/telegram";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
@@ -128,6 +129,7 @@ export default function CoachDashboard({
   const [unread, setUnread] = useState<UnreadInfo>({});
   const [chatOpen, setChatOpen] = useState(false);
   const [chatClientId, setChatClientId] = useState<string | null>(null);
+  useTelegramBack(chatOpen, () => setChatOpen(false));
   async function refreshUnread() {
     setUnread(await fetchCoachUnread());
   }
@@ -446,7 +448,7 @@ export default function CoachDashboard({
     <div className="flex flex-col gap-6 pb-20 lg:flex-row lg:items-start lg:gap-8 lg:pb-0">
       {typeof document !== "undefined" &&
         createPortal(
-          <nav className="fixed inset-x-0 bottom-0 z-[60] flex items-stretch border-t border-line bg-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden">
+          <nav className="fixed inset-x-0 bottom-0 z-[60] flex items-stretch border-t border-line bg-sidebar/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
             {MOBILE_MAIN_IDS.map((id) => {
               const t = TABS.find((x) => x.id === id)!;
               const active = tab === id;

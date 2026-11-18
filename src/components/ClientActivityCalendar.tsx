@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { searchFood, FoodProduct } from "@/lib/foodApi";
 import HabitsChecklist from "@/components/HabitsChecklist";
+import { haptic, useTelegramBack } from "@/lib/telegram";
 
 // Один календар для тренувань, харчування і чек-інів клієнта.
 // Фільтр зверху перемикає, що саме показувати в клітинках і в деталях дня.
@@ -150,6 +151,14 @@ export default function ClientActivityCalendar({
       document.body.style.overflow = prevOverflow;
     };
   }, [workoutModalOpen, foodModalOpen, checkinModalOpen, habitsModalOpen]);
+
+  // Кнопка «Назад» у шапці Telegram закриває відкритий попап.
+  useTelegramBack(workoutModalOpen || foodModalOpen || checkinModalOpen || habitsModalOpen, () => {
+    setWorkoutModalOpen(false);
+    setFoodModalOpen(false);
+    setCheckinModalOpen(false);
+    setHabitsModalOpen(false);
+  });
 
   async function loadWorkouts() {
     const { data } = await supabase
@@ -1113,8 +1122,8 @@ export default function ClientActivityCalendar({
               </div>
               {!selectedCheckin && (
                 <p className="text-muted">
-                  На цей день чек-іна немає. Заповнити його можна у вкладці «Профіль» — чек-ін вноситься раз на
-                  тиждень, у {WEEKDAY_ACCUSATIVE[checkinWeekday]}.
+                  На цей день чек-іна немає. Чек-ін заповнюється на екрані «Сьогодні» раз на тиждень, у
+                  {" "}{WEEKDAY_ACCUSATIVE[checkinWeekday]}.
                 </p>
               )}
               {selectedCheckin && (
