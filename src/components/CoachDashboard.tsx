@@ -25,7 +25,7 @@ type TabId = "home" | "clients" | "library" | "more" | "analytics" | "appearance
 type LibrarySubTab = "workouts" | "food" | "habits";
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: "home", label: "Головна" },
+  { id: "home", label: "Зустрічі й огляд" },
   { id: "clients", label: "Клієнти" },
   { id: "library", label: "База" },
   { id: "more", label: "Ще" },
@@ -41,10 +41,10 @@ const LIBRARY_SECTIONS: { id: LibrarySubTab; label: string; icon: string }[] = [
   { id: "habits", label: "Звички", icon: "💧" },
 ];
 
-// Знизу на мобільному — 4 пункти. Аналітика й налаштування живуть в «Ще»
-// (налаштування також — шестірня в хедері); чат — плаваюча кнопка.
-const MOBILE_MAIN_IDS: TabId[] = ["home", "clients", "library", "more"];
-const MORE_GROUP: TabId[] = ["more", "analytics", "appearance"];
+// Знизу на мобільному — 3 пункти. Усе рідкісне (зустрічі, аналітика, налаштування,
+// вихід) живе в «Ще»; чат — плаваюча кнопка.
+const MOBILE_MAIN_IDS: TabId[] = ["clients", "library", "more"];
+const MORE_GROUP: TabId[] = ["more", "home", "analytics", "appearance"];
 const TAB_ICON: Record<TabId, NavIconName> = {
   home: "home",
   clients: "clients",
@@ -56,14 +56,12 @@ const TAB_ICON: Record<TabId, NavIconName> = {
 
 export default function CoachDashboard({
   goHomeSignal,
-  meetingSignal,
-  settingsSignal,
+  onSignOut,
 }: {
   goHomeSignal?: number;
-  meetingSignal?: number;
-  settingsSignal?: number;
+  onSignOut?: () => void;
 }) {
-  const [tab, setTab] = useState<TabId>("home");
+  const [tab, setTab] = useState<TabId>("clients");
   // Запит «відкрити клієнта» (з Головної) — скидаємо при ручному переході між вкладками,
   // інакше повернення на «Клієнти» знову відкрило б старого клієнта.
   const [clientReq, setClientReq] = useState<{ id: string; n: number } | null>(null);
@@ -101,20 +99,8 @@ export default function CoachDashboard({
   const [homeAction, setHomeAction] = useState<{ ts: number } | null>(null);
 
   useEffect(() => {
-    if (goHomeSignal) go("home");
+    if (goHomeSignal) go("clients");
   }, [goHomeSignal]);
-
-  useEffect(() => {
-    if (meetingSignal) {
-      go("home");
-      setHomeAction({ ts: Date.now() });
-    }
-  }, [meetingSignal]);
-
-  // Кнопка-шестірня в хедері — відкриває "Налаштування" (тема, питання чек-іна).
-  useEffect(() => {
-    if (settingsSignal) go("appearance");
-  }, [settingsSignal]);
 
   // При переключенні вкладки прокручуємо сторінку наверх.
   useEffect(() => {
@@ -148,7 +134,7 @@ export default function CoachDashboard({
   );
 
   return (
-    <div className="flex flex-col gap-6 pb-20 lg:flex-row lg:items-start lg:gap-8 lg:pb-0">
+    <div className="flex flex-col gap-6 pb-28 lg:flex-row lg:items-start lg:gap-8 lg:pb-0">
       {typeof document !== "undefined" &&
         createPortal(
           <nav className="fixed inset-x-0 bottom-0 z-[60] flex items-stretch border-t border-line bg-sidebar/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
@@ -174,16 +160,24 @@ export default function CoachDashboard({
         )}
 
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
-        <TabButton t={TABS.find((x) => x.id === "home")!} />
-        <div className="my-2 h-px bg-line" />
-        {(["clients", "library", "analytics", "appearance"] as TabId[]).map((id) => (
+        {(["clients", "library", "home", "analytics", "appearance"] as TabId[]).map((id) => (
           <TabButton key={id} t={TABS.find((x) => x.id === id)!} />
         ))}
+        <div className="my-2 h-px bg-line" />
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="rounded-md px-3 py-2 text-left font-display text-sm font-medium text-muted hover:text-ink"
+        >
+          Вийти
+        </button>
       </nav>
 
       <div className="min-w-0 flex-1">
         {tab === "home" ? (
-          <CoachHome
+          <div>
+            {backToMore}
+            <CoachHome
             onOpenClient={(id) => {
               setClientReq({ id, n: Date.now() });
               setTab("clients");
@@ -194,9 +188,11 @@ export default function CoachDashboard({
             }}
             unread={unread}
             actionSignal={homeAction}
-          />
+            />
+          </div>
         ) : tab === "clients" ? (
           <CoachClients
+            unread={unread}
             openRequest={clientReq}
             onOpenChat={(id) => {
               setChatClientId(id);
@@ -208,6 +204,7 @@ export default function CoachDashboard({
           <div className="mx-auto flex max-w-2xl flex-col gap-3">
             {(
               [
+                ["home", "Зустрічі й огляд", "Найближчі зустрічі, тренування, активність"],
                 ["analytics", "Аналітика", "Графіки по клієнтах, харчування, чек-іни"],
                 ["appearance", "Налаштування", "Тема, питання чек-іна"],
               ] as [TabId, string, string][]
@@ -228,6 +225,23 @@ export default function CoachDashboard({
                 <span className="text-muted">›</span>
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => {
+                go("home");
+                setHomeAction({ ts: Date.now() });
+              }}
+              className="rounded-2xl border border-line bg-surface p-4 text-left text-sm font-semibold text-ink"
+            >
+              + Нова зустріч
+            </button>
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="rounded-2xl border border-line bg-surface p-4 text-left text-sm text-muted"
+            >
+              Вийти
+            </button>
           </div>
         ) : tab === "appearance" ? (
           <div className="flex flex-col gap-4">

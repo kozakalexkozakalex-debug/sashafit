@@ -9,6 +9,7 @@ import CheckinReviewSheet from "@/components/CheckinReviewSheet";
 import { clientRisk, RISK_LABEL } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
 import { useTelegramBack } from "@/lib/telegram";
+import { UnreadInfo } from "@/lib/coachUnread";
 
 // Вкладка «Клієнти» тренера: список з пошуком, запрошення нового клієнта,
 // а всередині клієнта — вкладки «Зведення / План / Чек-іни».
@@ -57,13 +58,6 @@ type Checkin = {
 };
 type AnswerRow = { checkin_id: string; value: string | null; checkin_questions: { label: string } | null };
 
-type SubTab = "summary" | "plan" | "checkins";
-const SUBTABS: { id: SubTab; label: string }[] = [
-  { id: "summary", label: "Зведення" },
-  { id: "plan", label: "План" },
-  { id: "checkins", label: "Чек-іни" },
-];
-
 type AssignKind = "workout" | "program" | "ration" | "habits";
 
 // Шторка для дій над клієнтом: на мобільному виїжджає знизу, на ПК — по центру.
@@ -93,15 +87,20 @@ export default function CoachClients({
   openRequest,
   onOpenChat,
   suspendBack,
+  unread,
 }: {
   // Запит з «Головної»: відкрити конкретного клієнта.
   openRequest: { id: string; n: number } | null;
   onOpenChat: (clientId: string) => void;
   // Поки поверх відкрито чат, кнопка «Назад» Telegram має закривати його, а не клієнта.
   suspendBack?: boolean;
+  // Непрочитані повідомлення по клієнтах (рахує CoachDashboard).
+  unread?: UnreadInfo;
 }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [lastCheckin, setLastCheckin] = useState<Record<string, string>>({});
+  // Скільки нових (неперевірених) чек-інів у кожного клієнта.
+  const [toReview, setToReview] = useState<Record<string, number>>({});
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -114,7 +113,6 @@ export default function CoachClients({
 
   // Відкритий клієнт.
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [subTab, setSubTab] = useState<SubTab>("summary");
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [answers, setAnswers] = useState<Record<string, { label: string; value: string }[]>>({});
@@ -131,13 +129,16 @@ export default function CoachClients({
 
     const { data: ci } = await supabase
       .from("checkins")
-      .select("client_id, created_at")
+      .select("client_id, created_at, reviewed_at")
       .order("created_at", { ascending: false });
     const last: Record<string, string> = {};
-    for (const row of (ci as { client_id: string; created_at: string }[]) || []) {
+    const fresh: Record<string, number> = {};
+    for (const row of (ci as { client_id: string; created_at: string; reviewed_at: string | null }[]) || []) {
       if (!last[row.client_id]) last[row.client_id] = row.created_at;
+      if (!row.reviewed_at) fresh[row.client_id] = (fresh[row.client_id] || 0) + 1;
     }
     setLastCheckin(last);
+    setToReview(fresh);
   }
 
   useEffect(() => {
@@ -147,7 +148,6 @@ export default function CoachClients({
   useEffect(() => {
     if (!openRequest) return;
     setDetailId(openRequest.id);
-    setSubTab("summary");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRequest?.n]);
 
@@ -249,7 +249,6 @@ export default function CoachClients({
   }
 
   function openClient(id: string) {
-    setSubTab("summary");
     setDetailId(id);
   }
 
@@ -265,7 +264,11 @@ export default function CoachClients({
   const pending = clients.filter((c) => !c.profile_id);
   const connected = clients.filter((c) => c.profile_id);
   const q = query.trim().toLowerCase();
-  const shown = q ? connected.filter((c) => clientLabel(c).toLowerCase().includes(q)) : connected;
+  const needs = (id: string) => (toReview[id] || 0) + (unread?.[id]?.count || 0);
+  const filtered = q ? connected.filter((c) => clientLabel(c).toLowerCase().includes(q)) : connected;
+  // Тим, кому потрібна дія тренера, — нагорі.
+  const shown = [...filtered].sort((a, b) => (needs(b.id) > 0 ? 1 : 0) - (needs(a.id) > 0 ? 1 : 0));
+  const needAction = connected.filter((c) => needs(c.id) > 0).length;
 
   // ---------- Сторінка клієнта ----------
   const current = detailId ? clients.find((x) => x.id === detailId) : null;
@@ -299,15 +302,6 @@ export default function CoachClients({
               <p className="truncate text-xs text-muted">{RISK_LABEL[clientRisk(current, lastCheckin[current.id])]}</p>
             )}
           </div>
-          {current.profile_id && (
-            <button
-              type="button"
-              onClick={() => onOpenChat(current.id)}
-              className="flex-none rounded-full bg-accent px-3.5 py-1.5 text-xs font-bold text-paper"
-            >
-              Чат
-            </button>
-          )}
         </div>
 
         {notFilled ? (
@@ -319,55 +313,60 @@ export default function CoachClients({
           </div>
         ) : (
           <>
-            <div className="flex gap-1 rounded-full border border-line bg-sidebar p-1">
-              {SUBTABS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setSubTab(t.id)}
-                  className={`flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                    subTab === t.id ? "bg-accent text-paper" : "text-muted hover:text-ink"
-                  }`}
-                >
-                  {t.label}
-                  {t.id === "checkins" && unreviewed > 0 ? ` · ${unreviewed}` : ""}
-                </button>
-              ))}
-            </div>
-
-            {subTab === "summary" && <ClientProfileCard client={current} checkins={checkins} readOnly />}
-
-            {subTab === "plan" && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setAssignMenu(true)}
-                  className="rounded-xl bg-accent py-3 text-sm font-bold text-paper"
-                >
-                  + Призначити
-                </button>
-                <ClientActivityCalendar
-                  key={calendarKey}
-                  clientId={current.id}
-                  checkins={markers}
-                  showHabits
-                  habitsReadOnly
-                  checkinWeekday={current.checkin_weekday ?? 0}
-                />
-              </>
-            )}
-
-            {subTab === "checkins" && (
-              <>
+            {(unreviewed > 0 || (unread?.[current.id]?.count || 0) > 0) && (
+              <div className="flex flex-col gap-2 rounded-2xl border border-brand/40 bg-brand/10 p-3">
+                <p className="text-sm font-semibold text-ink">Потрібна дія</p>
                 {unreviewed > 0 && (
                   <button
                     type="button"
                     onClick={() => setReviewOpen(true)}
-                    className="rounded-xl bg-accent py-3 text-sm font-bold text-paper"
+                    className="rounded-xl bg-accent py-2.5 text-sm font-bold text-paper"
                   >
-                    Перевірити нові ({unreviewed})
+                    Перевірити чек-ін ({unreviewed})
                   </button>
                 )}
+                {(unread?.[current.id]?.count || 0) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenChat(current.id)}
+                    className="rounded-xl bg-danger py-2.5 text-sm font-bold text-white"
+                  >
+                    Відповісти ({unread?.[current.id]?.count})
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setAssignMenu(true)}
+                className="rounded-xl bg-accent py-3 text-sm font-bold text-paper"
+              >
+                + Призначити
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenChat(current.id)}
+                className="rounded-xl border border-line bg-surface py-3 text-sm font-bold text-ink"
+              >
+                💬 Написати
+              </button>
+            </div>
+
+            <h3 className="mt-1 text-sm font-semibold text-ink">План і календар</h3>
+            <ClientActivityCalendar
+              key={calendarKey}
+              clientId={current.id}
+              checkins={markers}
+              showHabits
+              habitsReadOnly
+              checkinWeekday={current.checkin_weekday ?? 0}
+            />
+
+            <h3 className="mt-1 text-sm font-semibold text-ink">Чек-іни</h3>
+
+              <>
                 {checkins.length === 0 ? (
                   <p className="rounded-xl border border-line bg-surface p-4 text-sm text-muted">
                     Чек-інів ще немає.
@@ -434,7 +433,10 @@ export default function CoachClients({
                   ))
                 )}
               </>
-            )}
+            
+
+            <h3 className="mt-1 text-sm font-semibold text-ink">Профіль, цілі, заміри</h3>
+            <ClientProfileCard client={current} checkins={checkins} readOnly />
 
             <button
               type="button"
@@ -548,7 +550,10 @@ export default function CoachClients({
       {notice && <p className="text-xs text-success">{notice}</p>}
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-ink">Клієнти ({connected.length})</h2>
+        <h2 className="text-sm font-semibold text-ink">
+          Клієнти ({connected.length})
+          {needAction > 0 && <span className="ml-2 font-normal text-brand">· потрібна дія: {needAction}</span>}
+        </h2>
         {connected.length > 1 && (
           <button
             type="button"
@@ -613,7 +618,19 @@ export default function CoachClients({
                   <span className="block truncate text-sm font-semibold text-ink">{clientLabel(c)}</span>
                   <span className="block truncate text-xs text-muted">{daysAgoText(lastCheckin[c.id])}</span>
                 </span>
-                <span className="flex-none text-xs text-muted">{RISK_LABEL[clientRisk(c, lastCheckin[c.id])]}</span>
+                <span className="flex flex-none flex-col items-end gap-1 text-xs">
+                  {(toReview[c.id] || 0) > 0 && (
+                    <span className="rounded-full bg-accent px-2 py-0.5 font-semibold text-paper">Чек-ін</span>
+                  )}
+                  {(unread?.[c.id]?.count || 0) > 0 && (
+                    <span className="rounded-full bg-danger px-2 py-0.5 font-semibold text-white">
+                      💬 {unread?.[c.id]?.count}
+                    </span>
+                  )}
+                  {needs(c.id) === 0 && (
+                    <span className="text-muted">{RISK_LABEL[clientRisk(c, lastCheckin[c.id])]}</span>
+                  )}
+                </span>
               </button>
             </div>
           ))}
