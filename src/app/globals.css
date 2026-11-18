@@ -6,7 +6,38 @@
    Значення — RGB-трійки, щоб працювали прозорості Tailwind (bg-accent/15).
    Перемикається атрибутами на <html>: data-theme і data-mode (див. src/lib/theme.ts). */
 
+/* RUNA: чорний + лайм (за замовчуванням, як у референсі). */
 :root,
+:root[data-theme="lime"][data-mode="dark"] {
+  --c-paper: 10 10 11;
+  --c-surface: 24 25 27;
+  --c-sidebar: 16 17 18;
+  --c-ink: 245 246 243;
+  --c-muted: 146 149 144;
+  --c-line: 42 44 43;
+  --c-accent: 190 242 40;
+  --c-brand: 190 242 40;
+  --c-success: 96 210 110;
+  --c-warn: 243 142 40;
+  --c-danger: 240 84 84;
+  --c-info: 130 170 255;
+}
+
+:root[data-theme="lime"][data-mode="light"] {
+  --c-paper: 246 247 242;
+  --c-surface: 255 255 255;
+  --c-sidebar: 236 238 230;
+  --c-ink: 18 20 14;
+  --c-muted: 104 108 98;
+  --c-line: 218 221 208;
+  --c-accent: 84 128 0;
+  --c-brand: 84 128 0;
+  --c-success: 37 118 74;
+  --c-warn: 176 92 6;
+  --c-danger: 194 58 50;
+  --c-info: 47 111 163;
+}
+
 :root[data-theme="orange"][data-mode="dark"] {
   --c-paper: 21 23 27;
   --c-surface: 35 38 48;

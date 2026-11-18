@@ -2,10 +2,10 @@
 // "sf_theme", режим — "sf_mode" (auto = як у Telegram/телефону).
 // Самі кольори лежать у globals.css, тут — лише перемикання атрибутів на <html>.
 
-export type ThemeId = "violet" | "mono" | "orange";
+export type ThemeId = "lime" | "violet" | "mono" | "orange";
 export type ModePref = "auto" | "dark" | "light";
 
-export const DEFAULT_THEME: ThemeId = "orange";
+export const DEFAULT_THEME: ThemeId = "lime";
 
 export const THEMES: {
   id: ThemeId;
@@ -15,6 +15,13 @@ export const THEMES: {
   dark: [string, string, string, string];
   light: [string, string, string, string];
 }[] = [
+  {
+    id: "lime",
+    label: "Чорний і лайм",
+    hint: "Чорний фон, яскравий лайм — основна тема",
+    dark: ["#0A0A0B", "#18191B", "#BEF228", "#BEF228"],
+    light: ["#F6F7F2", "#FFFFFF", "#548000", "#548000"],
+  },
   {
     id: "violet",
     label: "Фіалка і лайм",
@@ -39,19 +46,19 @@ export const THEMES: {
 ];
 
 function isTheme(v: string | null): v is ThemeId {
-  return v === "violet" || v === "mono" || v === "orange";
+  return v === "lime" || v === "violet" || v === "mono" || v === "orange";
 }
 
 export function readPrefs(): { theme: ThemeId; mode: ModePref } {
   try {
-    const t = localStorage.getItem("sf_theme");
-    const m = localStorage.getItem("sf_mode");
+    const t = localStorage.getItem("sf_theme2");
+    const m = localStorage.getItem("sf_mode2");
     return {
       theme: isTheme(t) ? t : DEFAULT_THEME,
-      mode: m === "dark" || m === "light" || m === "auto" ? m : "auto",
+      mode: m === "dark" || m === "light" || m === "auto" ? m : "dark",
     };
   } catch {
-    return { theme: DEFAULT_THEME, mode: "auto" };
+    return { theme: DEFAULT_THEME, mode: "dark" };
   }
 }
 
@@ -85,8 +92,8 @@ export function applyTheme(theme: ThemeId, modePref: ModePref) {
 
 export function saveAndApply(theme: ThemeId, mode: ModePref) {
   try {
-    localStorage.setItem("sf_theme", theme);
-    localStorage.setItem("sf_mode", mode);
+    localStorage.setItem("sf_theme2", theme);
+    localStorage.setItem("sf_mode2", mode);
   } catch {
     /* ігноруємо — немає доступу до localStorage */
   }

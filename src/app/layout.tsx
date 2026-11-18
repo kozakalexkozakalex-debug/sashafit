@@ -49,7 +49,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{var t=localStorage.getItem('sf_theme');if(t!=='violet'&&t!=='mono'&&t!=='orange')t='orange';var m=localStorage.getItem('sf_mode');if(m!=='dark'&&m!=='light')m='auto';if(m==='auto'){var w=window.Telegram&&window.Telegram.WebApp;m=w&&w.colorScheme?w.colorScheme:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark')}var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-mode',m)}catch(e){}})()",
+              "(function(){try{var t=localStorage.getItem('sf_theme2');if(t!=='lime'&&t!=='violet'&&t!=='mono'&&t!=='orange')t='lime';var m=localStorage.getItem('sf_mode2');if(m!=='dark'&&m!=='light'&&m!=='auto')m='dark';if(m==='auto'){var w=window.Telegram&&window.Telegram.WebApp;m=w&&w.colorScheme?w.colorScheme:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark')}var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-mode',m)}catch(e){}})()",
           }}
         />
       </head>

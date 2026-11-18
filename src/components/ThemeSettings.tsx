@@ -11,7 +11,7 @@ const MODES: { id: ModePref; label: string }[] = [
 
 // Вкладка "Оформлення": вибір теми й режиму. Зберігається на цьому пристрої.
 export default function ThemeSettings() {
-  const [theme, setTheme] = useState<ThemeId>("orange");
+  const [theme, setTheme] = useState<ThemeId>("lime");
   const [mode, setMode] = useState<ModePref>("auto");
 
   useEffect(() => {

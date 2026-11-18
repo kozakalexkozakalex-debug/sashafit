@@ -9,6 +9,8 @@ import CheckinReviewSheet from "@/components/CheckinReviewSheet";
 import { clientRisk, RISK_LABEL } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
 import { useTelegramBack } from "@/lib/telegram";
+import Avatar from "@/components/Avatar";
+import { useAvatars } from "@/lib/useAvatars";
 import { UnreadInfo } from "@/lib/coachUnread";
 
 // Вкладка «Клієнти» тренера: список з пошуком, запрошення нового клієнта,
@@ -109,6 +111,7 @@ export default function CoachClients({
   // Скільки нових (неперевірених) чек-інів у кожного клієнта.
   const [toReview, setToReview] = useState<Record<string, number>>({});
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "action" | "risk">("all");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState("");
@@ -275,7 +278,12 @@ export default function CoachClients({
   const connected = clients.filter((c) => c.profile_id);
   const q = query.trim().toLowerCase();
   const needs = (id: string) => (toReview[id] || 0) + (unread?.[id]?.count || 0);
-  const filtered = q ? connected.filter((c) => clientLabel(c).toLowerCase().includes(q)) : connected;
+  const byQuery = q ? connected.filter((c) => clientLabel(c).toLowerCase().includes(q)) : connected;
+  const riskOf = (c: Client) => clientRisk(c, lastCheckin[c.id]);
+  const filtered = byQuery.filter((c) =>
+    filter === "action" ? needs(c.id) > 0 : filter === "risk" ? riskOf(c) !== "ok" : true
+  );
+  const avatars = useAvatars(connected);
   // Тим, кому потрібна дія тренера, — нагорі.
   const shown = [...filtered].sort((a, b) => (needs(b.id) > 0 ? 1 : 0) - (needs(a.id) > 0 ? 1 : 0));
   const needAction = connected.filter((c) => needs(c.id) > 0).length;
@@ -576,14 +584,31 @@ export default function CoachClients({
           {busy ? "…" : "+ Клієнт"}
         </button>
       </div>
+      <div className="flex gap-2 overflow-x-auto">
+        {(
+          [
+            ["all", `Усі (${connected.length})`],
+            ["action", `Потрібна дія (${needAction})`],
+            ["risk", `Ризик (${connected.filter((c) => riskOf(c) !== "ok").length})`],
+          ] as ["all" | "action" | "risk", string][]
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setFilter(id)}
+            className={`flex-none rounded-full px-3.5 py-1.5 text-xs font-semibold ${
+              filter === id ? "bg-accent text-paper" : "border border-line text-muted"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       {err && <p className="text-sm text-danger">{err}</p>}
       {notice && <p className="text-xs text-success">{notice}</p>}
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-ink">
-          Клієнти ({connected.length})
-          {needAction > 0 && <span className="ml-2 font-normal text-brand">· потрібна дія: {needAction}</span>}
-        </h2>
+        <h2 className="text-sm font-semibold text-ink">Клієнти</h2>
         {connected.length > 1 && (
           <button
             type="button"
@@ -641,12 +666,18 @@ export default function CoachClients({
                 onClick={() => (selectMode ? togglePicked(c.id) : openClient(c.id))}
                 className="flex min-w-0 flex-1 items-center gap-3 text-left"
               >
-                <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full border border-line bg-paper font-display text-sm font-bold text-ink">
-                  {clientLabel(c).slice(0, 1).toUpperCase()}
-                </span>
+                <Avatar
+                  name={clientLabel(c)}
+                  url={avatars[c.id]}
+                  size={44}
+                  dot={riskOf(c) === "ok" ? "bg-success" : riskOf(c) === "risk" ? "bg-danger" : "bg-warn"}
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-ink">{clientLabel(c)}</span>
-                  <span className="block truncate text-xs text-muted">{daysAgoText(lastCheckin[c.id])}</span>
+                  <span className="block truncate text-xs text-muted">
+                    {c.goal ? `${c.goal} · ` : ""}
+                    {daysAgoText(lastCheckin[c.id])}
+                  </span>
                 </span>
                 <span className="flex flex-none flex-col items-end gap-1 text-xs">
                   {(toReview[c.id] || 0) > 0 && (
@@ -657,9 +688,7 @@ export default function CoachClients({
                       💬 {unread?.[c.id]?.count}
                     </span>
                   )}
-                  {needs(c.id) === 0 && (
-                    <span className="text-muted">{RISK_LABEL[clientRisk(c, lastCheckin[c.id])]}</span>
-                  )}
+                  {needs(c.id) === 0 && <span className="text-muted">›</span>}
                 </span>
               </button>
             </div>
