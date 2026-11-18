@@ -94,6 +94,7 @@ export default function ClientToday({
   const [kcalTarget, setKcalTarget] = useState<number | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [doneHabitIds, setDoneHabitIds] = useState<string[]>([]);
+  const [coachMsg, setCoachMsg] = useState<{ body: string; has_attachment: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -142,6 +143,15 @@ export default function ClientToday({
           ((logs as { habit_id: string; done: boolean }[]) || []).filter((l) => l.done).map((l) => l.habit_id)
         );
       }
+      const { data: lastMsg } = await supabase
+        .from("messages")
+        .select("body, attachment_kind")
+        .eq("client_id", clientId)
+        .eq("sender", "coach")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const m = (lastMsg as { body: string; attachment_kind: string | null }[] | null)?.[0];
+      if (!cancelled) setCoachMsg(m ? { body: m.body, has_attachment: !!m.attachment_kind } : null);
       setLoaded(true);
     }
     load();
@@ -217,6 +227,18 @@ export default function ClientToday({
           );
         })}
       </div>
+
+      {loaded && coachMsg && (
+        <div className="flex items-center gap-3 rounded-3xl border border-line bg-surface p-4">
+          <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-accent/15 text-lg">💬</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs text-muted">Твій тренер</span>
+            <span className="block truncate text-sm font-semibold text-ink">
+              {coachMsg.body || (coachMsg.has_attachment ? "Надіслав(ла) фото або відео" : "")}
+            </span>
+          </span>
+        </div>
+      )}
 
       {loaded && (
         <div className="flex items-center gap-4 rounded-3xl border border-line bg-surface p-4">
@@ -298,20 +320,20 @@ export default function ClientToday({
           )}
         </>
       ) : workoutPending && todayWorkout ? (
-        <div className="rounded-3xl bg-accent p-5 text-paper shadow-[0_12px_36px_-10px_rgb(var(--c-accent)/0.6)]">
-          <p className="text-xs font-medium text-paper/80">Тренування сьогодні</p>
-          <p className="mt-1 font-display text-2xl font-bold leading-tight">{todayWorkout.title}</p>
-          <p className="mt-1 text-sm text-paper/80">
-            {todayWorkout.assigned_workout_exercises.length} вправ
-          </p>
-          <button
-            type="button"
-            onClick={() => onOpen("workout")}
-            className="mt-4 w-full rounded-xl bg-paper py-3 text-sm font-bold text-ink"
-          >
-            Почати тренування
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => onOpen("workout")}
+          className="flex items-center gap-4 rounded-3xl border border-brand/50 bg-gradient-to-br from-surface to-paper p-5 text-left shadow-[0_12px_36px_-14px_rgb(var(--c-accent)/0.6)]"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs text-muted">Тренування сьогодні</span>
+            <span className="mt-0.5 block font-display text-xl font-bold leading-tight text-ink">{todayWorkout.title}</span>
+            <span className="mt-1 block text-sm text-muted">{todayWorkout.assigned_workout_exercises.length} вправ</span>
+          </span>
+          <span className="flex h-14 w-14 flex-none items-center justify-center rounded-full bg-accent text-2xl text-paper shadow-[0_0_24px_rgb(var(--c-accent)/0.6)]">
+            ▶
+          </span>
+        </button>
       ) : todayWorkout ? (
         <div className="rounded-3xl border border-line bg-surface p-5">
           <p className="font-display text-xl font-bold text-success">Тренування виконано ✓</p>

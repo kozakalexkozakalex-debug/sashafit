@@ -404,14 +404,14 @@ export default function CoachClients({
               </div>
             )}
 
-            <div className="flex gap-1 rounded-full border border-line bg-sidebar p-1">
+            <div className="flex border-b border-line">
               {SUBTABS.map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => setSubTab(t.id)}
-                  className={`flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                    subTab === t.id ? "bg-accent text-paper" : "text-muted hover:text-ink"
+                  className={`-mb-px flex-1 border-b-2 px-3 py-2.5 text-sm font-semibold transition ${
+                    subTab === t.id ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
                   }`}
                 >
                   {t.label}

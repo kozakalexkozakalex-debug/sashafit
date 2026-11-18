@@ -465,7 +465,7 @@ export default function ClientDashboard() {
               type="button"
               onClick={() => goTab(t.id)}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                active ? "text-brand" : "text-muted"
+                active ? "text-brand [&_svg]:drop-shadow-[0_0_6px_rgb(var(--c-brand)/0.8)]" : "text-muted"
               }`}
             >
               <span className="relative">
