@@ -257,6 +257,7 @@ export default function CoachDashboard({
             >
               Вийти
             </button>
+            <p className="pt-2 text-center text-[11px] text-muted">Версія {process.env.NEXT_PUBLIC_BUILD}</p>
           </div>
         ) : tab === "appearance" ? (
           <div className="flex flex-col gap-4">
