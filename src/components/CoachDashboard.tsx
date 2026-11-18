@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import CoachHome from "@/components/CoachHome";
 import CoachClients from "@/components/CoachClients";
 import CoachToday from "@/components/CoachToday";
+import CoachDiary from "@/components/CoachDiary";
 import CoachChats from "@/components/CoachChats";
 import ThemeSettings from "@/components/ThemeSettings";
 import CheckinQuestionsSettings from "@/components/CheckinQuestionsSettings";
@@ -22,13 +23,15 @@ const NutritionSection = dynamic(() => import("@/components/NutritionSection"), 
 const CoachAnalytics = dynamic(() => import("@/components/CoachAnalytics"), { ssr: false });
 
 // «more» — екран-меню «Ще» (аналітика, налаштування); сам по собі нічого не показує.
-type TabId = "today" | "home" | "clients" | "library" | "more" | "analytics" | "appearance";
+type TabId = "today" | "diary" | "chat" | "home" | "clients" | "library" | "more" | "analytics" | "appearance";
 type LibrarySubTab = "workouts" | "food" | "habits";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "today", label: "Сьогодні" },
   { id: "home", label: "Зустрічі й огляд" },
   { id: "clients", label: "Клієнти" },
+  { id: "diary", label: "Щоденник" },
+  { id: "chat", label: "Чат" },
   { id: "library", label: "База" },
   { id: "more", label: "Ще" },
   { id: "analytics", label: "Аналітика" },
@@ -45,10 +48,12 @@ const LIBRARY_SECTIONS: { id: LibrarySubTab; label: string; icon: string }[] = [
 
 // Знизу на мобільному — 4 пункти. Усе рідкісне (зустрічі, аналітика, налаштування,
 // вихід) живе в «Ще»; чат — плаваюча кнопка.
-const MOBILE_MAIN_IDS: TabId[] = ["today", "clients", "library", "more"];
-const MORE_GROUP: TabId[] = ["more", "home", "analytics", "appearance"];
+const MOBILE_MAIN_IDS: TabId[] = ["today", "clients", "diary", "chat", "more"];
+const MORE_GROUP: TabId[] = ["more", "library", "home", "analytics", "appearance"];
 const TAB_ICON: Record<TabId, NavIconName> = {
   today: "home",
+  diary: "plan",
+  chat: "chat",
   home: "home",
   clients: "clients",
   library: "library",
@@ -70,6 +75,7 @@ export default function CoachDashboard({
   const [clientReq, setClientReq] = useState<{ id: string; n: number } | null>(null);
   function go(t: TabId) {
     setClientReq(null);
+    if (t === "chat") setChatClientId(null);
     setTab(t);
   }
 
@@ -153,7 +159,14 @@ export default function CoachDashboard({
                     active ? "text-brand" : "text-muted"
                   }`}
                 >
-                  <NavIcon name={TAB_ICON[id]} className="h-5 w-5" />
+                  <span className="relative">
+                    <NavIcon name={TAB_ICON[id]} className="h-5 w-5" />
+                    {id === "chat" && unreadTotal > 0 && (
+                      <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">
+                        {unreadTotal > 9 ? "9+" : unreadTotal}
+                      </span>
+                    )}
+                  </span>
                   {t.label}
                 </button>
               );
@@ -163,7 +176,7 @@ export default function CoachDashboard({
         )}
 
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
-        {(["today", "clients", "library", "home", "analytics", "appearance"] as TabId[]).map((id) => (
+        {(["today", "clients", "diary", "chat", "library", "home", "analytics", "appearance"] as TabId[]).map((id) => (
           <TabButton key={id} t={TABS.find((x) => x.id === id)!} />
         ))}
         <div className="my-2 h-px bg-line" />
@@ -179,16 +192,34 @@ export default function CoachDashboard({
       <div className="min-w-0 flex-1">
         {tab === "today" ? (
           <CoachToday
+            onQuick={(kind) => {
+              if (kind === "meeting") {
+                go("home");
+                setHomeAction({ ts: Date.now() });
+              } else go(kind);
+            }}
             unread={unread}
             onOpenChat={(id) => {
               setChatClientId(id);
-              setChatOpen(true);
+              setTab("chat");
             }}
             onOpenClient={(id) => {
               setClientReq({ id, n: Date.now() });
               setTab("clients");
             }}
           />
+        ) : tab === "diary" ? (
+          <CoachDiary
+            onOpenClient={(id) => {
+              setClientReq({ id, n: Date.now() });
+              setTab("clients");
+            }}
+          />
+        ) : tab === "chat" ? (
+          <div className="mx-auto flex max-w-2xl flex-col gap-3">
+            <h2 className="font-display text-2xl font-bold text-ink">Чат</h2>
+            <CoachChats unread={unread} onRead={refreshUnread} openClientId={chatClientId} />
+          </div>
         ) : tab === "home" ? (
           <div>
             {backToMore}
@@ -199,7 +230,7 @@ export default function CoachDashboard({
             }}
             onOpenChat={(id) => {
               setChatClientId(id);
-              setChatOpen(true);
+              setTab("chat");
             }}
             unread={unread}
             actionSignal={homeAction}
@@ -211,7 +242,7 @@ export default function CoachDashboard({
             openRequest={clientReq}
             onOpenChat={(id) => {
               setChatClientId(id);
-              setChatOpen(true);
+              setTab("chat");
             }}
             suspendBack={chatOpen}
           />
@@ -219,6 +250,7 @@ export default function CoachDashboard({
           <div className="mx-auto flex max-w-2xl flex-col gap-3">
             {(
               [
+                ["library", "База", "Вправи, програми, харчування, звички"],
                 ["home", "Зустрічі й огляд", "Найближчі зустрічі, тренування, активність"],
                 ["analytics", "Аналітика", "Графіки по клієнтах, харчування, чек-іни"],
                 ["appearance", "Налаштування", "Тема, питання чек-іна"],
@@ -267,6 +299,7 @@ export default function CoachDashboard({
           </div>
         ) : tab === "library" ? (
           <div>
+            {backToMore}
             <div className="mb-5 flex gap-4">
               {LIBRARY_SECTIONS.map((s) => {
                 const active = librarySubTab === s.id;
@@ -308,23 +341,6 @@ export default function CoachDashboard({
           </div>
         )}
       </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          setChatClientId(null);
-          setChatOpen(true);
-        }}
-        aria-label="Чат"
-        className="fixed bottom-20 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-accent text-paper shadow-lg transition hover:brightness-110 lg:bottom-6"
-      >
-        <NavIcon name="chat" className="h-6 w-6" />
-        {unreadTotal > 0 && !chatOpen && (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[11px] font-semibold text-white">
-            {unreadTotal > 9 ? "9+" : unreadTotal}
-          </span>
-        )}
-      </button>
 
       {chatOpen &&
         typeof document !== "undefined" &&

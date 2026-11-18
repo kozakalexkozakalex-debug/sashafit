@@ -37,7 +37,9 @@ export default function CoachToday({
   unread,
   onOpenChat,
   onOpenClient,
+  onQuick,
 }: {
+  onQuick?: (kind: "meeting" | "clients" | "library" | "chat") => void;
   unread: UnreadInfo;
   onOpenChat: (clientId: string) => void;
   onOpenClient: (clientId: string) => void;
@@ -48,6 +50,7 @@ export default function CoachToday({
   const [adherence, setAdherence] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewId, setReviewId] = useState<string | null>(null);
+  const [quickOpen, setQuickOpen] = useState(false);
 
   async function load() {
     const since = new Date();
@@ -186,9 +189,24 @@ export default function CoachToday({
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
-      <div>
-        <p className="text-xs capitalize text-muted">{dateText}</p>
-        <h2 className="font-display text-2xl font-bold text-ink">Сьогодні</h2>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs capitalize text-muted">{dateText}</p>
+          <h2 className="font-display text-2xl font-bold text-ink">Доброго дня 👋</h2>
+        </div>
+        <button
+          type="button"
+          onClick={() => onQuick?.("chat")}
+          aria-label="Повідомлення"
+          className="relative flex h-11 w-11 flex-none items-center justify-center rounded-full border border-line bg-surface text-lg"
+        >
+          🔔
+          {todo.length > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[11px] font-semibold text-white">
+              {todo.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {loading ? (
@@ -236,6 +254,49 @@ export default function CoachToday({
             )}
           </div>
         </>
+      )}
+
+      {!loading && (
+        <button
+          type="button"
+          onClick={() => setQuickOpen(true)}
+          className="rounded-2xl bg-accent py-3.5 text-sm font-bold text-paper shadow-[0_12px_36px_-10px_rgb(var(--c-accent)/0.6)]"
+        >
+          ⚡ Швидкі дії
+        </button>
+      )}
+
+      {quickOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 lg:items-center" onClick={() => setQuickOpen(false)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-t-3xl border border-line bg-sidebar p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:rounded-3xl"
+          >
+            <p className="mb-3 text-sm font-semibold text-ink">Швидкі дії</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["clients", "👥 Клієнти і запрошення"],
+                  ["meeting", "📅 Нова зустріч"],
+                  ["library", "🏋 База вправ і програм"],
+                  ["chat", "💬 Повідомлення"],
+                ] as ["clients" | "meeting" | "library" | "chat", string][]
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => {
+                    setQuickOpen(false);
+                    onQuick?.(k);
+                  }}
+                  className="rounded-2xl border border-line bg-surface py-4 text-sm font-semibold text-ink"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {reviewClient && (

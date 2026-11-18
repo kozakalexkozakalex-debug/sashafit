@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ClientActivityCalendar, { CheckinMarker, OpenRequest } from "@/components/ClientActivityCalendar";
 import ClientToday from "@/components/ClientToday";
+import ClientNutrition from "@/components/ClientNutrition";
+import HabitsChecklist from "@/components/HabitsChecklist";
 import CheckinSheet from "@/components/CheckinSheet";
 import ClientProfileCard from "@/components/ClientProfileCard";
 import ChatLauncher from "@/components/ChatLauncher";
@@ -126,11 +128,14 @@ function ClientHomeSummary({
   );
 }
 
-type TabId = "today" | "plan" | "progress";
+type TabId = "today" | "nutrition" | "progress" | "habits" | "more" | "plan";
+// Знизу: Сьогодні, Харчування, Прогрес, Звички, Ще (як у референсі). Календар-план і чат — в «Ще».
 const TABS: { id: TabId; label: string; icon: NavIconName }[] = [
   { id: "today", label: "Сьогодні", icon: "home" },
-  { id: "plan", label: "План", icon: "plan" },
+  { id: "nutrition", label: "Харчування", icon: "library" },
   { id: "progress", label: "Прогрес", icon: "progress" },
+  { id: "habits", label: "Звички", icon: "plan" },
+  { id: "more", label: "Ще", icon: "more" },
 ];
 
 export default function ClientDashboard() {
@@ -463,22 +468,14 @@ export default function ClientDashboard() {
                 active ? "text-brand" : "text-muted"
               }`}
             >
-              <NavIcon name={t.icon} className="h-5 w-5" />
+              <span className="relative">
+                <NavIcon name={t.icon} className="h-5 w-5" />
+                {t.id === "more" && chatBadge}
+              </span>
               {t.label}
             </button>
           );
         })}
-        <button
-          type="button"
-          onClick={() => setChatSignal((n) => n + 1)}
-          className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium text-muted"
-        >
-          <span className="relative">
-            <NavIcon name="chat" className="h-5 w-5" />
-            {chatBadge}
-          </span>
-          Чат
-        </button>
       </nav>
 
       <nav className="hidden lg:sticky lg:top-6 lg:flex lg:w-56 lg:flex-none lg:flex-col lg:gap-0.5 lg:rounded-xl lg:border lg:border-line lg:bg-sidebar lg:p-3 lg:pb-3">
@@ -497,16 +494,6 @@ export default function ClientDashboard() {
             </button>
           );
         })}
-        <button
-          type="button"
-          onClick={() => setChatSignal((n) => n + 1)}
-          className="flex w-full items-center justify-between rounded-md border-l-2 border-transparent px-3 py-2 text-left font-display text-sm font-medium text-muted transition hover:bg-line/30 hover:text-ink"
-        >
-          Чат
-          {chatUnread > 0 && (
-            <span className="rounded-full bg-danger px-1.5 text-[11px] font-semibold text-white">{chatUnread}</span>
-          )}
-        </button>
       </nav>
 
       <div className="min-w-0 flex-1">
@@ -526,8 +513,52 @@ export default function ClientDashboard() {
                 setTab("plan");
               }}
             />
+          ) : tab === "nutrition" ? (
+            <ClientNutrition
+              clientId={client.id}
+              onAddFood={() => {
+                setOpenReq({ kind: "food", n: Date.now() });
+                setTab("plan");
+              }}
+            />
+          ) : tab === "habits" ? (
+            <>
+              <h2 className="font-display text-2xl font-bold text-ink">Звички</h2>
+              <HabitsChecklist clientId={client.id} />
+            </>
+          ) : tab === "more" ? (
+            <div className="flex flex-col gap-2.5">
+              <h2 className="font-display text-2xl font-bold text-ink">Ще</h2>
+              {(
+                [
+                  ["plan", "📅 План і календар", "Тренування, їжа, звички по днях"],
+                  ["chat", "💬 Чат з тренером", chatUnread > 0 ? `Нових: ${chatUnread}` : "Написати або надіслати фото"],
+                ] as [string, string, string][]
+              ).map(([id, title, hint]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => (id === "chat" ? setChatSignal((n) => n + 1) : goTab("plan"))}
+                  className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 text-left"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-ink">{title}</span>
+                    <span className="block truncate text-xs text-muted">{hint}</span>
+                  </span>
+                  <span className="text-muted">›</span>
+                </button>
+              ))}
+              <NotificationsToggle clientId={client.id} />
+            </div>
           ) : tab === "plan" ? (
             <>
+              <button
+                type="button"
+                onClick={() => goTab("more")}
+                className="self-start rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-muted"
+              >
+                ← Ще
+              </button>
               <ClientActivityCalendar
                 clientId={client.id}
                 checkins={checkinMarkers}
@@ -535,7 +566,6 @@ export default function ClientDashboard() {
                 checkinWeekday={client.checkin_weekday ?? 0}
                 openRequest={openReq}
               />
-              <NotificationsToggle clientId={client.id} />
             </>
           ) : (
             <>
