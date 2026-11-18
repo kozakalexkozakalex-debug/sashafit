@@ -218,6 +218,53 @@ export default function ClientToday({
         })}
       </div>
 
+      {loaded && (
+        <div className="flex items-center gap-4 rounded-3xl border border-line bg-surface p-4">
+          <div className="relative h-24 w-24 flex-none">
+            <svg viewBox="0 0 96 96" className="h-24 w-24 -rotate-90" aria-hidden="true">
+              <circle cx="48" cy="48" r="40" fill="none" strokeWidth="9" style={{ stroke: "rgb(var(--c-line))" }} />
+              <circle
+                cx="48"
+                cy="48"
+                r="40"
+                fill="none"
+                strokeWidth="9"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 40}
+                strokeDashoffset={2 * Math.PI * 40 * (1 - (weekTotal > 0 ? weekDone / weekTotal : 0))}
+                style={{
+                  stroke: "rgb(var(--c-accent))",
+                  transition: "stroke-dashoffset .6s ease",
+                  filter: "drop-shadow(0 0 6px rgb(var(--c-accent) / 0.6))",
+                }}
+              />
+            </svg>
+            <span className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="font-display text-xl font-bold text-ink">
+                {weekTotal > 0 ? Math.round((weekDone / weekTotal) * 100) : 0}%
+              </span>
+              <span className="text-[10px] text-muted">тиждень</span>
+            </span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-ink">Прогрес тижня</p>
+            <p className="mt-1 text-xs text-muted">
+              {weekTotal > 0 ? `Тренувань: ${weekDone} з ${weekTotal}` : "Тренувань на цей тиждень ще немає"}
+            </p>
+            {kcalTarget ? (
+              <p className="text-xs text-muted">
+                Калорії сьогодні: {Math.round(kcal)} / {kcalTarget}
+              </p>
+            ) : null}
+            {habits.length > 0 && (
+              <p className="text-xs text-muted">
+                Звички: {doneHabitIds.length} з {habits.length}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {!loaded ? (
         <div className="h-36 animate-pulse rounded-3xl bg-surface" />
       ) : needCheckin ? (

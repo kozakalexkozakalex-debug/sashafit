@@ -10,6 +10,7 @@ import { clientRisk, RISK_LABEL } from "@/lib/clientRisk";
 import { clientLabel } from "@/lib/clientLabel";
 import { useTelegramBack } from "@/lib/telegram";
 import Avatar from "@/components/Avatar";
+import { checkinWindow } from "@/lib/checkinWindow";
 import { useAvatars } from "@/lib/useAvatars";
 import { UnreadInfo } from "@/lib/coachUnread";
 
@@ -60,11 +61,11 @@ type Checkin = {
 };
 type AnswerRow = { checkin_id: string; value: string | null; checkin_questions: { label: string } | null };
 
-type SubTab = "week" | "checkins" | "profile";
+type SubTab = "overview" | "profile" | "progress";
 const SUBTABS: { id: SubTab; label: string }[] = [
-  { id: "week", label: "Тиждень" },
-  { id: "checkins", label: "Чек-іни" },
+  { id: "overview", label: "Огляд" },
   { id: "profile", label: "Профіль" },
+  { id: "progress", label: "Прогрес" },
 ];
 
 type AssignKind = "workout" | "program" | "ration" | "habits";
@@ -123,7 +124,14 @@ export default function CoachClients({
 
   // Відкритий клієнт.
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [subTab, setSubTab] = useState<SubTab>("week");
+  const [subTab, setSubTab] = useState<SubTab>("overview");
+  const [weekStats, setWeekStats] = useState<{ pct: number | null; done: number; planned: number; lastTitle: string | null; lastDate: string | null }>({
+    pct: null,
+    done: 0,
+    planned: 0,
+    lastTitle: null,
+    lastDate: null,
+  });
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [answers, setAnswers] = useState<Record<string, { label: string; value: string }[]>>({});
@@ -159,7 +167,7 @@ export default function CoachClients({
   useEffect(() => {
     if (!openRequest) return;
     setDetailId(openRequest.id);
-    setSubTab("week");
+    setSubTab("overview");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRequest?.n]);
 
@@ -171,6 +179,29 @@ export default function CoachClients({
       .order("created_at", { ascending: false });
     const rows = (data as Checkin[]) || [];
     setCheckins(rows);
+
+    // Виконання тренувань за останні 7 днів + остання виконана.
+    const dk = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const { data: wo } = await supabase
+      .from("assigned_workouts")
+      .select("title, date, completed_at")
+      .eq("client_id", clientId)
+      .gte("date", dk(new Date(Date.now() - 13 * 86400000)))
+      .order("date", { ascending: false });
+    const list = (wo as { title: string; date: string; completed_at: string | null }[]) || [];
+    const weekAgo = dk(new Date(Date.now() - 6 * 86400000));
+    const todayKey = dk(new Date());
+    const inWeek = list.filter((w) => w.date >= weekAgo && w.date <= todayKey);
+    const doneWeek = inWeek.filter((w) => w.completed_at).length;
+    const lastDone = list.find((w) => w.completed_at);
+    setWeekStats({
+      pct: inWeek.length > 0 ? Math.round((doneWeek / inWeek.length) * 100) : null,
+      done: doneWeek,
+      planned: inWeek.length,
+      lastTitle: lastDone?.title ?? null,
+      lastDate: lastDone?.date ?? null,
+    });
 
     // Ключі: «id» — фото спереду (для календаря), «id:side» і «id:back».
     const urls: Record<string, string> = {};
@@ -261,7 +292,7 @@ export default function CoachClients({
   }
 
   function openClient(id: string) {
-    setSubTab("week");
+    setSubTab("overview");
     setDetailId(id);
   }
 
@@ -306,29 +337,38 @@ export default function CoachClients({
 
     return (
       <div className="mx-auto flex max-w-2xl flex-col gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => setDetailId(null)}
-            className="flex-none rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-muted"
+            className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-muted"
           >
             ← Клієнти
           </button>
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate font-display text-lg font-bold text-ink">{clientLabel(current)}</h2>
-            {current.profile_id && (
-              <p className="truncate text-xs text-muted">{RISK_LABEL[clientRisk(current, lastCheckin[current.id])]}</p>
-            )}
-          </div>
           {current.profile_id && (
             <button
               type="button"
               onClick={() => onOpenChat(current.id)}
-              className="flex-none rounded-full border border-line px-3.5 py-1.5 text-xs font-bold text-ink"
+              className="rounded-full border border-line px-3.5 py-1.5 text-xs font-bold text-ink"
             >
               💬 Чат
             </button>
           )}
+        </div>
+        <div className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4">
+          <Avatar name={clientLabel(current)} url={avatars[current.id]} size={72} />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate font-display text-xl font-bold text-ink">{clientLabel(current)}</h2>
+            {current.profile_id && (
+              <span className="mt-1 inline-block rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-semibold text-brand">
+                {RISK_LABEL[clientRisk(current, lastCheckin[current.id])]}
+              </span>
+            )}
+            <p className="mt-1 truncate text-xs text-muted">
+              {current.goal ? `${current.goal} · ` : ""}з{" "}
+              {new Date(current.created_at).toLocaleDateString("uk-UA", { month: "short", year: "numeric" })}
+            </p>
+          </div>
         </div>
 
         {notFilled ? (
@@ -364,16 +404,6 @@ export default function CoachClients({
               </div>
             )}
 
-            {subTab === "week" && (
-              <button
-                type="button"
-                onClick={() => setAssignMenu(true)}
-                className="rounded-xl bg-accent py-3 text-sm font-bold text-paper"
-              >
-                + Призначити
-              </button>
-            )}
-
             <div className="flex gap-1 rounded-full border border-line bg-sidebar p-1">
               {SUBTABS.map((t) => (
                 <button
@@ -385,23 +415,78 @@ export default function CoachClients({
                   }`}
                 >
                   {t.label}
-                  {t.id === "checkins" && unreviewed > 0 ? ` · ${unreviewed}` : ""}
+                  {t.id === "progress" && unreviewed > 0 ? ` · ${unreviewed}` : ""}
                 </button>
               ))}
             </div>
 
-            {subTab === "week" && (
-            <ClientActivityCalendar
-              key={calendarKey}
-              clientId={current.id}
-              checkins={markers}
-              showHabits
-              habitsReadOnly
-              checkinWeekday={current.checkin_weekday ?? 0}
-            />
+            {subTab === "overview" && (
+              <>
+                <div className="rounded-2xl border border-line bg-surface p-4">
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-sm font-semibold text-ink">Виконання тижня</p>
+                    <p className="font-display text-2xl font-bold text-ink">
+                      {weekStats.pct === null ? "—" : `${weekStats.pct}%`}
+                    </p>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-paper">
+                    <div
+                      className="h-full rounded-full bg-accent shadow-[0_0_12px_rgb(var(--c-accent)/0.7)]"
+                      style={{ width: `${weekStats.pct ?? 0}%` }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted">
+                    {weekStats.planned > 0
+                      ? `Виконано ${weekStats.done} з ${weekStats.planned} тренувань за 7 днів`
+                      : "За останні 7 днів тренувань не було призначено"}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="rounded-2xl border border-line bg-surface p-3.5">
+                    <p className="text-xs text-muted">Наступний чек-ін</p>
+                    <p className="mt-1 text-sm font-semibold text-ink">
+                      {(() => {
+                        const w = checkinWindow(
+                          new Date(),
+                          current.checkin_weekday ?? 0,
+                          checkins.map((c) => c.created_at.slice(0, 10))
+                        );
+                        return w.open && !w.done
+                          ? "Можна здавати зараз"
+                          : `Через ${w.daysToNext} дн`;
+                      })()}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-line bg-surface p-3.5">
+                    <p className="text-xs text-muted">Остання активність</p>
+                    <p className="mt-1 truncate text-sm font-semibold text-ink">
+                      {weekStats.lastTitle ? `✅ ${weekStats.lastTitle}` : "—"}
+                    </p>
+                    {weekStats.lastDate && <p className="text-[11px] text-muted">{weekStats.lastDate}</p>}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setAssignMenu(true)}
+                  className="rounded-xl bg-accent py-3 text-sm font-bold text-paper shadow-[0_12px_36px_-10px_rgb(var(--c-accent)/0.6)]"
+                >
+                  + Призначити тренування, раціон або звички
+                </button>
+
+                <ClientActivityCalendar
+                  key={calendarKey}
+                  clientId={current.id}
+                  checkins={markers}
+                  showHabits
+                  habitsReadOnly
+                  checkinWeekday={current.checkin_weekday ?? 0}
+                />
+              </>
             )}
 
-            {subTab === "checkins" && (
+            {subTab === "progress" && (
 
               <>
                 {checkins.length === 0 ? (

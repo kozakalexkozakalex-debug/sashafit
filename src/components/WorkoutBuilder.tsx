@@ -19,7 +19,7 @@ import { supabase } from "@/lib/supabaseClient";
 // тільки вже додані вправи в списку, щоб міняти їх порядок — бібліотеку
 // більше не тягнемо, бо на телефоні це блокувало скрол списку.
 
-type Exercise = { id: string; name: string; muscle_group: string | null; equipment: string | null };
+type Exercise = { id: string; name: string; muscle_group: string | null; equipment: string | null; photo_path: string | null };
 
 type WorkoutItem = {
   uid: string;
@@ -36,9 +36,20 @@ function LibraryExercise({ ex, onAdd }: { ex: Exercise; onAdd: () => void }) {
     <button
       type="button"
       onClick={onAdd}
-      className="flex items-center gap-2 rounded-lg border border-line bg-paper px-3 py-2.5 text-left text-sm transition active:bg-brand/10"
+      className="flex items-center gap-3 rounded-xl border border-line bg-surface p-2 text-left text-sm transition active:bg-brand/10"
     >
-      <span className="flex-1">
+      {ex.photo_path ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={supabase.storage.from("exercises").getPublicUrl(ex.photo_path).data.publicUrl}
+          alt=""
+          loading="lazy"
+          className="h-12 w-12 flex-none rounded-lg object-cover"
+        />
+      ) : (
+        <span className="flex h-12 w-12 flex-none items-center justify-center rounded-lg bg-paper text-lg">🏋</span>
+      )}
+      <span className="min-w-0 flex-1 font-medium text-ink">
         {ex.name}
         {ex.equipment && <span className="ml-1 text-xs text-muted">· {ex.equipment}</span>}
       </span>
@@ -110,6 +121,7 @@ export default function WorkoutBuilder({
 }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [items, setItems] = useState<WorkoutItem[]>([]);
   const [busy, setBusy] = useState(false);
@@ -118,7 +130,7 @@ export default function WorkoutBuilder({
   useEffect(() => {
     supabase
       .from("exercises")
-      .select("id, name, muscle_group, equipment")
+      .select("id, name, muscle_group, equipment, photo_path")
       .order("name")
       .then(({ data }) => setExercises((data as Exercise[]) || []));
   }, []);
@@ -264,9 +276,21 @@ export default function WorkoutBuilder({
             ))}
           </div>
 
-          <div className="mb-3 flex max-h-64 flex-col gap-1.5 overflow-y-auto rounded-lg border border-line bg-paper p-2">
-            {activeGroup &&
-              byGroup[activeGroup]?.map((ex) => <LibraryExercise key={ex.id} ex={ex} onAdd={() => addItem(ex)} />)}
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Пошук вправи (по всій базі)"
+            className="mb-2 w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink outline-none"
+          />
+          <div className="mb-3 flex max-h-72 flex-col gap-1.5 overflow-y-auto rounded-xl border border-line bg-paper p-2">
+            {(search.trim()
+              ? exercises.filter((ex) => ex.name.toLowerCase().includes(search.trim().toLowerCase()))
+              : activeGroup
+                ? byGroup[activeGroup] || []
+                : []
+            ).map((ex) => (
+              <LibraryExercise key={ex.id} ex={ex} onAdd={() => addItem(ex)} />
+            ))}
           </div>
         </>
       )}
