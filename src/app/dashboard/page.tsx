@@ -14,7 +14,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [goHomeSignal, setGoHomeSignal] = useState(0);
   const [meetingSignal, setMeetingSignal] = useState(0);
-  const [newClientSignal, setNewClientSignal] = useState(0);
   const [settingsSignal, setSettingsSignal] = useState(0);
 
   useEffect(() => {
@@ -75,15 +74,6 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setNewClientSignal((v) => v + 1)}
-                className="flex items-center gap-1.5 rounded-full border border-brand px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand/10 sm:text-sm"
-              >
-                <span className="text-sm leading-none">+</span>
-                <span className="hidden sm:inline">Заявки</span>
-                <span className="sm:hidden">Заявки</span>
-              </button>
-              <button
-                type="button"
                 onClick={() => setSettingsSignal((v) => v + 1)}
                 aria-label="Налаштування"
                 className="flex h-8 w-8 items-center justify-center rounded-full border border-line text-muted transition hover:text-brand"
@@ -105,7 +95,6 @@ export default function DashboardPage() {
           <CoachDashboard
             goHomeSignal={goHomeSignal}
             meetingSignal={meetingSignal}
-            newClientSignal={newClientSignal}
             settingsSignal={settingsSignal}
           />
         ) : (
